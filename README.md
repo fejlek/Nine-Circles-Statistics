@@ -16,7 +16,7 @@ However, greater care must be taken in the model's specification, since all nonl
 
 ## Regression modeling strategies
 
-In the solutions provided here, I will (or at least try to) follow  these steps that help to obtain valid statistical inference and help to obtain models that  perform well overall (inspired by *F. Harrell. Regression modeling strategies. New York: Springer-Verlag, 2001.*)
+In the solutions provided here, I will (or at least try to) follow  these steps that help to obtain valid statistical inference and models that  perform well overall (inspired by *F. Harrell. Regression modeling strategies. New York: Springer-Verlag, 2001.*)
 
 1. Data exploration (checking for missing/nonsensical values of predictors, redundancy analysis of predictors, elimination and/or grouping of predictors if needed)
 2. Formulating hypotheses and the corresponding full model (main linear effects, nonlinear effects, interactions) based on the nature of the problem and effective sample size (rule of thumb: 10-20 independent observations per parameter). We should not use the predicted values (formally or informally) in model selection.
@@ -27,3 +27,6 @@ In the solutions provided here, I will (or at least try to) follow  these steps 
 7. Model interpretation,  hypotheses testing, and/or evaluation of predictive performance.
 8. Model validation (usually via bootstrap, i.e., repeating at least 4 and 7 for each bootstrap sample). If we performed multiple imputation, we should repeat 3 for each bootstrap sample. If we performed variable selection beyond what is suggested in 5, we should repeat the variable selection step for each bootstrap sample.
    
+## Technical solution
+
+All solutions will programmed in R and provided as R markdown documents and github markdown documents.
