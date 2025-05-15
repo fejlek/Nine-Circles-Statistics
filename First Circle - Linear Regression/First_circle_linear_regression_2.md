@@ -1,10 +1,10 @@
 # The First Circle: Linear Regression, Part Two
 
-<br/>
+
 Jiří Fejlek
 
 2025-05-15
-<br/>
+
 
 ## Linear Regression Model (*effect estimation and hypothesis testing*)
 

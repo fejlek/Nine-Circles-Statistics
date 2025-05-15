@@ -1,10 +1,10 @@
 # The First Circle: Linear Regression, Part One
 
-<br/>
+
 Jiří Fejlek
 
 2025-05-15
-<br/>
+
 
 ## Life Expectancy (WHO) dataset
 
