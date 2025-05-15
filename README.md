@@ -16,7 +16,7 @@ However, greater care must be taken in the model's specification, since all nonl
 
 ## Regression modeling strategies
 
-In the solutions provided here, I will (or at least try to) follow  these steps (inspired by *F. Harrell. Regression modeling strategies. New York: Springer-Verlag, 2001.*)
+In the solutions provided here, I will (or at least try to) follow  these steps that help to obtain valid statistical inference and help to obtain models that  perform well overall (inspired by *F. Harrell. Regression modeling strategies. New York: Springer-Verlag, 2001.*)
 
 1. Data exploration (checking for missing/nonsensical values of predictors, redundancy analysis of predictors, elimination and/or grouping of predictors if needed)
 2. Formulating hypotheses and the corresponding full model (main linear effects, nonlinear effects, interactions) based on the nature of the problem and effective sample size (rule of thumb: 10-20 independent observations per parameter). We should not use the predicted values (formally or informally) in model selection.
