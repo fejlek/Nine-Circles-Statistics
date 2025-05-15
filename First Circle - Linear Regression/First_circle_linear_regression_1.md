@@ -1,5 +1,6 @@
 # The First Circle: Linear Regression, Part One
-
+Jiří Fejlek
+2025-05-15
 ## Life Expectancy (WHO) dataset
 
 <https://www.kaggle.com/datasets/lashagoch/life-expectancy-who-updated>

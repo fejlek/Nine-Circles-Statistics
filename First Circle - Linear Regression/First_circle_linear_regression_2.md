@@ -1,5 +1,6 @@
 # The First Circle: Linear Regression, Part Two
-
+Jiří Fejlek
+2025-05-15
 ## Linear Regression Model (*effect estimation and hypothesis testing*)
 
 <br/> In Part Two of this demonstration of using linear regression, we
