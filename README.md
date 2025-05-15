@@ -23,7 +23,7 @@ In the solutions provided here, I will (or at least try to) follow  these steps 
 3. Single or multiple imputation (rule of thumb: multiple imputation should be used if the proportion of observations with missing values is greater than 3%). We should use a multiple imputation model that is at least as general as our full model.
 4. Fitting a full model.
 5. Very limited model simplification by testing the significance of *all* interaction and/or *all* nonlinear terms (rule of thumb: provided that the corresponding statistics have a P-value greater than 0.2, it should be safe to simplify the model by deleting all corresponding terms). Other than that, we should not remove any seemingly nonsignificant effects from the model.
-6. Checking the distributional assumptions (usually by analyzing the residuals) and the presence of overly influential observations. We change the model if needed to obtain a valid inference.
+6. Checking the distributional assumptions (e.g, by analyzing the residuals) and the presence of overly influential observations. We change the model if needed to obtain a valid inference.
 7. Model interpretation,  hypotheses testing, and/or evaluation of predictive performance.
 8. Model validation (usually via bootstrap, i.e., repeating at least 4 and 7 for each bootstrap sample). If we performed multiple imputation, we should repeat 3 for each bootstrap sample. If we performed variable selection beyond what is suggested in 5, we should repeat the variable selection step for each bootstrap sample.
    
