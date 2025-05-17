@@ -43,14 +43,11 @@ Data contains life expectancy, health, immunization, and economic and demographi
 * **Life_expectancy** - Average life expectancy 
 
 <br/>
-
 In this demonstration of using linear regression, our objective will be to build a model to identify predictors that seem to have a significant effect on life expectancy based on this dataset.
 
 We split this presentation into two parts: data preparation/exploration and creating a model for effect estimation.
 
-<br/>
 Let us start the data preparation/exploration part and load in the data, and display the first few rows to check that it loaded correctly.
-<br/>
 <br/>
 
 ```{r, message=FALSE}

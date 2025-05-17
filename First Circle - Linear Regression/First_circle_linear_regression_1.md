@@ -46,18 +46,15 @@ demographic information about 179 countries from 2000 to 2015:
   Trade Organization)
 - **Life_expectancy** - Average life expectancy
 
-<br/>
-
-In this demonstration of using linear regression, our objective will be
-to build a model to identify predictors that seem to have a significant
-effect on life expectancy based on this dataset.
+<br/> In this demonstration of using linear regression, our objective
+will be to build a model to identify predictors that seem to have a
+significant effect on life expectancy based on this dataset.
 
 We split this presentation into two parts: data preparation/exploration
 and creating a model for effect estimation.
 
-<br/> Let us start the data preparation/exploration part and load in the
-data, and display the first few rows to check that it loaded correctly.
-<br/> <br/>
+Let us start the data preparation/exploration part and load in the data,
+and display the first few rows to check that it loaded correctly. <br/>
 
 ``` r
 library(readr)
@@ -415,7 +412,7 @@ redun(~.- Life_expectancy - Infant_deaths - Under_five_deaths - Year - Country  
     ##     Polio + Diphtheria + Incidents_HIV + Thinness_ten_nineteen_years + 
     ##     Thinness_five_nine_years + Schooling + Economy_status + Population_log + 
     ##     GDP_log + Inf5_m
-    ## <environment: 0x000002291345b8c8>
+    ## <environment: 0x000001cc8751b1c0>
     ## 
     ## n: 2864  p: 15   nk: 4 
     ## 
