@@ -1,12 +1,10 @@
 # The First Circle: Linear Regression, Part One
 
-
 Jiří Fejlek
 <br/>
 2025-05-15
 
-
-## Life Expectancy (WHO) dataset
+## Life Expectancy (WHO) dataset (*data exploration and redundancy analysis*)
 
 <https://www.kaggle.com/datasets/lashagoch/life-expectancy-who-updated>
 
@@ -15,38 +13,38 @@ demographic information about 179 countries from 2000 to 2015:
 
 <br/>
 
--   **Country**
--   **Region**
--   **Year** - Data observed from 2000 to 2015
--   **Infant_deaths** - Infant deaths per 1000 population
--   **Under_five_deaths** - Deaths of children under five years old per
-    1000 population
--   **Adult_mortality** - Deaths of adults between 15 and 60 per 1000
-    population
--   **Alcohol_consumption** - Alcohol consumption in liters of pure
-    alcohol per capita for 15+ years old
--   **Hepatitis_B** - Coverage (%) of Hepatitis B (HepB3) immunization
-    among 1-year-olds.
--   **Measles** - Coverage (%) of Measles immunization among 1-year-olds
--   **BMI** - Mean body mass index (BMI) of adult population 18+
--   **Polio** - Coverage (%) of Polio (Pol3) immunization among
-    1-year-olds
--   **Diptheria** - Coverage (%) of Diphtheria tetanus toxoid and
-    pertussis (DTP3) immunization among 1-year-olds.
--   **Incidents_HIV** - Incidents of HIV per 1000 population aged 15-49
--   **GDP_per_capita** - GDP per capita in USD
--   **Population_mln** - Total population in millions
--   **Thinness_10-19** - Prevalence of thinness among adolescents aged
-    10-19 years: BMI \< -2 standard deviations below the median
--   **Thinness_5-9** - Prevalence of thinness among children aged 5-9
-    years: BMI \< -2 standard deviations below the median
--   **Schooling** - Average years that people aged 25+ spent in formal
-    education
--   **Developed** - Economically developed country (status in the World
-    Trade Organization)
--   **Developing** - Economically developing country (status in the
-    World Trade Organization)
--   **Life_expectancy** - Average life expectancy
+- **Country**
+- **Region**
+- **Year** - Data observed from 2000 to 2015
+- **Infant_deaths** - Infant deaths per 1000 population
+- **Under_five_deaths** - Deaths of children under five years old per
+  1000 population
+- **Adult_mortality** - Deaths of adults between 15 and 60 per 1000
+  population
+- **Alcohol_consumption** - Alcohol consumption in liters of pure
+  alcohol per capita for 15+ years old
+- **Hepatitis_B** - Coverage (%) of Hepatitis B (HepB3) immunization
+  among 1-year-olds.
+- **Measles** - Coverage (%) of Measles immunization among 1-year-olds
+- **BMI** - Mean body mass index (BMI) of adult population 18+
+- **Polio** - Coverage (%) of Polio (Pol3) immunization among
+  1-year-olds
+- **Diptheria** - Coverage (%) of Diphtheria tetanus toxoid and
+  pertussis (DTP3) immunization among 1-year-olds.
+- **Incidents_HIV** - Incidents of HIV per 1000 population aged 15-49
+- **GDP_per_capita** - GDP per capita in USD
+- **Population_mln** - Total population in millions
+- **Thinness_10-19** - Prevalence of thinness among adolescents aged
+  10-19 years: BMI \< -2 standard deviations below the median
+- **Thinness_5-9** - Prevalence of thinness among children aged 5-9
+  years: BMI \< -2 standard deviations below the median
+- **Schooling** - Average years that people aged 25+ spent in formal
+  education
+- **Developed** - Economically developed country (status in the World
+  Trade Organization)
+- **Developing** - Economically developing country (status in the World
+  Trade Organization)
+- **Life_expectancy** - Average life expectancy
 
 <br/>
 
@@ -86,7 +84,7 @@ head(life_expectancy)
     ## #   Schooling <dbl>, Economy_status_Developed <dbl>,
     ## #   Economy_status_Developing <dbl>, Life_expectancy <dbl>
 
-## Initial Data Exploration
+### Initial Data Exploration
 
 <br/> We start with a brief data exploration. We will mostly look for
 serious problems with the data such as missing values, nonsensical
@@ -146,7 +144,7 @@ life_expectancy$Region <- factor(life_expectancy$Region)
 <br/> The rest of the predictors are correctly specified as numerical.
 Let us check that their values make some sense. <br/>
 
--   Infant_deaths
+- Infant_deaths
 
 ``` r
 summary(life_expectancy$Infant_deaths)
@@ -155,91 +153,91 @@ summary(life_expectancy$Infant_deaths)
     ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
     ##    1.80    8.10   19.60   30.36   47.35  138.10
 
--   Under_five_deaths
+- Under_five_deaths
 
 <!-- -->
 
     ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
     ##   2.300   9.675  23.100  42.938  66.000 224.900
 
--   Adult_mortality
+- Adult_mortality
 
 <!-- -->
 
     ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
     ##   49.38  106.91  163.84  192.25  246.79  719.36
 
--   Alcohol_consumption
+- Alcohol_consumption
 
 <!-- -->
 
     ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
     ##   0.000   1.200   4.020   4.821   7.777  17.870
 
--   Hepatitis_B
+- Hepatitis_B
 
 <!-- -->
 
     ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
     ##   12.00   78.00   89.00   84.29   96.00   99.00
 
--   Measles
+- Measles
 
 <!-- -->
 
     ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
     ##   10.00   64.00   83.00   77.34   93.00   99.00
 
--   Polio
+- Polio
 
 <!-- -->
 
     ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
     ##     8.0    81.0    93.0    86.5    97.0    99.0
 
--   Diphtheria
+- Diphtheria
 
 <!-- -->
 
     ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
     ##   16.00   81.00   93.00   86.27   97.00   99.00
 
--   Incidents_HIV
+- Incidents_HIV
 
 <!-- -->
 
     ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
     ##  0.0100  0.0800  0.1500  0.8943  0.4600 21.6800
 
--   GDP_per_capita
+- GDP_per_capita
 
 <!-- -->
 
     ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
     ##     148    1416    4217   11541   12557  112418
 
--   Population_mln
+- Population_mln
 
 <!-- -->
 
     ##     Min.  1st Qu.   Median     Mean  3rd Qu.     Max. 
     ##    0.080    2.098    7.850   36.676   23.688 1379.860
 
--   Thinness_ten_nineteen_years
+- Thinness_ten_nineteen_years
 
 <!-- -->
 
     ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
     ##   0.100   1.600   3.300   4.866   7.200  27.700
 
--   Thinness_five_nine_years
+- Thinness_five_nine_years
 
 <!-- -->
 
     ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
     ##     0.1     1.6     3.4     4.9     7.3    28.6
 
--   Schooling
+- Schooling
 
 <!-- -->
 
@@ -263,10 +261,10 @@ plot3 <- ggplot(life_expectancy, aes(x=Adult_mortality)) + geom_histogram() + xl
 grid.arrange(plot1, plot2, plot3, ncol=3)
 ```
 
-<img src="First_circle_linear_regression_1_files/figure-markdown_github/unnamed-chunk-21-1.png" style="display: block; margin: auto;" />
+<img src="First_circle_linear_regression_1_files/figure-GFM/unnamed-chunk-21-1.png" style="display: block; margin: auto;" />
 
 <br/>
-<img src="First_circle_linear_regression_1_files/figure-markdown_github/unnamed-chunk-22-1.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_1_files/figure-markdown_github/unnamed-chunk-22-2.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_1_files/figure-markdown_github/unnamed-chunk-22-3.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_1_files/figure-markdown_github/unnamed-chunk-22-4.png" style="display: block; margin: auto;" />
+<img src="First_circle_linear_regression_1_files/figure-GFM/unnamed-chunk-22-1.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_1_files/figure-GFM/unnamed-chunk-22-2.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_1_files/figure-GFM/unnamed-chunk-22-3.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_1_files/figure-GFM/unnamed-chunk-22-4.png" style="display: block; margin: auto;" />
 
 <br/> None of the numerical predictors seems nearly constant, so we will
 consider all of them for modelling now. I will just do a logarithm
@@ -281,25 +279,25 @@ life_expectancy <- life_expectancy %>% add_column(Population_log)
 life_expectancy <- life_expectancy %>% add_column(GDP_log)
 ```
 
-<img src="First_circle_linear_regression_1_files/figure-markdown_github/unnamed-chunk-24-1.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_1_files/figure-markdown_github/unnamed-chunk-24-2.png" style="display: block; margin: auto;" />
+<img src="First_circle_linear_regression_1_files/figure-GFM/unnamed-chunk-24-1.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_1_files/figure-GFM/unnamed-chunk-24-2.png" style="display: block; margin: auto;" />
 
-## Redundancy Analysis
+### Redundancy Analysis
 
-<br/> As we will discuss further in Part 2, we will model life
-expectancy using all predictors except **Country**, **Year**, and
-**Adult_mortality**. Our dataset consists of a relatively small number
-of predictors. However, the effective size of our dataset is also much
-smaller than which would appear at the first glance, as we discuss in
-Part Two. Hence, it is worthwhile to check whether some predictors
-contain redundant information. We first plot a correlation heatmap.
-<br/>
+<br/> As we will discuss further in Part 2, our model of life expectancy
+will contain as the main predictors of interest all predictors except
+**Country**, **Year**, and **Adult_mortality**. Our dataset consists of
+a relatively small number of predictors. However, the effective size of
+our dataset is also much smaller than which would appear at the first
+glance, as we discuss in Part Two. Hence, it is worthwhile to check
+whether some predictors contain redundant information. We first plot a
+correlation heatmap. <br/>
 
 ``` r
 library(pheatmap)
 pheatmap(cor(life_expectancy[,c(4,5,7:13,16,17,18,21,22)]),display_numbers = TRUE, fontsize = 8, cluster_rows = FALSE, cluster_cols = FALSE)
 ```
 
-<img src="First_circle_linear_regression_1_files/figure-markdown_github/unnamed-chunk-25-1.png" width="200%" style="display: block; margin: auto;" />
+<img src="First_circle_linear_regression_1_files/figure-GFM/unnamed-chunk-25-1.png" width="200%" style="display: block; margin: auto;" />
 
 <br/>
 
@@ -417,7 +415,7 @@ redun(~.- Life_expectancy - Infant_deaths - Under_five_deaths - Year - Country  
     ##     Polio + Diphtheria + Incidents_HIV + Thinness_ten_nineteen_years + 
     ##     Thinness_five_nine_years + Schooling + Economy_status + Population_log + 
     ##     GDP_log + Inf5_m
-    ## <environment: 0x000001ace551f0e0>
+    ## <environment: 0x000002291345b8c8>
     ## 
     ## n: 2864  p: 15   nk: 4 
     ## 

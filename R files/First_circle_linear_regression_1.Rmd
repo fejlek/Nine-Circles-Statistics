@@ -1,8 +1,10 @@
 ---
 title: "The First Circle: Linear Regression, Part One"
 author: "Jiří Fejlek"
-date: "2025-05-15"
-output: html_document
+date: "2025-05-17"
+output:
+  md_document:
+    variant: GFM
 code_folding: hide
 ---
 
@@ -10,7 +12,7 @@ code_folding: hide
 knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
 ```
 
-## Life Expectancy (WHO)  dataset
+## Life Expectancy (WHO)  dataset (*data exploration and redundancy analysis*)
 
 <https://www.kaggle.com/datasets/lashagoch/life-expectancy-who-updated>
  
@@ -59,7 +61,7 @@ life_expectancy <- read_csv('C:/Users/elini/Desktop/nine circles/Life-Expectancy
 head(life_expectancy)
 ```
 
-## Initial Data Exploration
+### Initial Data Exploration
 <br/>
 We start with a brief data exploration. We will mostly look for serious problems with the data such as missing values, nonsensical values, etc. Let us first look at the size of the dataset.
 <br/>
@@ -226,10 +228,10 @@ ggplot(life_expectancy, aes(x=Population_log)) + geom_histogram() + xlab("Popula
 ggplot(life_expectancy, aes(x=GDP_log)) + geom_histogram() + xlab("GDP_log") + ylab("Frequency")
 ```
 
-## Redundancy Analysis
+### Redundancy Analysis
 
 <br/>
-As we will discuss further in Part 2, we will model life expectancy using all predictors except **Country**, **Year**, and **Adult_mortality**. Our dataset consists of a relatively small number of predictors. However, the effective size of our dataset is also much smaller than which would appear at the first glance, as we discuss in Part Two.  Hence, it is worthwhile to check whether some predictors contain redundant information. We first plot a correlation heatmap.
+As we will discuss further in Part 2, our model of life expectancy will contain as the main predictors of interest all predictors except **Country**, **Year**, and **Adult_mortality**. Our dataset consists of a relatively small number of predictors. However, the effective size of our dataset is also much smaller than which would appear at the first glance, as we discuss in Part Two.  Hence, it is worthwhile to check whether some predictors contain redundant information. We first plot a correlation heatmap.
 <br/>
 
 ```{r fig.align = 'center',out.width="200%", message=FALSE}
