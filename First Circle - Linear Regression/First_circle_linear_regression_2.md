@@ -1,17 +1,15 @@
-# The First Circle: Linear Regression, Part Two
-
-Jiří Fejlek
-<br/>
-2025-05-19
-
 ## Linear Regression Model (*for effect estimation and hypothesis testing*)
 
 <br/> In Part Two of this demonstration of using linear regression, we
 seek to model **Life expectancy** using data that contains health,
 immunization, and economic and demographic information about 179
-countries from 2000 to 2015.
+countries from 2000 to 2015. In this demonstration, we will start with a
+simple linear regression model, but we will eventually move to models
+for panel data. Thus, we will introduce random and fixed effects models
+for panel data and even lesser known *correlated random effects models*.
 
-I will not consider **Adult_mortality** as our predictor, because
+Let us start the modelling with our choice of the predictors. I will not
+consider **Adult_mortality** as our predictor, because
 **Adult_mortality** is tightly connected to **Life_expectancy**, but
 does not give much additional insight into why life expectancy is lower,
 what the difference is between these countries, other than that people
@@ -303,7 +301,7 @@ t(apply(coefmat,2,function(x) quantile(x,c(0.025,0.5,0.975))))
 not change much compared to the ones provided by the standard non-robust
 estimates. Lastly, we can check for influential observations (and
 potential outliers). A common metric to detect overly influential
-observations is Cook’s distance. <br/>
+observations is the Cook’s distance. <br/>
 
 <img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-8-1.png" style="display: block; margin: auto;" />
 
@@ -311,7 +309,7 @@ A simple rule of thumb is that an observation could be overtly
 influential if its Cook’s distance is greater than one. That is
 definitely not the case for our model. Still, some observations have a
 significantly greater Cook’s distance than others. Let us compare the
-regression of coefficients with observations deleted based on Cook’s
+regression of coefficients with observations deleted based on the Cook’s
 distance.
 
 ``` r
@@ -707,7 +705,7 @@ phtest(fixed_effect_model_plm,random_effect_model_plm)
 <br/> The Hausman test has the disadvantage that it assumes standard
 errors (which we know is a bit problematic for panel data). Thus, we can
 instead perform the following robust Wald test. The main idea is to add
-the cluster mean of the time-varying predictors to the random effects
+the cluster means of the time-varying predictors to the random effects
 model (*J. Antonakis, N. Bastardoz, and M. Rönkkö. “On ignoring the
 random effects assumption in multilevel models: Review, critique, and
 recommendations.” Organizational Research Methods 24.2 (2021):
@@ -895,7 +893,7 @@ effects model using a package *lme4* that can be used to fit general
 linear mixed-effects models. We then use package *HLMdiag* to determine
 the influence of individual observations. Since we are dealing with
 panel data, we will consider diagnostics based on deleting whole
-clusters given by **Country.** We will again use Cook’s distance and
+clusters given by **Country.** We will again use the Cook’s distance and
 refit the model based on several Cook’s distance cut-offs based on the
 Cook’s distance plot. <br/>
 
@@ -909,7 +907,7 @@ lmer_model <- lmer(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + 
 inf <- hlm_influence(lmer_model, level = "Country")
 
 # Plot Cook's distance
-plot(inf$cooksd)
+plot(inf$cooksd,ylab = "Cook's distance")
 ```
 
 <img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-21-1.png" style="display: block; margin: auto;" />
@@ -1170,205 +1168,6 @@ slightly narrower confidence intervals. Since the intervals based on the
 robust standard errors and nonparametric bootstrap match, I guess the
 issue is indeed heteroskedasticity of errors (parametric bootstrap
 cannot account for this since it simulates directly from the model that
-assumes homoscedastic errors). <br/>
-
-### Conclusions
-
-<br/> Let us discuss the results. We notice that most of the predictors
-in the correlated random effects (CRE) model are not significant.
-
-Concerning the time-invariant predictors, that we were able to estimate
-thanks to the CRE model, the significant predictors are **Economy** and
-some **Region**-specific factors. It seems that economically developed
-countries tend to have higher life expectancy than developing countries
-even after adjusting for other covariates. We can investigate this more
-formally post hoc using *lsmeans* (lsmeans computes estimated marginal
-means for a given factor, see
-<https://cran.r-project.org/web/packages/emmeans/vignettes/basics.html>
-for more details). <br/>
-
-    ## $lsmeans
-    ##  Economy    lsmean    SE  df lower.CL upper.CL
-    ##  Developing   68.0 0.329 156     67.3     68.6
-    ##  Developed    72.6 0.819 156     71.0     74.2
-    ## 
-    ## Results are averaged over the levels of: Region, Year 
-    ## Degrees-of-freedom method: kenward-roger 
-    ## Confidence level used: 0.95 
-    ## 
-    ## $contrasts
-    ##  contrast               estimate SE  df t.ratio p.value
-    ##  Developing - Developed    -4.63  1 156  -4.612  <.0001
-    ## 
-    ## Results are averaged over the levels of: Region, Year 
-    ## Degrees-of-freedom method: kenward-roger
-
-<img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-27-1.png" style="display: block; margin: auto;" />
-
-<br/> The differences between the estimated marginal means for regions
-seem much less significant. <br/>
-
-    ## $lsmeans
-    ##  Region lsmean    SE  df lower.CL upper.CL
-    ##  Afr      69.7 0.631 156     68.4     70.9
-    ##  Asia     71.1 0.698 156     69.7     72.5
-    ##  CAm      72.0 0.707 156     70.6     73.4
-    ##  EU       68.9 0.680 156     67.5     70.2
-    ##  MidE     69.9 0.811 156     68.3     71.5
-    ##  NAm      69.8 1.380 156     67.1     72.5
-    ##  Oce      69.0 0.775 156     67.4     70.5
-    ##  NotEU    70.8 0.719 156     69.4     72.2
-    ##  SAm      71.7 0.845 156     70.1     73.4
-    ## 
-    ## Results are averaged over the levels of: Economy, Year 
-    ## Degrees-of-freedom method: kenward-roger 
-    ## Confidence level used: 0.95 
-    ## 
-    ## $contrasts
-    ##  contrast     estimate    SE  df t.ratio p.value
-    ##  Afr - Asia    -1.4257 0.704 156  -2.025  0.5287
-    ##  Afr - CAm     -2.3214 0.782 156  -2.969  0.0808
-    ##  Afr - EU       0.8122 1.160 156   0.701  0.9987
-    ##  Afr - MidE    -0.2045 0.894 156  -0.229  1.0000
-    ##  Afr - NAm     -0.1244 1.580 156  -0.079  1.0000
-    ##  Afr - Oce      0.6862 0.963 156   0.712  0.9986
-    ##  Afr - NotEU   -1.1381 0.940 156  -1.210  0.9532
-    ##  Afr - SAm     -2.0581 0.887 156  -2.321  0.3361
-    ##  Asia - CAm    -0.8957 0.840 156  -1.067  0.9781
-    ##  Asia - EU      2.2378 1.160 156   1.932  0.5929
-    ##  Asia - MidE    1.2212 0.857 156   1.425  0.8865
-    ##  Asia - NAm     1.3013 1.550 156   0.840  0.9954
-    ##  Asia - Oce     2.1119 1.020 156   2.064  0.5020
-    ##  Asia - NotEU   0.2876 0.893 156   0.322  1.0000
-    ##  Asia - SAm    -0.6325 0.929 156  -0.681  0.9990
-    ##  CAm - EU       3.1336 1.060 156   2.962  0.0823
-    ##  CAm - MidE     2.1169 0.891 156   2.377  0.3043
-    ##  CAm - NAm      2.1970 1.530 156   1.440  0.8804
-    ##  CAm - Oce      3.0076 0.894 156   3.364  0.0263
-    ##  CAm - NotEU    1.1833 0.816 156   1.451  0.8759
-    ##  CAm - SAm      0.2633 0.807 156   0.326  1.0000
-    ##  EU - MidE     -1.0167 1.230 156  -0.830  0.9958
-    ##  EU - NAm      -0.9365 1.450 156  -0.645  0.9993
-    ##  EU - Oce      -0.1259 1.100 156  -0.115  1.0000
-    ##  EU - NotEU    -1.9503 0.938 156  -2.078  0.4920
-    ##  EU - SAm      -2.8703 1.160 156  -2.477  0.2511
-    ##  MidE - NAm     0.0801 1.540 156   0.052  1.0000
-    ##  MidE - Oce     0.8907 0.994 156   0.896  0.9929
-    ##  MidE - NotEU  -0.9336 1.020 156  -0.915  0.9919
-    ##  MidE - SAm    -1.8536 0.978 156  -1.895  0.6180
-    ##  NAm - Oce      0.8106 1.580 156   0.513  0.9999
-    ##  NAm - NotEU   -1.0137 1.490 156  -0.680  0.9990
-    ##  NAm - SAm     -1.9338 1.550 156  -1.247  0.9444
-    ##  Oce - NotEU   -1.8243 0.975 156  -1.872  0.6340
-    ##  Oce - SAm     -2.7443 1.010 156  -2.727  0.1469
-    ##  NotEU - SAm   -0.9200 0.917 156  -1.003  0.9851
-    ## 
-    ## Results are averaged over the levels of: Economy, Year 
-    ## Degrees-of-freedom method: kenward-roger 
-    ## P value adjustment: tukey method for comparing a family of 9 estimates
-
-<img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-28-1.png" style="display: block; margin: auto;" />
-
-<br/> If I were to guess why the factors for **Central**, **South
-America**, and **Asia** appeared (for **Asia** almost) significant in
-the CRE model, I would suspect that there is a significant difference
-between developing countries of South/Central America and Asia and the
-least developed countries (using the UN terminology) which are almost
-all in Africa and the region specific factors serve as a kind of proxy
-for this fact.
-
-I also suspect that some other additional factors significantly
-influence life expectancy that are not directly present in the model,
-which are encompassed in the **Economy** countries factor.
-
-Concerning the time-varying predictors in our model, the only
-significant ones appear to be **Inf5_m**, **BMI**, and **HIV**. Let us
-try to make some sense of this results.
-
-The first significant predictor is **Inf5_m**, i.e., infant
-mortality/deaths of children under five years old per 1000 population.
-This effect is expected since the incidence of such early deaths drives
-the life expectancy down. We could observe this effect quite clearly
-from the data (the red curve is a LOESS fit of the data: span = 0.5,
-degree = 2) <br/>
-
-<img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-29-1.png" style="display: block; margin: auto;" />
-
-<br/> Another significant predictor is the number of **HIV** incidents,
-and it is the only disease that proved to be significant in our model.
-The significance of this effect is again to be expected. For example,
-the UNAIDS report *THE URGENCY OF NOW AIDS AT A CROSSROADS* shows that
-from successes in the treatment of HIV, life expectancy in Africa
-increased from 56 to 61 between 2010 and 2024. Again, if we visualize
-the data, the effect of **HIV** is also quite noticeable. <br/>
-
-<img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-30-1.png" style="display: block; margin: auto;" />
-
-<br/> The last significant predictor is average **BMI** of adult
-population. This one is a bit trickier to interpret. If we simply
-visualize the data, we could argue that **Life_expectancy** actually
-increases slightly with **BMI**. <br/>
-
-<img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-31-1.png" style="display: block; margin: auto;" />
-
-<br/> However, more economically developed countries tend to have higher
-average **BMI** <br/>
-
-<img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-32-1.png" style="display: block; margin: auto;" />
-
-<br/> and those countries tend to have higher **Life_expectancy** (and
-lower **Infant_mortality/Child_deaths** and lower **HIV** incidents
-count). Actually, if we plot **BMI** vs **Life_expectancy** for
-developed countries, this negative effect for large average **BMI** is
-hinted at (that low **BMI** and high **Life_expectancy** country is
-Japan) <br/>
-
-<img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-33-1.png" style="display: block; margin: auto;" />
-
-If we plot again **Life_expectancy** vs. **BMI** for all countries, but
-adjust for other significant factors
-
-<img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-34-1.png" style="display: block; margin: auto;" />
-
-The plot flattens a bit. We could suspect a nonlinear dependence in
-**BMI**, although interestingly enough, fitting a more complex nonlinear
-(via restricted cubic splines) does not change the apparent downward
-trend much.
-
-``` r
-# I fit just a fixed effects model for simplicity's sake
-library(rms)
-fixed_effect_model_nonlin <- lm(Life_expectancy ~ Alcohol + Hepatitis_B + Measles + rcs(BMI,4) + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m + factor(Country) + factor(Year), data = life_expectancy)
-
-# Plot the predicted life expectancy vs. BMI for the first observation
-BMI_seq <- seq(min(life_expectancy$BMI),max(life_expectancy$BMI),1)
-obs <- life_expectancy[1,]
-obs <- obs[rep(1, length(BMI_seq)), ]
-obs$BMI  <- BMI_seq
-
-pred <- predict(fixed_effect_model_nonlin ,obs,type = 'response')
-plot(obs$BMI,pred,xlab = 'BMI', ylab = 'Life expectancy (Turkey)')
-```
-
-<img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-35-1.png" style="display: block; margin: auto;" />
-
-Overall, individual/time effects in the model play an important
-adjusting role in here. Hence, our model is lacking in this regard.
-Still, having identified BMI as a negative factor in a life expectancy
-model is not without some basis, see e.g., Oxford University research
-*Moderate obesity takes years off life expectancy*
-(<https://www.ox.ac.uk/news/2009-03-18-moderate-obesity-takes-years-life-expectancy>
-) or 2023 paper from Nature Food, *Life expectancy can increase by up to
-10 years following sustained shifts towards healthier diets in the
-United Kingdom*.
-
-Overall, we kind of confirmed a statement about life expectancy on
-Wikipedia, which claims that *… great variations in life expectancy …
-(are) mostly caused by differences in public health, medical care, and
-diet*. With some hyperbole, our stand-ins for these causes are the three
-time-varying factors in our model: **HIV**, **infant mortality**, and
-**BMI**. However, we also observed a lot of additional heterogeneity in
-the data unexplained by these three predictors (some of it is captured
-by the **Economy** factor). Thus, if we were to investigate models of
-life expectancy further, we should explore including additional
-predictors in the model.
+assumes homoscedastic errors). With the validation complete, we end the
+Part Two. In the last part of this project, we will discuss our results.
+<br/>

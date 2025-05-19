@@ -1,18 +1,18 @@
-# The First Circle: Linear Regression, Part One
-
-Jiří Fejlek
-<br/>
-2025-05-17
-
+<br/> In this demonstration of using linear regression and some of its
+extensions (models for panel data to be more specific), our objective
+will be to build a model to identify predictors that seem to have a
+significant effect on life expectancy based on this dataset. I will
+split this presentation into three parts: data preparation/exploration,
+creating a model for effect estimation/hypothesis testing, and
+conclusion. <br/>
 
 ## Life Expectancy (WHO) dataset (*data exploration and redundancy analysis*)
 
-<https://www.kaggle.com/datasets/lashagoch/life-expectancy-who-updated>
-
+Let us start with the description of our data set. Our data are taken
+from
+<https://www.kaggle.com/datasets/lashagoch/life-expectancy-who-updated>.
 Data contains life expectancy, health, immunization, and economic and
-demographic information about 179 countries from 2000 to 2015:
-
-<br/>
+demographic information about 179 countries from 2000 to 2015 <br/>
 
 - **Country**
 - **Region**
@@ -47,15 +47,19 @@ demographic information about 179 countries from 2000 to 2015:
   Trade Organization)
 - **Life_expectancy** - Average life expectancy
 
-<br/> In this demonstration of using linear regression, our objective
-will be to build a model to identify predictors that seem to have a
-significant effect on life expectancy based on this dataset.
+As stated on the Kaggle page, information about Population, GDP, and
+Life Expectancy were taken from World Bank Data. Information about
+vaccinations for Measles, Hepatitis B, Polio, and Diphtheria, alcohol
+consumption, BMI, HIV incidents, mortality rates, and thinness were
+collected from World Health Organization public datasets. Information
+about Schooling was collected from the Our World in Data which is a
+project of the University of Oxford. The data had some missing values
+and were imputed with either closest three-year average or average of
+the Region. Unfortunately, these missing values are not denoted, thus,
+we will not be able to test other imputation methods.
 
-We split this presentation into two parts: data preparation/exploration
-and creating a model for effect estimation.
-
-Let us start the data preparation/exploration part and load in the data,
-and display the first few rows to check that it loaded correctly. <br/>
+<br/> We start with loading in the data, and displaying the first few
+rows to check that it loaded correctly. <br/>
 
 ``` r
 library(readr)
@@ -413,7 +417,7 @@ redun(~.- Life_expectancy - Infant_deaths - Under_five_deaths - Year - Country  
     ##     Polio + Diphtheria + Incidents_HIV + Thinness_ten_nineteen_years + 
     ##     Thinness_five_nine_years + Schooling + Economy_status + Population_log + 
     ##     GDP_log + Inf5_m
-    ## <environment: 0x0000028c3049b6c8>
+    ## <environment: 0x00000203d8704040>
     ## 
     ## n: 2864  p: 15   nk: 4 
     ## 
