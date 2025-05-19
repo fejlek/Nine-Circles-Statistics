@@ -1,12 +1,10 @@
 # The First Circle: Linear Regression, Part Two
 
-
 Jiří Fejlek
 <br/>
-2025-05-15
+2025-05-19
 
-
-## Linear Regression Model (*effect estimation and hypothesis testing*)
+## Linear Regression Model (*for effect estimation and hypothesis testing*)
 
 <br/> In Part Two of this demonstration of using linear regression, we
 seek to model **Life expectancy** using data that contains health,
@@ -16,9 +14,10 @@ countries from 2000 to 2015.
 <br/> I will not consider **Adult_mortality** as our predictor, because
 **Adult_mortality** is tightly connected to **Life_expectancy**, but
 does not give much additional insight into why life expectancy is lower,
-what the difference is between these countries, other than people tend
-to die younger. To illustrate this connection, we can see that a simple
-linear regression **Adult_mortality** on **Life_expectancy** <br/> <br/>
+what the difference is between these countries, other than that people
+tend to die before reaching senior age. To illustrate this connection,
+we can see that a simple linear regression **Adult_mortality** on
+**Life_expectancy** <br/> <br/>
 
 ``` r
 summary(lm(formula = Life_expectancy ~ Adult_mortality, data = life_expectancy))
@@ -49,48 +48,48 @@ I will also not consider **Country** and **Year** as our predictors in
 our initial model, since we are not developing a model for a
 *particular* country in a *particular* time. Although, as we will see
 later, it is actually quite important to acknowledge that our data are
-panel data (i.e., data for some subjects evolving in time). Such data
-for a given subject, in our case, for a given country, are usually
+panel data (i.e., data for some individuals evolving in time). Such data
+for a given individual, in our case, for a given country, are usually
 significantly correlated. Consequently, it is quite incorrect to
 consider a model that sees these data as 2864 *independent*
-observations, since it would lead to overly too optimistic estimates of
+observations, since it would lead to overly optimistic estimates of
 effects (e.g, too narrow confidence intervals).
 
 In addition, including **Country** and **Year** in our model allows us
-to reduce the omitted variable bias in our estimates, as we see later.
+to reduce the omitted variable bias of our estimates, as we see later.
 Still, I will proceed to do this first, a simple linear regression model
 (mostly for illustrative purposes) anyway, and make corrections in the
 model later.
 
-<br/> Based on the data exploration in Part One, I will use the
-logarithm transformation of predictors **Population_mln** and
-**GDP_per_capita**, and the predictor **Inf5_m**, combining predictors
-**Infant_deaths** and **Under_five_deaths**. Hence, we will consider the
-following predictors <br/>
+Based on the data exploration in Part One, I will use the logarithm
+transformation of predictors **Population_mln** and **GDP_per_capita**,
+and the predictor **Inf5_m**, combining predictors **Infant_deaths** and
+**Under_five_deaths**. Hence, we will consider the following predictors
+<br/>
 
--   **Inf5_m** - Linear combination of **Infant_deaths** and
-    **Under_five_deaths** (see Part One)
--   **Region**
--   **Alcohol_consumption**
--   **Hepatitis_B**
--   **Measles**
--   **BMI**
--   **Polio**
--   **Diptheria**
--   **Incidents_HIV** -
--   **log(GDP_per_capita)**
--   **log(Population_mln + 1)**
--   **Thinness_10-19**
--   **Thinness_5-9**
--   **Schooling**
--   **Economy** - Factor variable with levels **Developed** and
-    **Developing** <br/>
+- **Inf5_m** - Linear combination of **Infant_deaths** and
+  **Under_five_deaths** (see Part One)
+- **Region**
+- **Alcohol_consumption**
+- **Hepatitis_B**
+- **Measles**
+- **BMI**
+- **Polio**
+- **Diptheria**
+- **Incidents_HIV** -
+- **log(GDP_per_capita)**
+- **log(Population_mln + 1)**
+- **Thinness_10-19**
+- **Thinness_5-9**
+- **Schooling**
+- **Economy** - Factor variable with levels **Developed** and
+  **Developing** <br/>
 
-I will a simple model where all predictors enters linearly. I will not
-consider any interaction or nonlinear terms in the model. I do not have
-any prior knowledge which specific interaction/nonlinear terms should be
-included in the model nor I have a specific hypothesis about
-interactions/nonlinearity I wish to test.
+I will consider a simple model where all predictors enter linearly. I
+will not consider any interaction or nonlinear terms in the model. I do
+not have any prior knowledge of which specific interaction/nonlinear
+terms should be included in the model, nor do I have a specific
+hypothesis about interactions/nonlinearity I wish to test.
 
 Our dataset is not large enough to reasonably include even just all
 simple linear interaction terms, or for that matter, two cubic spline
@@ -101,14 +100,14 @@ each country are correlated, and these correlations will be strong since
 such country characteristics do not change in time that much). The rule
 of thumb for a number of predictors in such a case is between ~ 179/10 =
 18 and ~179/20 = 9, which nicely corresponds to our total number of
-predictors.
+predictors of interest.
 
 Thus, to obtain reasonable estimates, we would have to guess which
 interactions (or nonlinear terms) to include from the data itself, which
 is not an advisable approach.
 
-<br/> Before we start the modelling, we will do some variable renaming
-to shorten the predictor names. <br/>
+Before we start the modelling, we will do some variable renaming to
+shorten the predictor names. <br/>
 
 ``` r
 library(tibble)
@@ -172,13 +171,14 @@ summary(linear_model)
     ## F-statistic:  2247 on 22 and 2841 DF,  p-value: < 2.2e-16
 
 <br/> Many predictors seem highly significant (though again, this
-significance is inflated since we did not consider correlation between
-the observations for the same country). Let us check the assumptions of
-linear regression by plotting the residuals of the fit. We will check a
-histogram and QQ-plot of residuals and plots of residuals vs. fitted
-values and residuals vs. predictors. <br/>
+significance is inflated since we did not consider the correlation
+between the observations for the same country). Let us check the
+distributional assumptions of linear regression by plotting the
+residuals of the fit. We will check a histogram and QQ-plot of residuals
+and plots of residuals vs. fitted values and residuals vs. predictors.
+<br/>
 
-<img src="First_circle_linear_regression_2_files/figure-markdown_github/unnamed-chunk-5-1.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_2_files/figure-markdown_github/unnamed-chunk-5-2.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_2_files/figure-markdown_github/unnamed-chunk-5-3.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_2_files/figure-markdown_github/unnamed-chunk-5-4.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_2_files/figure-markdown_github/unnamed-chunk-5-5.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_2_files/figure-markdown_github/unnamed-chunk-5-6.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_2_files/figure-markdown_github/unnamed-chunk-5-7.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_2_files/figure-markdown_github/unnamed-chunk-5-8.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_2_files/figure-markdown_github/unnamed-chunk-5-9.png" style="display: block; margin: auto;" />
+<img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-5-1.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-5-2.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-5-3.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-5-4.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-5-5.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-5-6.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-5-7.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-5-8.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-5-9.png" style="display: block; margin: auto;" />
 
 <br/> We notice that residuals have an almost normal distribution
 (although the distribution has slightly heavier tails than the normal
@@ -224,11 +224,9 @@ coeftest(linear_model, vcov = vcovHC(linear_model, type = c("HC0")))
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
-<br/> We observe that heteroskedasticity-consistent estimates of
-standard errors are not very different. We can obtain a similar result
+<br/> We can obtain similar heteroskedasticity-consistent estimates
 using a simple nonparametric bootstrap that resamples with repetitions
-the whole dataset (paired bootstrap). This approach can also be shown to
-be consistent in the presence of heteroskedasticity. <br/>
+the whole dataset (paired bootstrap). <br/>
 
 ``` r
 set.seed(123) # for reproducibility
@@ -242,7 +240,7 @@ coefmat[i,] <- coef(model_new)
 colnames(coefmat) <- rownames(as.data.frame(coef(linear_model)))
 coefmat <- data.frame(coefmat)
 
-## Original CI
+## Original (non-robust) CI
 confint(linear_model)
 ```
 
@@ -272,7 +270,7 @@ confint(linear_model)
     ## Inf5_m           -4.3950804529 -4.075769295
 
 ``` r
-## Bootstrap CI
+## Bootstrap (robust) CI
 t(apply(coefmat,2,function(x) quantile(x,c(0.025,0.5,0.975))))
 ```
 
@@ -301,17 +299,17 @@ t(apply(coefmat,2,function(x) quantile(x,c(0.025,0.5,0.975))))
     ## Schooling        -0.2297458653 -0.168631065 -0.113419844
     ## Inf5_m           -4.4305396082 -4.242004563 -4.034264795
 
-<br/> We see that the confidence intervals did not change significantly
-compared to the ones provided by the standard estimates. Lastly, we can
-check for influential observations (and potential outliers). A common
-metric to detect overly influential observations is Cook’s distance.
-<br/>
+<br/> We see that the statistical significance/confidence intervals did
+not change much compared to the ones provided by the standard non-robust
+estimates. Lastly, we can check for influential observations (and
+potential outliers). A common metric to detect overly influential
+observations is Cook’s distance. <br/>
 
-<img src="First_circle_linear_regression_2_files/figure-markdown_github/unnamed-chunk-8-1.png" style="display: block; margin: auto;" />
+<img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-8-1.png" style="display: block; margin: auto;" />
 
 A simple rule of thumb is that an observation could be overtly
 influential if its Cook’s distance is greater than one. That is
-definitely not the case for our model. Still some observations have
+definitely not the case for our model. Still, some observations have a
 significantly greater Cook’s distance than others. Let us compare the
 regression of coefficients with observations deleted based on Cook’s
 distance.
@@ -353,11 +351,11 @@ round(coeff_delete,4)
     ## Schooling        -0.1695 -0.1655 -0.1589  -0.1471
     ## Inf5_m           -4.2354 -4.2804 -4.2759  -4.3528
 
-<br/> We see that no values of the parameters dramatically changed and
+<br/> We see that no values of the parameters dramatically changed, and
 all values stayed within the confidence intervals provided by the
 bootstrap. <br/>
 
-### Linear model for panel data (i.e., accounting for autocorrelation)
+### Accounting for autocorrelation
 
 <br/> All of the aforementioned approaches, including
 heteroskedasticity-consistent standard errors and paired bootstrap,
@@ -365,16 +363,14 @@ assume that the error terms are independent. However, our data set
 consists of longitudinal data for 179 countries, and hence, these
 observations might be significantly correlated. We can check our
 suspicion by plotting the residuals of our model for a given country
-against **Year** . <br/>
+against **Year**. <br/>
 
-<img src="First_circle_linear_regression_2_files/figure-markdown_github/unnamed-chunk-10-1.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_2_files/figure-markdown_github/unnamed-chunk-10-2.png" style="display: block; margin: auto;" />
+<img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-10-1.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-10-2.png" style="display: block; margin: auto;" />
 
 <br/> These residuals are clearly strongly correlated. Hence, instead of
 heteroskedasticity-consistent standard errors, we should use
 cluster-robust standard errors. Our clusters consist of observations
-from the same country, which we expect to be correlated. We should
-remember that our underlying assumption is that error terms from
-different clusters are independent. <br/>
+from the same country, which we expect to be correlated. <br/>
 
 ``` r
 library(clubSandwich)
@@ -409,273 +405,162 @@ coef_test(linear_model, vcov = "CR2", cluster = life_expectancy$Country)
     ##            Inf5_m -4.23542 0.27803          0 -15.234       44.67      < 0.001  ***
 
 <br/> We observe that the cluster-robust standard errors are
-significantly larger (corresponding to the fact that we assume to have a
-much smaller number of independent observations) and that many of the
-effects are no longer significant.
+significantly larger and that many effects are no longer significant.
+<br/>
 
-This linear model we constructed is in the context of panel data models
-called *pooled* because it stacks the data for all individuals and time
-instants together. This model is valid provided there is no unobserved
-heterogeneity in the data that is *correlated* with the predictors in
-the model (i.e., there is no omitted variable bias). A *fixed effects
-model* for panel data alleviates some of this bias by adding factor
-predictors corresponding to all individuals and time instants to model
-the unobserved heterogeneity: <br/>
+### Pooled, fixed effects, and random effects panel data models
+
+<br/> This linear model we constructed is in the context of panel data
+models called *pooled* because it stacks the data for all individuals
+and time instants together. This model is consistent provided there is
+no unobserved heterogeneity in the data that is *correlated* with the
+predictors in the model (i.e., there is no omitted variable bias). We
+can alleviate some of this potential bias by considering so-called
+*fixed effects*.
+
+We first consider time fixed effects, i.e., effects corresponding to
+unobservables that change in time but are independent of individual
+countries. From a technical standpoint, we can simply include factor
+variables corresponding to the variable **Year** to the model. Again, we
+compute cluster-robust standard errors for the coefficients. <br/>
 
 ``` r
-fixed_efffect_model <- lm(Life_expectancy ~ Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m + factor(Country) + factor(Year), data = life_expectancy)
-summary(fixed_efffect_model)
+linear_model_year <- lm(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m + factor(Year), data = life_expectancy)
+coef_test(linear_model_year, vcov = "CR2", cluster = life_expectancy$Country)
 ```
 
-    ## 
-    ## Call:
-    ## lm(formula = Life_expectancy ~ Alcohol + Hepatitis_B + Measles + 
-    ##     BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + 
-    ##     Thin_5_9 + Schooling + Inf5_m + factor(Country) + factor(Year), 
-    ##     data = life_expectancy)
-    ## 
-    ## Residuals:
-    ##     Min      1Q  Median      3Q     Max 
-    ## -3.4644 -0.3188  0.0278  0.2942  7.7158 
-    ## 
-    ## Coefficients:
-    ##                                                 Estimate Std. Error t value Pr(>|t|)    
-    ## (Intercept)                                    8.116e+01  2.521e+00  32.194  < 2e-16 ***
-    ## Alcohol                                       -9.912e-03  1.900e-02  -0.522 0.601878    
-    ## Hepatitis_B                                    9.379e-04  2.132e-03   0.440 0.660074    
-    ## Measles                                       -6.292e-03  2.137e-03  -2.945 0.003261 ** 
-    ## BMI                                           -9.757e-01  9.575e-02 -10.190  < 2e-16 ***
-    ## Polio                                          1.088e-03  4.270e-03   0.255 0.798874    
-    ## Diphtheria                                     1.297e-02  4.270e-03   3.039 0.002401 ** 
-    ## HIV                                           -8.416e-01  2.678e-02 -31.430  < 2e-16 ***
-    ## GDP_log                                        4.553e-01  1.247e-01   3.650 0.000267 ***
-    ## Pop_log                                        2.635e-01  2.812e-01   0.937 0.348890    
-    ## Thin_10_19                                     4.314e-05  1.125e-02   0.004 0.996940    
-    ## Thin_5_9                                       7.771e-04  1.111e-02   0.070 0.944253    
-    ## Schooling                                     -2.305e-02  4.464e-02  -0.516 0.605711    
-    ## Inf5_m                                        -2.697e+00  6.837e-02 -39.451  < 2e-16 ***
-    ## factor(Country)Albania                         1.185e+01  8.159e-01  14.526  < 2e-16 ***
-    ## factor(Country)Algeria                         9.423e+00  5.054e-01  18.646  < 2e-16 ***
-    ## factor(Country)Angola                         -2.979e+00  3.908e-01  -7.623 3.42e-14 ***
-    ## factor(Country)Antigua and Barbuda             1.020e+01  1.079e+00   9.451  < 2e-16 ***
-    ## factor(Country)Argentina                       1.048e+01  7.135e-01  14.684  < 2e-16 ***
-    ## factor(Country)Armenia                         9.654e+00  8.507e-01  11.348  < 2e-16 ***
-    ## factor(Country)Australia                       1.504e+01  8.396e-01  17.916  < 2e-16 ***
-    ## factor(Country)Austria                         1.268e+01  7.712e-01  16.444  < 2e-16 ***
-    ## factor(Country)Azerbaijan                      8.802e+00  6.911e-01  12.737  < 2e-16 ***
-    ## factor(Country)Bahamas, The                    9.067e+00  1.116e+00   8.124 6.81e-16 ***
-    ## factor(Country)Bahrain                         9.325e+00  9.300e-01  10.026  < 2e-16 ***
-    ## factor(Country)Bangladesh                      2.928e+00  5.749e-01   5.093 3.77e-07 ***
-    ## factor(Country)Barbados                        1.500e+01  1.088e+00  13.781  < 2e-16 ***
-    ## factor(Country)Belarus                         5.279e+00  7.270e-01   7.261 5.01e-13 ***
-    ## factor(Country)Belgium                         1.272e+01  7.732e-01  16.456  < 2e-16 ***
-    ## factor(Country)Belize                          1.034e+01  1.148e+00   9.011  < 2e-16 ***
-    ## factor(Country)Benin                           2.741e-01  4.163e-01   0.658 0.510368    
-    ## factor(Country)Bhutan                          3.159e+00  8.548e-01   3.696 0.000223 ***
-    ## factor(Country)Bolivia                         5.255e+00  5.821e-01   9.028  < 2e-16 ***
-    ## factor(Country)Bosnia and Herzegovina          9.903e+00  7.378e-01  13.423  < 2e-16 ***
-    ## factor(Country)Botswana                        3.600e+00  8.315e-01   4.330 1.55e-05 ***
-    ## factor(Country)Brazil                          7.446e+00  8.021e-01   9.282  < 2e-16 ***
-    ## factor(Country)Brunei Darussalam               8.840e+00  1.047e+00   8.439  < 2e-16 ***
-    ## factor(Country)Bulgaria                        8.072e+00  7.222e-01  11.176  < 2e-16 ***
-    ## factor(Country)Burkina Faso                   -3.339e+00  3.691e-01  -9.044  < 2e-16 ***
-    ## factor(Country)Burundi                        -4.793e+00  4.821e-01  -9.943  < 2e-16 ***
-    ## factor(Country)Cabo Verde                      6.182e+00  9.250e-01   6.683 2.84e-11 ***
-    ## factor(Country)Cambodia                        2.472e-01  3.726e-01   0.663 0.507172    
-    ## factor(Country)Cameroon                       -1.809e+00  3.735e-01  -4.843 1.35e-06 ***
-    ## factor(Country)Canada                          1.465e+01  8.471e-01  17.296  < 2e-16 ***
-    ## factor(Country)Central African Republic       -6.232e+00  5.299e-01 -11.760  < 2e-16 ***
-    ## factor(Country)Colombia                        9.878e+00  5.569e-01  17.736  < 2e-16 ***
-    ## factor(Country)Comoros                         1.880e+00  8.351e-01   2.252 0.024410 *  
-    ## factor(Country)Congo, Dem. Rep.               -2.664e+00  4.062e-01  -6.557 6.56e-11 ***
-    ## factor(Country)Congo, Rep.                    -2.406e+00  5.806e-01  -4.144 3.51e-05 ***
-    ## factor(Country)Costa Rica                      1.392e+01  7.787e-01  17.873  < 2e-16 ***
-    ## factor(Country)Cote d'Ivoire                  -4.459e+00  3.543e-01 -12.587  < 2e-16 ***
-    ## factor(Country)Croatia                         1.056e+01  8.284e-01  12.743  < 2e-16 ***
-    ## factor(Country)Cuba                            1.144e+01  6.494e-01  17.622  < 2e-16 ***
-    ## factor(Country)Cyprus                          1.367e+01  1.020e+00  13.395  < 2e-16 ***
-    ## factor(Country)Czechia                         1.134e+01  8.051e-01  14.079  < 2e-16 ***
-    ## factor(Country)Denmark                         1.122e+01  8.517e-01  13.170  < 2e-16 ***
-    ## factor(Country)Djibouti                        1.147e+00  8.210e-01   1.398 0.162374    
-    ## factor(Country)Dominican Republic              9.033e+00  5.967e-01  15.140  < 2e-16 ***
-    ## factor(Country)Ecuador                         1.077e+01  6.095e-01  17.664  < 2e-16 ***
-    ## factor(Country)Egypt, Arab Rep.                8.903e+00  7.615e-01  11.691  < 2e-16 ***
-    ## factor(Country)El Salvador                     7.971e+00  7.030e-01  11.339  < 2e-16 ***
-    ## factor(Country)Equatorial Guinea               1.659e+00  7.901e-01   2.100 0.035791 *  
-    ## factor(Country)Eritrea                        -4.514e+00  6.975e-01  -6.472 1.15e-10 ***
-    ## factor(Country)Estonia                         8.323e+00  9.993e-01   8.329  < 2e-16 ***
-    ## factor(Country)Eswatini                        4.731e+00  9.862e-01   4.797 1.70e-06 ***
-    ## factor(Country)Ethiopia                       -3.260e+00  4.794e-01  -6.799 1.29e-11 ***
-    ## factor(Country)Fiji                            4.024e+00  1.009e+00   3.988 6.84e-05 ***
-    ## factor(Country)Finland                         1.279e+01  8.475e-01  15.095  < 2e-16 ***
-    ## factor(Country)France                          1.278e+01  7.953e-01  16.072  < 2e-16 ***
-    ## factor(Country)Gabon                           1.046e+00  7.830e-01   1.336 0.181751    
-    ## factor(Country)Gambia, The                    -1.384e+00  7.422e-01  -1.864 0.062385 .  
-    ## factor(Country)Georgia                         8.272e+00  8.586e-01   9.634  < 2e-16 ***
-    ## factor(Country)Germany                         1.262e+01  9.109e-01  13.852  < 2e-16 ***
-    ## factor(Country)Ghana                          -1.034e+00  3.712e-01  -2.786 0.005378 ** 
-    ## factor(Country)Greece                          1.426e+01  7.644e-01  18.653  < 2e-16 ***
-    ## factor(Country)Grenada                         8.929e+00  1.073e+00   8.325  < 2e-16 ***
-    ## factor(Country)Guatemala                       8.185e+00  5.287e-01  15.483  < 2e-16 ***
-    ## factor(Country)Guinea                         -1.628e+00  3.840e-01  -4.240 2.31e-05 ***
-    ## factor(Country)Guinea-Bissau                  -1.086e+00  7.302e-01  -1.488 0.136964    
-    ## factor(Country)Guyana                          5.619e+00  9.272e-01   6.060 1.55e-09 ***
-    ## factor(Country)Haiti                           2.049e+00  4.533e-01   4.520 6.47e-06 ***
-    ## factor(Country)Honduras                        9.293e+00  5.964e-01  15.583  < 2e-16 ***
-    ## factor(Country)Hungary                         8.470e+00  7.695e-01  11.007  < 2e-16 ***
-    ## factor(Country)Chad                           -5.748e+00  3.804e-01 -15.110  < 2e-16 ***
-    ## factor(Country)Chile                           1.371e+01  7.282e-01  18.822  < 2e-16 ***
-    ## factor(Country)China                           5.462e+00  1.194e+00   4.575 4.97e-06 ***
-    ## factor(Country)Iceland                         1.515e+01  1.085e+00  13.957  < 2e-16 ***
-    ## factor(Country)India                           4.838e-01  1.124e+00   0.431 0.666797    
-    ## factor(Country)Indonesia                       1.807e+00  7.476e-01   2.418 0.015684 *  
-    ## factor(Country)Iran, Islamic Rep.              8.026e+00  6.290e-01  12.759  < 2e-16 ***
-    ## factor(Country)Iraq                            7.988e+00  6.501e-01  12.287  < 2e-16 ***
-    ## factor(Country)Ireland                         1.399e+01  9.121e-01  15.338  < 2e-16 ***
-    ## factor(Country)Israel                          1.514e+01  8.652e-01  17.505  < 2e-16 ***
-    ## factor(Country)Italy                           1.395e+01  7.620e-01  18.304  < 2e-16 ***
-    ## factor(Country)Jamaica                         1.107e+01  8.350e-01  13.260  < 2e-16 ***
-    ## factor(Country)Japan                           1.193e+01  8.709e-01  13.699  < 2e-16 ***
-    ## factor(Country)Jordan                          1.148e+01  8.481e-01  13.538  < 2e-16 ***
-    ## factor(Country)Kazakhstan                      3.933e+00  6.870e-01   5.725 1.15e-08 ***
-    ## factor(Country)Kenya                          -3.475e+00  3.680e-01  -9.443  < 2e-16 ***
-    ## factor(Country)Kiribati                        9.436e+00  1.196e+00   7.890 4.38e-15 ***
-    ## factor(Country)Kuwait                          1.102e+01  9.777e-01  11.267  < 2e-16 ***
-    ## factor(Country)Kyrgyz Republic                 6.753e+00  7.322e-01   9.223  < 2e-16 ***
-    ## factor(Country)Lao PDR                         1.045e+00  4.961e-01   2.106 0.035267 *  
-    ## factor(Country)Latvia                          7.416e+00  9.254e-01   8.014 1.65e-15 ***
-    ## factor(Country)Lebanon                         1.321e+01  7.640e-01  17.287  < 2e-16 ***
-    ## factor(Country)Lesotho                         4.081e-01  8.230e-01   0.496 0.620001    
-    ## factor(Country)Liberia                         4.208e+00  5.859e-01   7.182 8.89e-13 ***
-    ## factor(Country)Libya                           8.696e+00  7.712e-01  11.276  < 2e-16 ***
-    ## factor(Country)Lithuania                       7.438e+00  8.866e-01   8.390  < 2e-16 ***
-    ## factor(Country)Luxembourg                      1.323e+01  1.093e+00  12.108  < 2e-16 ***
-    ## factor(Country)Madagascar                     -9.117e-01  3.683e-01  -2.476 0.013357 *  
-    ## factor(Country)Malawi                         -3.278e+00  4.114e-01  -7.968 2.38e-15 ***
-    ## factor(Country)Malaysia                        7.068e+00  5.796e-01  12.195  < 2e-16 ***
-    ## factor(Country)Maldives                        8.729e+00  9.389e-01   9.297  < 2e-16 ***
-    ## factor(Country)Mali                           -3.164e+00  3.413e-01  -9.268  < 2e-16 ***
-    ## factor(Country)Malta                           1.550e+01  1.078e+00  14.383  < 2e-16 ***
-    ## factor(Country)Mauritania                      3.959e+00  6.148e-01   6.439 1.42e-10 ***
-    ## factor(Country)Mauritius                       8.091e+00  8.713e-01   9.287  < 2e-16 ***
-    ## factor(Country)Mexico                          1.147e+01  8.058e-01  14.232  < 2e-16 ***
-    ## factor(Country)Micronesia, Fed. Sts.           7.107e+00  1.182e+00   6.011 2.10e-09 ***
-    ## factor(Country)Moldova                         6.239e+00  8.721e-01   7.155 1.08e-12 ***
-    ## factor(Country)Mongolia                        3.281e+00  7.914e-01   4.146 3.49e-05 ***
-    ## factor(Country)Montenegro                      9.916e+00  1.035e+00   9.581  < 2e-16 ***
-    ## factor(Country)Morocco                         9.376e+00  4.518e-01  20.752  < 2e-16 ***
-    ## factor(Country)Mozambique                     -3.569e+00  3.309e-01 -10.786  < 2e-16 ***
-    ## factor(Country)Myanmar                         1.539e-02  3.449e-01   0.045 0.964400    
-    ## factor(Country)Namibia                        -1.851e+00  7.460e-01  -2.482 0.013137 *  
-    ## factor(Country)Nepal                           1.510e+00  3.187e-01   4.736 2.30e-06 ***
-    ## factor(Country)Netherlands                     1.263e+01  7.687e-01  16.429  < 2e-16 ***
-    ## factor(Country)New Zealand                     1.541e+01  9.258e-01  16.640  < 2e-16 ***
-    ## factor(Country)Nicaragua                       9.390e+00  6.912e-01  13.586  < 2e-16 ***
-    ## factor(Country)Niger                          -2.699e+00  3.434e-01  -7.860 5.53e-15 ***
-    ## factor(Country)Nigeria                        -6.072e+00  6.996e-01  -8.680  < 2e-16 ***
-    ## factor(Country)North Macedonia                 9.925e+00  8.674e-01  11.442  < 2e-16 ***
-    ## factor(Country)Norway                          1.388e+01  9.117e-01  15.226  < 2e-16 ***
-    ## factor(Country)Oman                            9.241e+00  8.125e-01  11.374  < 2e-16 ***
-    ## factor(Country)Pakistan                        4.569e+00  6.339e-01   7.208 7.38e-13 ***
-    ## factor(Country)Panama                          1.288e+01  8.013e-01  16.077  < 2e-16 ***
-    ## factor(Country)Papua New Guinea                7.373e-01  5.336e-01   1.382 0.167149    
-    ## factor(Country)Paraguay                        8.713e+00  6.585e-01  13.232  < 2e-16 ***
-    ## factor(Country)Peru                            9.174e+00  5.687e-01  16.129  < 2e-16 ***
-    ## factor(Country)Philippines                     2.797e+00  5.653e-01   4.949 7.92e-07 ***
-    ## factor(Country)Poland                          9.544e+00  7.134e-01  13.378  < 2e-16 ***
-    ## factor(Country)Portugal                        1.216e+01  6.794e-01  17.901  < 2e-16 ***
-    ## factor(Country)Qatar                           1.496e+01  1.057e+00  14.149  < 2e-16 ***
-    ## factor(Country)Romania                         7.701e+00  6.450e-01  11.940  < 2e-16 ***
-    ## factor(Country)Russian Federation              2.054e+00  8.435e-01   2.435 0.014945 *  
-    ## factor(Country)Rwanda                         -1.236e+00  4.691e-01  -2.635 0.008466 ** 
-    ## factor(Country)Samoa                           1.289e+01  1.324e+00   9.735  < 2e-16 ***
-    ## factor(Country)Sao Tome and Principe           3.705e+00  9.866e-01   3.755 0.000177 ***
-    ## factor(Country)Saudi Arabia                    9.983e+00  7.752e-01  12.877  < 2e-16 ***
-    ## factor(Country)Senegal                         2.864e-01  3.669e-01   0.781 0.435066    
-    ## factor(Country)Serbia                          8.140e+00  7.105e-01  11.457  < 2e-16 ***
-    ## factor(Country)Seychelles                      1.120e+01  1.083e+00  10.343  < 2e-16 ***
-    ## factor(Country)Sierra Leone                   -5.190e+00  4.671e-01 -11.111  < 2e-16 ***
-    ## factor(Country)Singapore                       1.144e+01  7.906e-01  14.472  < 2e-16 ***
-    ## factor(Country)Slovak Republic                 9.021e+00  8.018e-01  11.252  < 2e-16 ***
-    ## factor(Country)Slovenia                        1.238e+01  9.396e-01  13.180  < 2e-16 ***
-    ## factor(Country)Solomon Islands                 6.850e+00  9.619e-01   7.121 1.37e-12 ***
-    ## factor(Country)Somalia                        -6.978e-01  3.753e-01  -1.860 0.063064 .  
-    ## factor(Country)South Africa                    4.944e+00  7.066e-01   6.997 3.30e-12 ***
-    ## factor(Country)Spain                           1.441e+01  7.350e-01  19.607  < 2e-16 ***
-    ## factor(Country)Sri Lanka                       6.271e+00  5.347e-01  11.728  < 2e-16 ***
-    ## factor(Country)St. Lucia                       1.309e+01  1.139e+00  11.487  < 2e-16 ***
-    ## factor(Country)St. Vincent and the Grenadines  8.368e+00  1.074e+00   7.789 9.62e-15 ***
-    ## factor(Country)Suriname                        6.558e+00  9.730e-01   6.741 1.93e-11 ***
-    ## factor(Country)Sweden                          1.387e+01  8.207e-01  16.901  < 2e-16 ***
-    ## factor(Country)Switzerland                     1.387e+01  8.461e-01  16.397  < 2e-16 ***
-    ## factor(Country)Syrian Arab Republic            1.093e+01  6.127e-01  17.833  < 2e-16 ***
-    ## factor(Country)Tajikistan                      6.167e+00  6.647e-01   9.278  < 2e-16 ***
-    ## factor(Country)Tanzania                       -2.535e+00  3.635e-01  -6.974 3.88e-12 ***
-    ## factor(Country)Thailand                        5.930e+00  5.361e-01  11.062  < 2e-16 ***
-    ## factor(Country)Timor-Leste                     1.900e+00  7.972e-01   2.384 0.017200 *  
-    ## factor(Country)Togo                           -2.217e+00  5.012e-01  -4.424 1.01e-05 ***
-    ## factor(Country)Tonga                           1.176e+01  1.386e+00   8.481  < 2e-16 ***
-    ## factor(Country)Trinidad and Tobago             8.481e+00  9.559e-01   8.872  < 2e-16 ***
-    ## factor(Country)Tunisia                         1.027e+01  5.805e-01  17.686  < 2e-16 ***
-    ## factor(Country)Turkiye                         9.895e+00  7.167e-01  13.806  < 2e-16 ***
-    ## factor(Country)Turkmenistan                    4.563e+00  7.123e-01   6.405 1.77e-10 ***
-    ## factor(Country)Uganda                         -4.345e+00  3.872e-01 -11.220  < 2e-16 ***
-    ## factor(Country)Ukraine                         5.034e+00  6.482e-01   7.766 1.14e-14 ***
-    ## factor(Country)United Arab Emirates            1.149e+01  8.821e-01  13.026  < 2e-16 ***
-    ## factor(Country)United Kingdom                  1.347e+01  8.936e-01  15.072  < 2e-16 ***
-    ## factor(Country)United States                   1.289e+01  1.205e+00  10.701  < 2e-16 ***
-    ## factor(Country)Uruguay                         1.179e+01  8.164e-01  14.441  < 2e-16 ***
-    ## factor(Country)Uzbekistan                      6.516e+00  5.820e-01  11.196  < 2e-16 ***
-    ## factor(Country)Vanuatu                         6.302e+00  1.020e+00   6.179 7.43e-10 ***
-    ## factor(Country)Venezuela, RB                   9.023e+00  6.380e-01  14.142  < 2e-16 ***
-    ## factor(Country)Vietnam                         5.251e+00  5.287e-01   9.931  < 2e-16 ***
-    ## factor(Country)Yemen, Rep.                     1.936e+00  3.730e-01   5.192 2.24e-07 ***
-    ## factor(Country)Zambia                         -3.194e+00  4.410e-01  -7.241 5.80e-13 ***
-    ## factor(Country)Zimbabwe                       -5.557e+00  4.859e-01 -11.436  < 2e-16 ***
-    ## factor(Year)2001                               1.145e-01  8.067e-02   1.419 0.156034    
-    ## factor(Year)2002                               1.798e-01  8.259e-02   2.178 0.029531 *  
-    ## factor(Year)2003                               2.983e-01  8.567e-02   3.482 0.000506 ***
-    ## factor(Year)2004                               5.307e-01  9.037e-02   5.873 4.83e-09 ***
-    ## factor(Year)2005                               6.565e-01  9.551e-02   6.874 7.76e-12 ***
-    ## factor(Year)2006                               8.810e-01  1.019e-01   8.643  < 2e-16 ***
-    ## factor(Year)2007                               1.097e+00  1.085e-01  10.117  < 2e-16 ***
-    ## factor(Year)2008                               1.392e+00  1.156e-01  12.044  < 2e-16 ***
-    ## factor(Year)2009                               1.676e+00  1.223e-01  13.709  < 2e-16 ***
-    ## factor(Year)2010                               1.990e+00  1.292e-01  15.401  < 2e-16 ***
-    ## factor(Year)2011                               2.255e+00  1.370e-01  16.463  < 2e-16 ***
-    ## factor(Year)2012                               2.514e+00  1.443e-01  17.426  < 2e-16 ***
-    ## factor(Year)2013                               2.808e+00  1.521e-01  18.468  < 2e-16 ***
-    ## factor(Year)2014                               3.110e+00  1.602e-01  19.416  < 2e-16 ***
-    ## factor(Year)2015                               3.297e+00  1.673e-01  19.708  < 2e-16 ***
-    ## ---
-    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-    ## 
-    ## Residual standard error: 0.7568 on 2657 degrees of freedom
-    ## Multiple R-squared:  0.994,  Adjusted R-squared:  0.9935 
-    ## F-statistic:  2134 on 206 and 2657 DF,  p-value: < 2.2e-16
+    ## Alternative hypothesis: two-sided 
+    ##             Coef. Estimate      SE Null value  t-stat d.f. (Satt) p-val (Satt) Sig.
+    ##       (Intercept) 56.09933 4.15897          0  13.489       59.90      < 0.001  ***
+    ##  EconomyDeveloped  4.45580 0.93903          0   4.745       22.67      < 0.001  ***
+    ##        RegionAsia  1.73158 0.72203          0   2.398       46.66      0.02053    *
+    ##         RegionCAm  2.73596 0.77245          0   3.542       40.45      0.00102   **
+    ##          RegionEU -0.23684 1.06567          0  -0.222       31.62      0.82555     
+    ##        RegionMidE  0.60502 0.89100          0   0.679       31.42      0.50209     
+    ##         RegionNAm  0.73527 1.78011          0   0.413        4.45      0.69871     
+    ##         RegionOce -0.25078 1.19552          0  -0.210       19.66      0.83601     
+    ##       RegionNotEU  1.59270 1.00063          0   1.592       51.18      0.11761     
+    ##         RegionSAm  2.47401 0.79315          0   3.119       30.75      0.00392   **
+    ##           Alcohol -0.21904 0.06740          0  -3.250       53.44      0.00200   **
+    ##       Hepatitis_B -0.00736 0.00991          0  -0.742       27.57      0.46416     
+    ##           Measles  0.00461 0.00977          0   0.472       41.83      0.63952     
+    ##               BMI  0.03289 0.15163          0   0.217       34.32      0.82955     
+    ##             Polio  0.02198 0.02284          0   0.962       27.31      0.34431     
+    ##        Diphtheria -0.01168 0.02232          0  -0.523       33.42      0.60412     
+    ##               HIV -0.91250 0.10542          0  -8.656        6.42      < 0.001  ***
+    ##           GDP_log  1.47523 0.23835          0   6.189       51.23      < 0.001  ***
+    ##           Pop_log  0.16067 0.13798          0   1.164       51.45      0.24962     
+    ##        Thin_10_19 -0.02285 0.02713          0  -0.842        6.40      0.43006     
+    ##          Thin_5_9  0.02115 0.03253          0   0.650        6.83      0.53689     
+    ##         Schooling -0.19688 0.10843          0  -1.816       64.10      0.07409    .
+    ##            Inf5_m -4.14714 0.28642          0 -14.479       44.04      < 0.001  ***
+    ##  factor(Year)2001 -0.07101 0.04134          0  -1.718      178.00      0.08758    .
+    ##  factor(Year)2002 -0.19628 0.07602          0  -2.582      177.97      0.01063    *
+    ##  factor(Year)2003 -0.26037 0.10103          0  -2.577      177.98      0.01077    *
+    ##  factor(Year)2004 -0.20417 0.12688          0  -1.609      177.95      0.10935     
+    ##  factor(Year)2005 -0.23949 0.14807          0  -1.617      177.90      0.10756     
+    ##  factor(Year)2006 -0.19972 0.16408          0  -1.217      177.84      0.22515     
+    ##  factor(Year)2007 -0.13104 0.17534          0  -0.747      177.74      0.45585     
+    ##  factor(Year)2008 -0.00476 0.18286          0  -0.026      177.72      0.97927     
+    ##  factor(Year)2009  0.12459 0.19753          0   0.631      177.59      0.52904     
+    ##  factor(Year)2010  0.30289 0.20929          0   1.447      177.47      0.14959     
+    ##  factor(Year)2011  0.39800 0.21983          0   1.810      177.31      0.07192    .
+    ##  factor(Year)2012  0.52711 0.22450          0   2.348      177.15      0.01998    *
+    ##  factor(Year)2013  0.68047 0.23609          0   2.882      176.94      0.00444   **
+    ##  factor(Year)2014  0.82084 0.24695          0   3.324      176.76      0.00108   **
+    ##  factor(Year)2015  0.85478 0.25176          0   3.395      176.54      < 0.001  ***
 
-<br/> An important point to notice is that by transitioning to the fixed
-effects model, predictors that stay constant in time (**Region** and
-**Economy status**) are no longer estimable since they become part of
-the respective individual fixed effects.
+<br/> Time fixed effects appear to be significant. We can test it
+formally by a robust Wald test. <br/>
 
-Package *plm* for panel data models provides a cleaner summary for the
-fixed effects model. <br/>
+``` r
+Wald_test(linear_model_year, constraints = constrain_zero(c("factor(Year)2001","factor(Year)2002","factor(Year)2003","factor(Year)2004","factor(Year)2005","factor(Year)2006","factor(Year)2007","factor(Year)2008","factor(Year)2009","factor(Year)2010","factor(Year)2011","factor(Year)2012","factor(Year)2013","factor(Year)2014","factor(Year)2015")), vcov = "CR2", cluster = life_expectancy$Country)
+```
+
+    ##  test Fstat df_num df_denom  p_val sig
+    ##   HTZ  3.82     15      164 <0.001 ***
+
+<br/> The estimates of main effects for the pooled model and the time
+fixed effects model are quite similar. However, we observe that the
+pooled model seems to slightly overestimate the life expectancy for
+earlier years and underestimate the life expectancy for the latter
+years. In the plot, blue: predicted mean life expectancy for linear
+model per year and red: predicted mean life expectancy for time fixed
+effect model per year (i.e, observed mean life expectancy per year due
+to how linear regression fits the data). <br/>
+
+``` r
+par(mfrow = c(1, 1))
+
+pred_lin_mean <- tapply(predict(linear_model), life_expectancy$Year, mean)
+pred_lin_year_mean <- tapply(predict(linear_model_year), life_expectancy$Year, mean)
+years <- seq(2000,2015,1)
+
+plot(years, pred_lin_year_mean, type = "n", xlab ='Year', ylab = 'Mean life expectancy')
+lines(years, pred_lin_year_mean, type = "l", col = "red")
+lines(years, pred_lin_mean, type = "l", col = "blue")
+```
+
+<img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-14-1.png" style="display: block; margin: auto;" />
+
+<br/> Thus, including the time-fixed effects in the model seems
+advisable.
+
+The second type of effects that could be considered in the model are
+effects corresponding to individual countries. These effects model
+unobservables that are individual for each country but constant in time.
+Again, from a technical standpoint, individual fixed effects can be
+simply modeled as factor variables corresponding to the variable
+**Country**.
+
+There is also a third major model used for panel data, a *random
+effects* model. Random effects model individual effects as normal random
+variables with some constant mean and variance (in our case, a constant
+for each country and year). In other words, they are random intercepts
+that shift the regression hyperplane a bit up or down for each
+individual country. Now, the key assumption of the random effects model
+is that these individual effects are *not* correlated with other
+covariates, i.e., the random effects model does not help with accounting
+for unobserved heterogeneity that is correlated with the predictors in
+the model. Still, the random effects model is worth talking about due to
+its efficiency.
+
+The pooled model is an ordinary linear regression model; thus, to be
+efficient, the errors need to be independent, which is almost never the
+case for panel data. The random effects model, by introducing random
+effects, inherently creates a correlation structure between the
+observations for the same individual (in our case, for the same
+country). This structure is equicorrelated, i.e., the correlation of the
+composite error (random effect + error) between two distinct
+observations for the same individual is constant. This may not be as
+realistic for a long time series (we expect the correlation between
+observations to reduce over time). However, it is still more realistic
+than the assumption of the pooled model that this correlation is always
+zero. So overall, the random effects model should provide more accurate
+estimates than the pooled model provided that the exogeneity assumption
+(individual effects are uncorrelated with the rest of the predictors)
+holds (see, e.g., *Wooldridge, Jeffrey M. Econometric analysis of cross
+section and panel data* or *Cameron, A. Colin, and Pravin K. Trivedi.
+Microeconometrics: methods and applications* for a much more detailed
+explanation about pooled, fixed effects, and random effects models).
+<br/>
 
 ``` r
 library(plm)
-fixed_efffect_model_plm <- plm(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m, data = life_expectancy,index = c("Country", "Year"),  model = 'within', effect = 'twoways')
-summary(fixed_efffect_model_plm)
+
+# individual fixed effects + time fixed effects 
+fixed_effect_model_plm <- plm(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m + factor(Year), data = life_expectancy,index = c("Country", "Year"),  model = 'within', effect = 'individual')
+summary(fixed_effect_model_plm)
 ```
 
-    ## Twoways effects Within Model
+    ## Oneway (individual) effect Within Model
     ## 
     ## Call:
     ## plm(formula = Life_expectancy ~ Economy + Region + Alcohol + 
     ##     Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + 
-    ##     GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m, 
-    ##     data = life_expectancy, effect = "twoways", model = "within", 
-    ##     index = c("Country", "Year"))
+    ##     GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m + 
+    ##     factor(Year), data = life_expectancy, effect = "individual", 
+    ##     model = "within", index = c("Country", "Year"))
     ## 
     ## Balanced Panel: n = 179, T = 16, N = 2864
     ## 
@@ -684,211 +569,774 @@ summary(fixed_efffect_model_plm)
     ## -3.464423 -0.318801  0.027809  0.294210  7.715751 
     ## 
     ## Coefficients:
-    ##                Estimate  Std. Error  t-value  Pr(>|t|)    
-    ## Alcohol     -9.9119e-03  1.8997e-02  -0.5218 0.6018782    
-    ## Hepatitis_B  9.3793e-04  2.1323e-03   0.4399 0.6600741    
-    ## Measles     -6.2919e-03  2.1367e-03  -2.9447 0.0032606 ** 
-    ## BMI         -9.7572e-01  9.5751e-02 -10.1902 < 2.2e-16 ***
-    ## Polio        1.0881e-03  4.2697e-03   0.2548 0.7988736    
-    ## Diphtheria   1.2974e-02  4.2700e-03   3.0385 0.0024006 ** 
-    ## HIV         -8.4157e-01  2.6776e-02 -31.4296 < 2.2e-16 ***
-    ## GDP_log      4.5525e-01  1.2473e-01   3.6500 0.0002673 ***
-    ## Pop_log      2.6348e-01  2.8122e-01   0.9369 0.3488902    
-    ## Thin_10_19   4.3137e-05  1.1248e-02   0.0038 0.9969404    
-    ## Thin_5_9     7.7709e-04  1.1112e-02   0.0699 0.9442529    
-    ## Schooling   -2.3045e-02  4.4638e-02  -0.5163 0.6057113    
-    ## Inf5_m      -2.6974e+00  6.8373e-02 -39.4511 < 2.2e-16 ***
+    ##                     Estimate  Std. Error  t-value  Pr(>|t|)    
+    ## Alcohol          -9.9119e-03  1.8997e-02  -0.5218 0.6018782    
+    ## Hepatitis_B       9.3793e-04  2.1323e-03   0.4399 0.6600741    
+    ## Measles          -6.2919e-03  2.1367e-03  -2.9447 0.0032606 ** 
+    ## BMI              -9.7572e-01  9.5751e-02 -10.1902 < 2.2e-16 ***
+    ## Polio             1.0881e-03  4.2697e-03   0.2548 0.7988736    
+    ## Diphtheria        1.2974e-02  4.2700e-03   3.0385 0.0024006 ** 
+    ## HIV              -8.4157e-01  2.6776e-02 -31.4296 < 2.2e-16 ***
+    ## GDP_log           4.5525e-01  1.2473e-01   3.6500 0.0002673 ***
+    ## Pop_log           2.6348e-01  2.8122e-01   0.9369 0.3488902    
+    ## Thin_10_19        4.3137e-05  1.1248e-02   0.0038 0.9969404    
+    ## Thin_5_9          7.7709e-04  1.1112e-02   0.0699 0.9442529    
+    ## Schooling        -2.3045e-02  4.4638e-02  -0.5163 0.6057113    
+    ## Inf5_m           -2.6974e+00  6.8373e-02 -39.4511 < 2.2e-16 ***
+    ## factor(Year)2001  1.1447e-01  8.0671e-02   1.4189 0.1560336    
+    ## factor(Year)2002  1.7983e-01  8.2587e-02   2.1775 0.0295306 *  
+    ## factor(Year)2003  2.9830e-01  8.5674e-02   3.4818 0.0005060 ***
+    ## factor(Year)2004  5.3072e-01  9.0373e-02   5.8725 4.827e-09 ***
+    ## factor(Year)2005  6.5655e-01  9.5513e-02   6.8739 7.757e-12 ***
+    ## factor(Year)2006  8.8102e-01  1.0194e-01   8.6426 < 2.2e-16 ***
+    ## factor(Year)2007  1.0975e+00  1.0848e-01  10.1165 < 2.2e-16 ***
+    ## factor(Year)2008  1.3925e+00  1.1562e-01  12.0436 < 2.2e-16 ***
+    ## factor(Year)2009  1.6765e+00  1.2229e-01  13.7087 < 2.2e-16 ***
+    ## factor(Year)2010  1.9903e+00  1.2923e-01  15.4012 < 2.2e-16 ***
+    ## factor(Year)2011  2.2553e+00  1.3699e-01  16.4635 < 2.2e-16 ***
+    ## factor(Year)2012  2.5138e+00  1.4426e-01  17.4255 < 2.2e-16 ***
+    ## factor(Year)2013  2.8084e+00  1.5207e-01  18.4677 < 2.2e-16 ***
+    ## factor(Year)2014  3.1097e+00  1.6016e-01  19.4156 < 2.2e-16 ***
+    ## factor(Year)2015  3.2972e+00  1.6731e-01  19.7076 < 2.2e-16 ***
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
-    ## Total Sum of Squares:    4623.7
+    ## Total Sum of Squares:    12342
     ## Residual Sum of Squares: 1521.9
-    ## R-Squared:      0.67085
-    ## Adj. R-Squared: 0.64533
-    ## F-statistic: 416.564 on 13 and 2657 DF, p-value: < 2.22e-16
-
-<br/> Similar to the pooled model, we still have to adjust the error
-estimates due to autocorrelation. <br/>
+    ## R-Squared:      0.8767
+    ## Adj. R-Squared: 0.86714
+    ## F-statistic: 674.686 on 28 and 2657 DF, p-value: < 2.22e-16
 
 ``` r
-options(width = 1000)
-coef_test(fixed_efffect_model_plm, vcov = "CR2", cluster = life_expectancy$Country)
+# individual random effects + time fixed effects
+random_effect_model_plm <- plm(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m + factor(Year), data = life_expectancy,index = c("Country", "Year"),  model = 'random', effect = 'individual')
+summary(random_effect_model_plm)
 ```
 
-    ## Alternative hypothesis: two-sided 
-    ##        Coef.  Estimate      SE Null value   t-stat d.f. (Satt) p-val (Satt) Sig.
-    ##      Alcohol -9.91e-03 0.05562          0 -0.17821       31.81      0.85969     
-    ##  Hepatitis_B  9.38e-04 0.00407          0  0.23025       45.47      0.81893     
-    ##      Measles -6.29e-03 0.00557          0 -1.12882       38.04      0.26604     
-    ##          BMI -9.76e-01 0.27433          0 -3.55676       38.63      0.00101   **
-    ##        Polio  1.09e-03 0.00802          0  0.13570       54.35      0.89256     
-    ##   Diphtheria  1.30e-02 0.00879          0  1.47602       51.91      0.14598     
-    ##          HIV -8.42e-01 0.14720          0 -5.71709        5.81      0.00138   **
-    ##      GDP_log  4.55e-01 0.38777          0  1.17401       38.42      0.24762     
-    ##      Pop_log  2.63e-01 0.75910          0  0.34709       18.39      0.73247     
-    ##   Thin_10_19  4.31e-05 0.01195          0  0.00361        5.89      0.99724     
-    ##     Thin_5_9  7.77e-04 0.01307          0  0.05943        5.44      0.95473     
-    ##    Schooling -2.30e-02 0.11752          0 -0.19610       66.66      0.84513     
-    ##       Inf5_m -2.70e+00 0.30261          0 -8.91381       35.44      < 0.001  ***
+    ## Oneway (individual) effect Random Effect Model 
+    ##    (Swamy-Arora's transformation)
+    ## 
+    ## Call:
+    ## plm(formula = Life_expectancy ~ Economy + Region + Alcohol + 
+    ##     Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + 
+    ##     GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m + 
+    ##     factor(Year), data = life_expectancy, effect = "individual", 
+    ##     model = "random", index = c("Country", "Year"))
+    ## 
+    ## Balanced Panel: n = 179, T = 16, N = 2864
+    ## 
+    ## Effects:
+    ##                  var std.dev share
+    ## idiosyncratic 0.5728  0.7568 0.116
+    ## individual    4.3560  2.0871 0.884
+    ## theta: 0.9097
+    ## 
+    ## Residuals:
+    ##      Min.   1st Qu.    Median   3rd Qu.      Max. 
+    ## -3.669565 -0.365385  0.027368  0.362918  7.492737 
+    ## 
+    ## Coefficients:
+    ##                     Estimate  Std. Error  z-value  Pr(>|z|)    
+    ## (Intercept)      66.42826100  1.92481468  34.5115 < 2.2e-16 ***
+    ## EconomyDeveloped  5.39797101  0.86369931   6.2498 4.109e-10 ***
+    ## RegionAsia        3.93659707  0.54991644   7.1585 8.154e-13 ***
+    ## RegionCAm         6.37756413  0.64690961   9.8585 < 2.2e-16 ***
+    ## RegionEU          2.65455376  0.99604412   2.6651 0.0076966 ** 
+    ## RegionMidE        6.27945096  0.73850576   8.5029 < 2.2e-16 ***
+    ## RegionNAm         5.67455693  1.46265872   3.8796 0.0001046 ***
+    ## RegionOce         3.51622245  0.81168136   4.3320 1.477e-05 ***
+    ## RegionNotEU       4.84051853  0.73534367   6.5827 4.621e-11 ***
+    ## RegionSAm         6.33885772  0.74758443   8.4791 < 2.2e-16 ***
+    ## Alcohol          -0.05125131  0.01882983  -2.7218 0.0064925 ** 
+    ## Hepatitis_B       0.00093237  0.00218151   0.4274 0.6690897    
+    ## Measles          -0.00483692  0.00216579  -2.2333 0.0255274 *  
+    ## BMI              -0.41883186  0.07626550  -5.4918 3.979e-08 ***
+    ## Polio             0.00311328  0.00438370   0.7102 0.4775838    
+    ## Diphtheria        0.01095702  0.00438242   2.5002 0.0124116 *  
+    ## HIV              -0.85645763  0.02612200 -32.7868 < 2.2e-16 ***
+    ## GDP_log           0.84887446  0.10809102   7.8533 4.051e-15 ***
+    ## Pop_log          -0.05827047  0.11984266  -0.4862 0.6268078    
+    ## Thin_10_19       -0.00113122  0.01155742  -0.0979 0.9220291    
+    ## Thin_5_9         -0.00041558  0.01141693  -0.0364 0.9709629    
+    ## Schooling         0.09090831  0.04081881   2.2271 0.0259394 *  
+    ## Inf5_m           -2.79992197  0.06336913 -44.1843 < 2.2e-16 ***
+    ## factor(Year)2001  0.04340916  0.08283102   0.5241 0.6002306    
+    ## factor(Year)2002  0.03963412  0.08394251   0.4722 0.6368141    
+    ## factor(Year)2003  0.08578981  0.08567676   1.0013 0.3166724    
+    ## factor(Year)2004  0.23746739  0.08832587   2.6885 0.0071766 ** 
+    ## factor(Year)2005  0.29433197  0.09135065   3.2220 0.0012730 ** 
+    ## factor(Year)2006  0.44220908  0.09513493   4.6482 3.348e-06 ***
+    ## factor(Year)2007  0.59042517  0.09900222   5.9638 2.465e-09 ***
+    ## factor(Year)2008  0.81608059  0.10332381   7.8983 2.828e-15 ***
+    ## factor(Year)2009  1.03999218  0.10771349   9.6552 < 2.2e-16 ***
+    ## factor(Year)2010  1.29295082  0.11196207  11.5481 < 2.2e-16 ***
+    ## factor(Year)2011  1.49125015  0.11700423  12.7453 < 2.2e-16 ***
+    ## factor(Year)2012  1.69152484  0.12170869  13.8981 < 2.2e-16 ***
+    ## factor(Year)2013  1.92441228  0.12687130  15.1682 < 2.2e-16 ***
+    ## factor(Year)2014  2.16196969  0.13218743  16.3553 < 2.2e-16 ***
+    ## factor(Year)2015  2.28634284  0.13691585  16.6989 < 2.2e-16 ***
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## Total Sum of Squares:    14306
+    ## Residual Sum of Squares: 1719.4
+    ## R-Squared:      0.87982
+    ## Adj. R-Squared: 0.87825
+    ## Chisq: 20688.6 on 37 DF, p-value: < 2.22e-16
 
-<br/> We can also obtain robust estimates via bootstrap, but we cannot
-use a simple paired bootstrap, since this bootstrap would destroy the
-data structure. Instead, we have to use the fact that we assume that
-observations for each individual country are independent from each
-other, and thus, bootstrap over these whole time series. <br/>
+<br/> An important point to notice is that by transitioning to the fixed
+effects model, predictors that stay constant in time (**Region** and
+**Economy status**) are no longer estimable since they become part of
+the respective individual fixed effects. However, the fixed effects
+model is consistent even when the individual effects are correlated with
+other predictors, whereas the random effects model is not. A standard
+test that is traditionally used to test the consistency of the random
+effects model is the Hausman test. <br/>
+
+``` r
+phtest(fixed_effect_model_plm,random_effect_model_plm)
+```
+
+    ## 
+    ##  Hausman Test
+    ## 
+    ## data:  Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B +  ...
+    ## chisq = 971.78, df = 28, p-value < 2.2e-16
+    ## alternative hypothesis: one model is inconsistent
+
+<br/> The Hausman test has the disadvantage that it assumes standard
+errors (which we know is a bit problematic for panel data). Thus, we can
+instead perform the following robust Wald test. The main idea is to add
+the cluster mean of the time-varying predictors to the random effects
+model (*J. Antonakis, N. Bastardoz, and M. Rönkkö. “On ignoring the
+random effects assumption in multilevel models: Review, critique, and
+recommendations.” Organizational Research Methods 24.2 (2021):
+443-483.*). <br/>
+
+``` r
+life_expectancy_cent <- within(life_expectancy, {
+  Alcohol_cent <- tapply(Alcohol, Country, mean)[factor(Country)]
+  Hepatitis_B_cent <- tapply(Hepatitis_B, Country, mean)[factor(Country)]
+  Measles_cent <- tapply(Measles, Country, mean)[factor(Country)]
+  BMI_cent <- tapply(BMI, Country, mean)[factor(Country)]
+  Polio_cent <- tapply(Polio, Country, mean)[factor(Country)]
+  Diphtheria_cent <- tapply(Diphtheria, Country, mean)[factor(Country)]
+  HIV_cent <- tapply(HIV, Country, mean)[factor(Country)]
+  GDP_log_cent <- tapply(GDP_log, Country, mean)[factor(Country)]
+  Pop_log_cent <- tapply(Pop_log, Country, mean)[factor(Country)]
+  Thin_10_19_cent <- tapply(Thin_10_19, Country, mean)[factor(Country)]
+  Thin_5_9_cent <- tapply(Thin_5_9, Country, mean)[factor(Country)]
+  Schooling_cent <- tapply(Schooling, Country, mean)[factor(Country)]
+  Inf5_m_cent <- tapply(Inf5_m, Country, mean)[factor(Country)]
+})
+
+corr_random_effect_model_plm <- plm(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m  + Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + Inf5_m_cent + factor(Year), data = life_expectancy_cent,index = c("Country", "Year"),  model = 'random', effect = 'individual')
+summary(corr_random_effect_model_plm)
+```
+
+    ## Oneway (individual) effect Random Effect Model 
+    ##    (Swamy-Arora's transformation)
+    ## 
+    ## Call:
+    ## plm(formula = Life_expectancy ~ Economy + Region + Alcohol + 
+    ##     Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + 
+    ##     GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m + 
+    ##     Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + 
+    ##     Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + 
+    ##     Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + 
+    ##     Inf5_m_cent + factor(Year), data = life_expectancy_cent, 
+    ##     effect = "individual", model = "random", index = c("Country", 
+    ##         "Year"))
+    ## 
+    ## Balanced Panel: n = 179, T = 16, N = 2864
+    ## 
+    ## Effects:
+    ##                  var std.dev share
+    ## idiosyncratic 0.5728  0.7568 0.116
+    ## individual    4.3560  2.0871 0.884
+    ## theta: 0.9097
+    ## 
+    ## Residuals:
+    ##      Min.   1st Qu.    Median   3rd Qu.      Max. 
+    ## -3.580366 -0.337804  0.024659  0.351934  7.543948 
+    ## 
+    ## Coefficients:
+    ##                     Estimate  Std. Error  z-value  Pr(>|z|)    
+    ## (Intercept)       5.6566e+01  4.6096e+00  12.2714 < 2.2e-16 ***
+    ## EconomyDeveloped  4.6263e+00  1.0032e+00   4.6116 3.996e-06 ***
+    ## RegionAsia        1.4257e+00  7.0414e-01   2.0247 0.0429007 *  
+    ## RegionCAm         2.3214e+00  7.8176e-01   2.9695 0.0029830 ** 
+    ## RegionEU         -8.1217e-01  1.1594e+00  -0.7005 0.4836001    
+    ## RegionMidE        2.0451e-01  8.9427e-01   0.2287 0.8191097    
+    ## RegionNAm         1.2436e-01  1.5774e+00   0.0788 0.9371601    
+    ## RegionOce        -6.8623e-01  9.6350e-01  -0.7122 0.4763256    
+    ## RegionNotEU       1.1381e+00  9.4022e-01   1.2105 0.2260985    
+    ## RegionSAm         2.0581e+00  8.8674e-01   2.3210 0.0202866 *  
+    ## Alcohol          -9.9119e-03  1.8997e-02  -0.5218 0.6018347    
+    ## Hepatitis_B       9.3793e-04  2.1323e-03   0.4399 0.6600383    
+    ## Measles          -6.2919e-03  2.1367e-03  -2.9447 0.0032325 ** 
+    ## BMI              -9.7572e-01  9.5751e-02 -10.1902 < 2.2e-16 ***
+    ## Polio             1.0881e-03  4.2697e-03   0.2548 0.7988539    
+    ## Diphtheria        1.2974e-02  4.2700e-03   3.0385 0.0023774 ** 
+    ## HIV              -8.4157e-01  2.6776e-02 -31.4296 < 2.2e-16 ***
+    ## GDP_log           4.5525e-01  1.2473e-01   3.6500 0.0002622 ***
+    ## Pop_log           2.6348e-01  2.8122e-01   0.9369 0.3488050    
+    ## Thin_10_19        4.3137e-05  1.1248e-02   0.0038 0.9969401    
+    ## Thin_5_9          7.7709e-04  1.1112e-02   0.0699 0.9442476    
+    ## Schooling        -2.3045e-02  4.4638e-02  -0.5163 0.6056683    
+    ## Inf5_m           -2.6974e+00  6.8373e-02 -39.4511 < 2.2e-16 ***
+    ## Alcohol_cent     -2.0095e-01  8.0165e-02  -2.5067 0.0121866 *  
+    ## Hepatitis_B_cent -2.4381e-02  2.4259e-02  -1.0050 0.3148804    
+    ## Measles_cent      1.0932e-02  1.3043e-02   0.8382 0.4019377    
+    ## BMI_cent          1.0149e+00  1.7547e-01   5.7841 7.292e-09 ***
+    ## Polio_cent        3.9076e-02  5.8607e-02   0.6667 0.5049354    
+    ## Diphtheria_cent  -3.1193e-02  5.9841e-02  -0.5213 0.6021836    
+    ## HIV_cent         -7.3970e-02  8.9967e-02  -0.8222 0.4109647    
+    ## GDP_log_cent      9.5129e-01  2.8815e-01   3.3013 0.0009622 ***
+    ## Pop_log_cent     -1.0993e-01  3.1194e-01  -0.3524 0.7245269    
+    ## Thin_10_19_cent  -1.0143e-01  2.4370e-01  -0.4162 0.6772532    
+    ## Thin_5_9_cent     8.8990e-02  2.4353e-01   0.3654 0.7148013    
+    ## Schooling_cent   -2.6253e-01  1.3099e-01  -2.0042 0.0450534 *  
+    ## Inf5_m_cent      -1.7953e+00  3.7917e-01  -4.7348 2.193e-06 ***
+    ## factor(Year)2001  1.1447e-01  8.0671e-02   1.4189 0.1559163    
+    ## factor(Year)2002  1.7983e-01  8.2587e-02   2.1775 0.0294429 *  
+    ## factor(Year)2003  2.9830e-01  8.5674e-02   3.4818 0.0004980 ***
+    ## factor(Year)2004  5.3072e-01  9.0373e-02   5.8725 4.292e-09 ***
+    ## factor(Year)2005  6.5655e-01  9.5513e-02   6.8739 6.248e-12 ***
+    ## factor(Year)2006  8.8102e-01  1.0194e-01   8.6426 < 2.2e-16 ***
+    ## factor(Year)2007  1.0975e+00  1.0848e-01  10.1165 < 2.2e-16 ***
+    ## factor(Year)2008  1.3925e+00  1.1562e-01  12.0436 < 2.2e-16 ***
+    ## factor(Year)2009  1.6765e+00  1.2229e-01  13.7087 < 2.2e-16 ***
+    ## factor(Year)2010  1.9903e+00  1.2923e-01  15.4012 < 2.2e-16 ***
+    ## factor(Year)2011  2.2553e+00  1.3699e-01  16.4635 < 2.2e-16 ***
+    ## factor(Year)2012  2.5138e+00  1.4426e-01  17.4255 < 2.2e-16 ***
+    ## factor(Year)2013  2.8084e+00  1.5207e-01  18.4677 < 2.2e-16 ***
+    ## factor(Year)2014  3.1097e+00  1.6016e-01  19.4156 < 2.2e-16 ***
+    ## factor(Year)2015  3.2972e+00  1.6731e-01  19.7076 < 2.2e-16 ***
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## Total Sum of Squares:    14306
+    ## Residual Sum of Squares: 1611.2
+    ## R-Squared:      0.88738
+    ## Adj. R-Squared: 0.88537
+    ## Chisq: 22164 on 50 DF, p-value: < 2.22e-16
+
+<br/> If there is no significant endogeneity in the model, the estimates
+of parameters corresponding to cluster means should be zero. We can test
+this using a robust Wald test, <br/>
+
+``` r
+Wald_test(corr_random_effect_model_plm, constraints = constrain_zero(c("Alcohol_cent","Hepatitis_B_cent","Measles_cent","BMI_cent","Polio_cent","Diphtheria_cent","HIV_cent","GDP_log_cent","Pop_log_cent","Thin_10_19_cent","Thin_5_9_cent","Schooling_cent","Inf5_m_cent")), vcov = "CR2", cluster = life_expectancy$Country)
+```
+
+    ##  test Fstat df_num df_denom   p_val sig
+    ##   HTZ   3.8     13     31.2 0.00111  **
+
+<br/> We reject the hypothesis; thus, the random effects model is not
+consistent and should not be used.
+
+The model we used to test the consistency of the random effects model is
+of particular interest. It is a so-called *correlated random effects*
+model (CRE). The CRE model is an extension of the random effects model
+that attempts to model the unobserved endogeneity via the cluster mean
+predictors. A nice property of the CRE model is that estimates of the
+time-varying predictors in the CRE model are identical to the fixed
+effects estimates. Hence, the CRE model provides an alternative to the
+fixed effects model that keeps the time-invariant predictors in the
+model.
+
+The CRE models are quite old (*Y. Mundlak. On the pooling of time series
+and cross section data. Econometrica: journal of the Econometric Society
+(1978): 69-85.*). However, it seems they got nowhere near as popular as
+fixed effects and random effects models. Although there seem to be
+recent papers emerging (e.g., *D. McNeish, and K. Kelley. Fixed effects
+models versus mixed effects models for clustered data: Reviewing the
+approaches, disentangling the differences, and making recommendations.
+Psychological Methods 24.1 (2019): 20*, *J. M. Wooldridge. Correlated
+random effects models with unbalanced panels. Journal of Econometrics
+211.1 (2019): 137-150*, *J. Antonakis, N. Bastardoz, and M. Rönkkö. “On
+ignoring the random effects assumption in multilevel models: Review,
+critique, and recommendations.” Organizational Research Methods 24.2
+(2021): 443-483.* ) that encourage usage of CRE models instead of random
+effects models (that are often significantly biased in practice) and
+fixed effects models (that make time-invariant predictors inestimable).
+
+<br/> Let us do some model diagnostics. We first check the residuals.
+<br/>
+
+<img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-19-1.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-19-2.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-19-3.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-19-4.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-19-5.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-19-6.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-19-7.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-19-8.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-19-9.png" style="display: block; margin: auto;" />
+
+<br/> We should also check the random effects. <br/>
+
+``` r
+# Random effects
+par(mfrow = c(1, 1))
+hist(ranef(corr_random_effect_model_plm),main = 'Histogram of random effects',xlab = 'Random effects')
+```
+
+<img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-20-1.png" style="display: block; margin: auto;" />
+
+``` r
+qqnorm(ranef(corr_random_effect_model_plm))
+qqline(ranef(corr_random_effect_model_plm))
+```
+
+<img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-20-2.png" style="display: block; margin: auto;" />
+
+<br/> We see that random effects are approximately normally distributed
+as assumed. Residuals are symmetric, although the tails are a bit
+heavier than a normal distribution would have. We suspect that there
+might be some heteroscedasticity (developing vs. developed countries).
+We also might have some overly influential observations/outliers.
+Unfortunately, *plm* package does not have support for computing
+influence diagnostics. Hence, we will refit our correlated random
+effects model using a package *lme4* that can be used to fit general
+linear mixed-effects models. We then use package *HLMdiag* to determine
+the influence of individual observations. Since we are dealing with
+panel data, we will consider diagnostics based on deleting whole
+clusters given by **Country.** We will again use Cook’s distance and
+refit the model based on several Cook’s distance cut-offs based on the
+Cook’s distance plot. <br/>
+
+``` r
+library(HLMdiag)
+library(lme4)
+
+lmer_model <- lmer(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m  + Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + Inf5_m_cent + factor(Year) + (1 | Country), life_expectancy_cent)
+
+# Compute influence by deleting individual Countries
+inf <- hlm_influence(lmer_model, level = "Country")
+
+# Plot Cook's distance
+plot(inf$cooksd)
+```
+
+<img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-21-1.png" style="display: block; margin: auto;" />
+
+``` r
+# Refit model for deleted observations
+lmer_model_red1 <- lmer(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m  + Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + Inf5_m_cent + factor(Year) + (1 | Country), data = life_expectancy_cent[life_expectancy_cent$Country  %in% inf$Country[inf$cooksd < 0.4],])
+
+lmer_model_red2 <- lmer(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m  + Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + Inf5_m_cent + factor(Year) + (1 | Country),data = life_expectancy_cent[life_expectancy_cent$Country  %in% inf$Country[inf$cooksd < 0.2],])
+
+lmer_model_red3 <- lmer(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m  + Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + Inf5_m_cent + factor(Year) + (1 | Country), data = life_expectancy_cent[life_expectancy_cent$Country  %in% inf$Country[inf$cooksd < 0.1],])
+
+lmer_model_red4 <- lmer(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m  + Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + Inf5_m_cent + factor(Year) + (1 | Country), data = life_expectancy_cent[life_expectancy_cent$Country  %in% inf$Country[inf$cooksd < 0.05],])
+
+
+coeff_delete <- cbind(fixef(lmer_model),fixef(lmer_model_red1),fixef(lmer_model_red2),fixef(lmer_model_red3),fixef(lmer_model_red4))
+colnames(coeff_delete) <- c('All','CD<0.4','CD<0.2','CD<0.1','CD<0.05')
+round(coeff_delete,4)[1:23,]
+```
+
+    ##                      All  CD<0.4  CD<0.2  CD<0.1 CD<0.05
+    ## (Intercept)      56.5661 56.6428 58.9626 59.6623 60.9916
+    ## EconomyDeveloped  4.6263  4.5842  4.7404  4.4290  4.4652
+    ## RegionAsia        1.4257  1.3666  1.2698  0.8215  0.3345
+    ## RegionCAm         2.3214  2.2614  2.3761  2.1584  1.8421
+    ## RegionEU         -0.8122 -0.8824 -1.0195 -1.2010 -1.6161
+    ## RegionMidE        0.2045  0.1489  0.2307 -0.2494 -0.5545
+    ## RegionNAm         0.1244  0.0743  0.0225 -0.2258 -0.7363
+    ## RegionOce        -0.6862 -0.7349 -1.0172 -1.2961 -1.7526
+    ## RegionNotEU       1.1381  1.0617  0.8978  0.5562  0.0616
+    ## RegionSAm         2.0581  1.9893  1.9448  1.7606  1.3106
+    ## Alcohol          -0.0099 -0.0153 -0.0257 -0.0215 -0.0496
+    ## Hepatitis_B       0.0009  0.0007  0.0009  0.0003 -0.0007
+    ## Measles          -0.0063 -0.0023 -0.0009 -0.0043 -0.0049
+    ## BMI              -0.9757 -0.9596 -0.9711 -0.9593 -0.9016
+    ## Polio             0.0011  0.0013 -0.0010 -0.0058  0.0018
+    ## Diphtheria        0.0130  0.0137  0.0094  0.0135  0.0075
+    ## HIV              -0.8416 -0.9535 -0.8575 -0.9155 -0.7159
+    ## GDP_log           0.4553  0.5177  0.3838  0.5539  0.3060
+    ## Pop_log           0.2635  0.1607 -0.1189  0.1809 -0.3170
+    ## Thin_10_19        0.0000  0.0006  0.0008  0.0000 -0.0033
+    ## Thin_5_9          0.0008  0.0024  0.0026  0.0025  0.0173
+    ## Schooling        -0.0230 -0.0474 -0.0410  0.0056 -0.0130
+    ## Inf5_m           -2.6974 -2.5994 -2.8554 -2.6405 -2.8083
+
+<br/> We see that our estimates did not change much, thus, there is no
+reason to delete some observations from the data.
+
+The last thing that remains is finding the significant predictors and
+validating the results. We already discussed that random effects account
+for the correlation of observations within the same clusters, thus we
+could take the standard errors as is. However, with random effect
+models, things are a bit murky, because it is in general non-trivial to
+determine correct degrees of freedom, see
+<https://bbolker.github.io/mixedmodels-misc/glmmFAQ.html#why-doesnt-lme4-display-denominator-degrees-of-freedomp-values-what-other-options-do-i-have>
+that discusses several alternatives to use. Let us explore them.
+
+Let us start with the standard confidence intervals (i.e, standard error
+multiplied by *qnorm(0.975)*, thus ignoring degrees of freedom). <br/>
+
+``` r
+confint(lmer_model,method ='Wald')[3:25,]
+```
+
+    ##                         2.5 %       97.5 %
+    ## (Intercept)      47.531453546 65.600747265
+    ## EconomyDeveloped  2.660079695  6.592484288
+    ## RegionAsia        0.045565925  2.805756837
+    ## RegionCAm         0.789194963  3.853619299
+    ## RegionEU         -3.084493293  1.460158372
+    ## RegionMidE       -1.548217999  1.957237556
+    ## RegionNAm        -2.967246963  3.215967341
+    ## RegionOce        -2.574640729  1.202190553
+    ## RegionNotEU      -0.704688892  2.980905340
+    ## RegionSAm         0.320148665  3.796099800
+    ## Alcohol          -0.047145067  0.027321304
+    ## Hepatitis_B      -0.003241372  0.005117231
+    ## Measles          -0.010479733 -0.002104103
+    ## BMI              -1.163390602 -0.788053751
+    ## Polio            -0.007280492  0.009456617
+    ## Diphtheria        0.004605424  0.021343495
+    ## HIV              -0.894053017 -0.789091228
+    ## GDP_log           0.210794911  0.699710487
+    ## Pop_log          -0.287701046  0.814652325
+    ## Thin_10_19       -0.022002993  0.022089268
+    ## Thin_5_9         -0.021002004  0.022556176
+    ## Schooling        -0.110534627  0.064444150
+    ## Inf5_m           -2.831380676 -2.563365394
+
+<br/> Another alternative is profile likelihood confidence intervals.
+<br/>
+
+``` r
+confint(lmer_model,method ='profile')[3:25,]
+```
+
+    ##                         2.5 %       97.5 %
+    ## (Intercept)      48.086197450 65.046003428
+    ## EconomyDeveloped  2.780850471  6.471713520
+    ## RegionAsia        0.130336042  2.720986725
+    ## RegionCAm         0.883308601  3.759505666
+    ## RegionEU         -2.944919379  1.320584464
+    ## RegionMidE       -1.440559547  1.849579113
+    ## RegionNAm        -2.777350026  3.026070416
+    ## RegionOce        -2.458647872  1.086197702
+    ## RegionNotEU      -0.591498080  2.867714532
+    ## RegionSAm         0.426900985  3.689347486
+    ## Alcohol          -0.046963670  0.027139907
+    ## Hepatitis_B      -0.003221011  0.005096870
+    ## Measles          -0.010459331 -0.002124506
+    ## BMI              -1.162476296 -0.788968057
+    ## Polio            -0.007239721  0.009415847
+    ## Diphtheria        0.004646197  0.021302722
+    ## HIV              -0.893797334 -0.789346911
+    ## GDP_log           0.211985890  0.698519508
+    ## Pop_log          -0.285015757  0.811967035
+    ## Thin_10_19       -0.021895586  0.021981861
+    ## Thin_5_9         -0.020895898  0.022450070
+    ## Schooling        -0.110108386  0.064017909
+    ## Inf5_m           -2.830727801 -2.564018268
+
+<br/> Another another method is based on *parametric* bootstrap (i.e.,
+bootstrap based on simulating new responses for our data from the
+estimated model and getting new estimates by refitting the model) <br/>
+
+``` r
+confint(lmer_model,method ='boot')[3:25,]
+```
+
+    ##                         2.5 %       97.5 %
+    ## (Intercept)      46.722216352 65.609894350
+    ## EconomyDeveloped  2.547958333  6.494962061
+    ## RegionAsia        0.051459002  2.825399412
+    ## RegionCAm         0.765586660  3.983933787
+    ## RegionEU         -2.963763458  1.522150003
+    ## RegionMidE       -1.451339799  1.940870721
+    ## RegionNAm        -2.890663610  3.381734314
+    ## RegionOce        -2.364751036  1.178219438
+    ## RegionNotEU      -0.430443133  3.044613841
+    ## RegionSAm         0.411867430  3.862104332
+    ## Alcohol          -0.047298725  0.027635192
+    ## Hepatitis_B      -0.003552128  0.005047911
+    ## Measles          -0.010385215 -0.002001467
+    ## BMI              -1.193570951 -0.783589687
+    ## Polio            -0.007236502  0.009809156
+    ## Diphtheria        0.004565825  0.021522299
+    ## HIV              -0.896836076 -0.792177634
+    ## GDP_log           0.216139653  0.691544932
+    ## Pop_log          -0.275853889  0.778638134
+    ## Thin_10_19       -0.023279162  0.021767030
+    ## Thin_5_9         -0.022224810  0.023953784
+    ## Schooling        -0.117098398  0.063440879
+    ## Inf5_m           -2.839072116 -2.558247467
+
+<br/> Another another another alternative is t-test statistics with a
+degrees of freedom (DOF) correction. We will use function *coef_test*
+that computes cluster-robust standard errors (CR2) and Satterthwaite DOF
+correction (we used this approach for several tests before) <br/>
+
+``` r
+coef_stats <- coef_test(lmer_model, vcov = "CR2", cluster = life_expectancy$Country)[1:23,]
+conf_int <- cbind(fixef(lmer_model)[1:23] - coef_stats$SE*qt(0.975,coef_stats$df_Satt),fixef(lmer_model)[1:23] + coef_stats$SE*qt(0.975,coef_stats$df_Satt))
+colnames(conf_int) <- c('2.5 %','97.5 %')
+conf_int
+```
+
+    ##                         2.5 %       97.5 %
+    ## (Intercept)      46.387583751 66.744617060
+    ## EconomyDeveloped  2.616563847  6.636000135
+    ## RegionAsia       -0.117700221  2.969022982
+    ## RegionCAm         0.686834662  3.955979599
+    ## RegionEU         -3.145213314  1.520878392
+    ## RegionMidE       -1.616408543  2.025428100
+    ## RegionNAm        -5.148086642  5.396807020
+    ## RegionOce        -3.362797486  1.990347310
+    ## RegionNotEU      -0.991935825  3.268152273
+    ## RegionSAm         0.376744323  3.739504142
+    ## Alcohol          -0.123232662  0.103408899
+    ## Hepatitis_B      -0.007264218  0.009140078
+    ## Measles          -0.017575275  0.004991439
+    ## BMI              -1.530774539 -0.420669814
+    ## Polio            -0.014984663  0.017160789
+    ## Diphtheria       -0.004665023  0.030613943
+    ## HIV              -1.204608137 -0.478536109
+    ## GDP_log          -0.329472381  1.239977779
+    ## Pop_log          -1.328905481  1.855856759
+    ## Thin_10_19       -0.029316444  0.029402719
+    ## Thin_5_9         -0.032028810  0.033582982
+    ## Schooling        -0.257634833  0.211544356
+    ## Inf5_m           -3.311423816 -2.083322253
+
+<br/> Lastly, we consider a method that is our validation method of
+choice: a nonparametric bootstrap. We cannot use a simple paired
+bootstrap, since this bootstrap would destroy the panel data structure.
+Instead, we have to use the fact that we assume that observations for
+each individual country are independent from each other, and thus,
+bootstrap over these whole time series. <br/>
 
 ``` r
 set.seed(123) # for reproducibility
 nb <- 2500
-coefmat <- matrix(NA,nb,length(fixed_efffect_model_plm$coefficients))
+coefmat <- matrix(NA,nb,length(corr_random_effect_model_plm$coefficients))
+colnames(coefmat) <- rownames(as.data.frame(corr_random_effect_model_plm$coefficients))
+
 Countries_list <- unique(life_expectancy$Country)
 
 for(i in 1:nb){
 Countries_new <- sample(Countries_list , rep=TRUE)
-life_expectancy_new <- life_expectancy[life_expectancy$Country == Countries_new[1],]
+life_expectancy_new <- life_expectancy_cent[life_expectancy_cent$Country == Countries_new[1],]
 
 for (j in 2:length(Countries_list)){
-  life_expectancy_new <- rbind(life_expectancy_new,life_expectancy[life_expectancy$Country == Countries_new[j],])
+  life_expectancy_new <- rbind(life_expectancy_new,life_expectancy_cent[life_expectancy_cent$Country == Countries_new[j],])
 }
 
-model_new <- plm(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m, data = life_expectancy_new,index = c("Country", "Year"),  model = 'within', effect = 'twoways')
-coefmat[i,] <- model_new$coefficients
+model_new <-  plm(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m  + Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + Inf5_m_cent + factor(Year), data = life_expectancy_new,index = c("Country", "Year"),  model = 'random', effect = 'individual')
+
+## Some region coefficients might be inestimable due to resample  
+coefmat[i,colnames(t(as.data.frame(model_new$coefficients)))] <- t(as.data.frame(model_new$coefficients))
 
 }
-colnames(coefmat) <- rownames(as.data.frame(fixed_efffect_model_plm$coefficients))
+colnames(coefmat) <- rownames(as.data.frame(corr_random_effect_model_plm$coefficients))
 coefmat <- data.frame(coefmat)
 
 ## Bootstrap CI
-t(apply(coefmat,2,function(x) quantile(x,c(0.025,0.5,0.975))))
+boot_ci <- t(apply(coefmat,2,function(x) quantile(x[!is.na(x)],c(0.025,0.5,0.975))))
+boot_ci[1:23,]
 ```
 
-    ##                     2.5%           50%        97.5%
-    ## Alcohol     -0.120875103 -0.0135748393  0.088558670
-    ## Hepatitis_B -0.006938248  0.0007359743  0.008529785
-    ## Measles     -0.017384031 -0.0059322264  0.003638968
-    ## BMI         -1.526493089 -0.9660997039 -0.488111856
-    ## Polio       -0.015744875  0.0005180592  0.015862202
-    ## Diphtheria  -0.003467844  0.0134109872  0.030615580
-    ## HIV         -1.166958309 -0.8480892170 -0.500609167
-    ## GDP_log     -0.196909286  0.4728072081  1.308891879
-    ## Pop_log     -1.246163481  0.2810800785  1.838659306
-    ## Thin_10_19  -0.021658933 -0.0007905785  0.035914240
-    ## Thin_5_9    -0.033563950  0.0001041811  0.024369521
-    ## Schooling   -0.248854264 -0.0225201774  0.187523507
-    ## Inf5_m      -3.260260023 -2.6941930363 -2.105902953
+    ##                          2.5%           50%        97.5%
+    ## X.Intercept.     46.693609098 57.3480999136 67.974522600
+    ## EconomyDeveloped  2.561725454  4.6959634003  6.810691944
+    ## RegionAsia       -0.256982716  1.2616058698  2.858288709
+    ## RegionCAm         0.645349021  2.1824879899  3.881066177
+    ## RegionEU         -3.408907588 -1.0957851114  1.341465225
+    ## RegionMidE       -1.719707370  0.0885772452  1.938182583
+    ## RegionNAm        -3.842920506  0.0324546271  3.202212042
+    ## RegionOce        -3.442960247 -0.9697587501  1.424952045
+    ## RegionNotEU      -1.162758390  0.9232032811  3.045823699
+    ## RegionSAm         0.315761044  1.9063418035  3.607219520
+    ## Alcohol          -0.120875103 -0.0135748393  0.088558670
+    ## Hepatitis_B      -0.006938248  0.0007359743  0.008529785
+    ## Measles          -0.017384031 -0.0059322264  0.003638968
+    ## BMI              -1.526493089 -0.9660997039 -0.488111856
+    ## Polio            -0.015744875  0.0005180592  0.015862202
+    ## Diphtheria       -0.003467844  0.0134109872  0.030615580
+    ## HIV              -1.166958309 -0.8480892170 -0.500609167
+    ## GDP_log          -0.196909286  0.4728072081  1.308891879
+    ## Pop_log          -1.246163481  0.2810800785  1.838659306
+    ## Thin_10_19       -0.021658933 -0.0007905785  0.035914240
+    ## Thin_5_9         -0.033563950  0.0001041811  0.024369521
+    ## Schooling        -0.248854264 -0.0225201774  0.187523507
+    ## Inf5_m           -3.260260023 -2.6941930363 -2.105902953
 
-<br/> We see that the bootstrap result corresponds to the robust
-standard errors (the same predictors appear to be significant).
-
-Since there is a lot of unobserved heterogeneity in the data, we prefer
-the fixed effects model over the pooled model. Let us plot the residuals
-of the fixed effects model to check the fit. <br/>
-
-<img src="First_circle_linear_regression_2_files/figure-markdown_github/unnamed-chunk-16-1.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_2_files/figure-markdown_github/unnamed-chunk-16-2.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_2_files/figure-markdown_github/unnamed-chunk-16-3.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_2_files/figure-markdown_github/unnamed-chunk-16-4.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_2_files/figure-markdown_github/unnamed-chunk-16-5.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_2_files/figure-markdown_github/unnamed-chunk-16-6.png" style="display: block; margin: auto;" />
-
-<br/> We observe that residuals seem symmetric but have significantly
-heavier tails than the normal distribution would, and there are possibly
-some outliers. We will repeat the fit for deleted observations based on
-Cook’s distance. <br/>
-
-``` r
-fixed_efffect_model_red1 <- lm(Life_expectancy ~ Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m + factor(Country) + factor(Year), data = life_expectancy[cooks.distance(fixed_efffect_model) < 0.04,])
-
-fixed_efffect_model_red2 <- lm(Life_expectancy ~ Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m + factor(Country) + factor(Year), data = life_expectancy[cooks.distance(fixed_efffect_model) < 0.02,])
-
-fixed_efffect_model_red3 <- lm(Life_expectancy ~ Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m + factor(Country) + factor(Year), data = life_expectancy[cooks.distance(fixed_efffect_model) < 0.01,])
-
-coeff_delete <- cbind(coefficients(fixed_efffect_model),coefficients(fixed_efffect_model_red1),coefficients(fixed_efffect_model_red2),coefficients(fixed_efffect_model_red3))
-colnames(coeff_delete) <- c('All','CD<0.04','CD<0.02','CD<0.01')
-round(coeff_delete[1:14,],3)
-```
-
-    ##                All CD<0.04 CD<0.02 CD<0.01
-    ## (Intercept) 81.156  84.266  83.946  82.821
-    ## Alcohol     -0.010  -0.009  -0.011  -0.019
-    ## Hepatitis_B  0.001   0.001   0.002   0.001
-    ## Measles     -0.006  -0.005  -0.005  -0.004
-    ## BMI         -0.976  -1.022  -1.006  -0.957
-    ## Polio        0.001   0.000   0.000  -0.001
-    ## Diphtheria   0.013   0.010   0.011   0.011
-    ## HIV         -0.842  -0.857  -0.883  -0.911
-    ## GDP_log      0.455   0.374   0.384   0.416
-    ## Pop_log      0.263  -0.093  -0.137  -0.172
-    ## Thin_10_19   0.000  -0.001  -0.002  -0.006
-    ## Thin_5_9     0.001   0.000  -0.001  -0.001
-    ## Schooling   -0.023  -0.014  -0.005  -0.006
-    ## Inf5_m      -2.697  -2.865  -2.855  -2.826
-
-<br/> Again, we notice that the values of the parameters did not
-dramatically change, and all actually stayed within the confidence
-intervals provided by the bootstrap. Thus, I will consider the fixed
-effects model with all the data as our final model <br/>
+<br/> We see that the nonparametric bootstrap nicely corresponds to the
+confidence intervals based on the robust standard errors with the DOF
+correction. The parametric bootstrap and the other two methods provided
+slightly narrower confidence intervals. Since the intervals based on the
+robust standard errors and nonparametric bootstrap match, I guess the
+issue is indeed heteroskedasticity of errors (parametric bootstrap
+cannot account for this since it simulates directly from the model that
+assumes homoscedastic errors). <br/>
 
 ### Conclusions
 
-<br/> Whether we use cluster-robust standard errors or bootstrap, we
-notice that most of the predictors in the fixed effects model are not
-significant. The only significant predictors of our model appear to be
-**Inf5_m**, **BMI**, and **HIV**. Let us try to make some sense of our
-results.
+<br/> Let us discuss the results. We notice that most of the predictors
+in the correlated random effects (CRE) model are not significant.
 
-The most important predictor (in the sense of the effect size)
-**Inf5_m**, i.e., infant mortality / deaths of children under five years
-old per 1000 population. This effect is expected since the incidence of
-such early deaths drives the overall mean life expectancy down.
+Concerning the time-invariant predictors, that we were able to estimate
+thanks to the CRE model, the significant predictors are *Economy* and
+some *Region*-specific factors. It seems that economically developed
+countries tend to have longer life expectancy than developing countries
+even after adjusting for other covariates. We can investigate this more
+formally post hoc using *lsmeans* (lsmeans computes estimated marginal
+means for a given factor, see
+<https://cran.r-project.org/web/packages/emmeans/vignettes/basics.html>
+for more details). <br/>
 
-We could observe this effect quite clearly from the data (the red curve
-is a LOESS fit of the data: span = 0.5, degree = 2) <br/>
+    ## $lsmeans
+    ##  Economy    lsmean    SE  df lower.CL upper.CL
+    ##  Developing   68.0 0.329 156     67.3     68.6
+    ##  Developed    72.6 0.819 156     71.0     74.2
+    ## 
+    ## Results are averaged over the levels of: Region, Year 
+    ## Degrees-of-freedom method: kenward-roger 
+    ## Confidence level used: 0.95 
+    ## 
+    ## $contrasts
+    ##  contrast               estimate SE  df t.ratio p.value
+    ##  Developing - Developed    -4.63  1 156  -4.612  <.0001
+    ## 
+    ## Results are averaged over the levels of: Region, Year 
+    ## Degrees-of-freedom method: kenward-roger
 
-<img src="First_circle_linear_regression_2_files/figure-markdown_github/unnamed-chunk-18-1.png" style="display: block; margin: auto;" />
+<img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-27-1.png" style="display: block; margin: auto;" />
 
-<br/> Another significant predictor is a number of **HIV** incidents,
-and it is actually the only disease that proved to be significant in our
-model. This significance of this effect is again to be expected. For
-example, the UNAIDS report *THE URGENCY OF NOW AIDS AT A CROSSROADS*
-shows that from successes in the treatment of HIV, life expectancy in
-Africa increased from 56 to 61 between 2010 and 2024. Again, if we
-visualize the data, the effect of **HIV** is also quite noticeable.
-<br/>
+<br/> The differences between the estimated marginal means for regions
+seem much less significant. <br/>
 
-<img src="First_circle_linear_regression_2_files/figure-markdown_github/unnamed-chunk-19-1.png" style="display: block; margin: auto;" />
+    ## $lsmeans
+    ##  Region lsmean    SE  df lower.CL upper.CL
+    ##  Afr      69.7 0.631 156     68.4     70.9
+    ##  Asia     71.1 0.698 156     69.7     72.5
+    ##  CAm      72.0 0.707 156     70.6     73.4
+    ##  EU       68.9 0.680 156     67.5     70.2
+    ##  MidE     69.9 0.811 156     68.3     71.5
+    ##  NAm      69.8 1.380 156     67.1     72.5
+    ##  Oce      69.0 0.775 156     67.4     70.5
+    ##  NotEU    70.8 0.719 156     69.4     72.2
+    ##  SAm      71.7 0.845 156     70.1     73.4
+    ## 
+    ## Results are averaged over the levels of: Economy, Year 
+    ## Degrees-of-freedom method: kenward-roger 
+    ## Confidence level used: 0.95 
+    ## 
+    ## $contrasts
+    ##  contrast     estimate    SE  df t.ratio p.value
+    ##  Afr - Asia    -1.4257 0.704 156  -2.025  0.5287
+    ##  Afr - CAm     -2.3214 0.782 156  -2.969  0.0808
+    ##  Afr - EU       0.8122 1.160 156   0.701  0.9987
+    ##  Afr - MidE    -0.2045 0.894 156  -0.229  1.0000
+    ##  Afr - NAm     -0.1244 1.580 156  -0.079  1.0000
+    ##  Afr - Oce      0.6862 0.963 156   0.712  0.9986
+    ##  Afr - NotEU   -1.1381 0.940 156  -1.210  0.9532
+    ##  Afr - SAm     -2.0581 0.887 156  -2.321  0.3361
+    ##  Asia - CAm    -0.8957 0.840 156  -1.067  0.9781
+    ##  Asia - EU      2.2378 1.160 156   1.932  0.5929
+    ##  Asia - MidE    1.2212 0.857 156   1.425  0.8865
+    ##  Asia - NAm     1.3013 1.550 156   0.840  0.9954
+    ##  Asia - Oce     2.1119 1.020 156   2.064  0.5020
+    ##  Asia - NotEU   0.2876 0.893 156   0.322  1.0000
+    ##  Asia - SAm    -0.6325 0.929 156  -0.681  0.9990
+    ##  CAm - EU       3.1336 1.060 156   2.962  0.0823
+    ##  CAm - MidE     2.1169 0.891 156   2.377  0.3043
+    ##  CAm - NAm      2.1970 1.530 156   1.440  0.8804
+    ##  CAm - Oce      3.0076 0.894 156   3.364  0.0263
+    ##  CAm - NotEU    1.1833 0.816 156   1.451  0.8759
+    ##  CAm - SAm      0.2633 0.807 156   0.326  1.0000
+    ##  EU - MidE     -1.0167 1.230 156  -0.830  0.9958
+    ##  EU - NAm      -0.9365 1.450 156  -0.645  0.9993
+    ##  EU - Oce      -0.1259 1.100 156  -0.115  1.0000
+    ##  EU - NotEU    -1.9503 0.938 156  -2.078  0.4920
+    ##  EU - SAm      -2.8703 1.160 156  -2.477  0.2511
+    ##  MidE - NAm     0.0801 1.540 156   0.052  1.0000
+    ##  MidE - Oce     0.8907 0.994 156   0.896  0.9929
+    ##  MidE - NotEU  -0.9336 1.020 156  -0.915  0.9919
+    ##  MidE - SAm    -1.8536 0.978 156  -1.895  0.6180
+    ##  NAm - Oce      0.8106 1.580 156   0.513  0.9999
+    ##  NAm - NotEU   -1.0137 1.490 156  -0.680  0.9990
+    ##  NAm - SAm     -1.9338 1.550 156  -1.247  0.9444
+    ##  Oce - NotEU   -1.8243 0.975 156  -1.872  0.6340
+    ##  Oce - SAm     -2.7443 1.010 156  -2.727  0.1469
+    ##  NotEU - SAm   -0.9200 0.917 156  -1.003  0.9851
+    ## 
+    ## Results are averaged over the levels of: Economy, Year 
+    ## Degrees-of-freedom method: kenward-roger 
+    ## P value adjustment: tukey method for comparing a family of 9 estimates
+
+<img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-28-1.png" style="display: block; margin: auto;" />
+
+<br/> If I were to guess why the factors for *Central*, *South America*,
+and *Asia* appeared (for *Asia* almost) significant in the CRE model, I
+would suspect that there is a significant difference between developing
+countries of South/Central America and Asia and the least developed
+countries (using the UN terminology) which are almost all in Africa and
+the region specific factors serve as a kind of proxy for this fact.
+
+I also suspect that some other additional factors significantly
+influence life expectancy that are not directly present in the model,
+which are encompassed in the developed/developing countries factor.
+
+Concerning the time-varying predictors in our model, the only
+significant ones appear to be **Inf5_m**, **BMI**, and **HIV**. Let us
+try to make some sense of this results.
+
+The first significant predictor is **Inf5_m**, i.e., infant
+mortality/deaths of children under five years old per 1000 population.
+This effect is expected since the incidence of such early deaths drives
+the overall mean life expectancy down. We could observe this effect
+quite clearly from the data (the red curve is a LOESS fit of the data:
+span = 0.5, degree = 2) <br/>
+
+<img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-29-1.png" style="display: block; margin: auto;" />
+
+<br/> Another significant predictor is the number of **HIV** incidents,
+and it is the only disease that proved to be significant in our model.
+The significance of this effect is again to be expected. For example,
+the UNAIDS report *THE URGENCY OF NOW AIDS AT A CROSSROADS* shows that
+from successes in the treatment of HIV, life expectancy in Africa
+increased from 56 to 61 between 2010 and 2024. Again, if we visualize
+the data, the effect of **HIV** is also quite noticeable. <br/>
+
+<img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-30-1.png" style="display: block; margin: auto;" />
 
 <br/> The last significant predictor is average **BMI** of adult
 population. This one is a bit trickier to interpret. If we simply
 visualize the data, we could argue that life expectancy actually
 increases slightly with BMI. <br/>
 
-<img src="First_circle_linear_regression_2_files/figure-markdown_github/unnamed-chunk-20-1.png" style="display: block; margin: auto;" />
+<img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-31-1.png" style="display: block; margin: auto;" />
 
 <br/> However, more economically developed countries tend to have higher
 average BMI <br/>
 
-<img src="First_circle_linear_regression_2_files/figure-markdown_github/unnamed-chunk-21-1.png" style="display: block; margin: auto;" />
+<img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-32-1.png" style="display: block; margin: auto;" />
 
 <br/> and those countries tend to have higher life expectancy (and lower
-infant mortality/child deaths and lower HIV incidents count) <br/>
+infant mortality/child deaths and lower HIV incidents count). Actually,
+if we plot BMI vs life expectancy for developed countries, this negative
+effect for large average BMI is hinted at (that low BMI and high life
+expectancy country is Japan) <br/>
 
-<img src="First_circle_linear_regression_2_files/figure-markdown_github/unnamed-chunk-22-1.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_2_files/figure-markdown_github/unnamed-chunk-22-2.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_2_files/figure-markdown_github/unnamed-chunk-22-3.png" style="display: block; margin: auto;" />
-
-<br/> Actually, if we plot BMI vs life expectancy for developed
-countries, this negative effect for large average BMI is hinted at (that
-low BMI and high life expectancy country is Japan) <br/>
-
-<img src="First_circle_linear_regression_2_files/figure-markdown_github/unnamed-chunk-23-1.png" style="display: block; margin: auto;" />
+<img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-33-1.png" style="display: block; margin: auto;" />
 
 If we plot again life expectancy vs. BMI for all countries, but adjust
-for If5_m and HIV, which were significant in our model
-<img src="First_circle_linear_regression_2_files/figure-markdown_github/unnamed-chunk-24-1.png" style="display: block; margin: auto;" />
+for other significant factors
 
-the plot flattens a bit. We could suspect a nonlinear dependence in BMI,
-although, interestingly enough fitting a more complex model, nonlinear
-BMI model (via restricted cubic splines), does not change the apparent
+<img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-34-1.png" style="display: block; margin: auto;" />
+
+The plot flattens a bit. We could suspect a nonlinear dependence in BMI,
+although interestingly enough, fitting a more complex nonlinear BMI
+model (via restricted cubic splines) does not change the apparent
 downward trend much.
 
 ``` r
+# I fit just a fixed effects model for simplicity's sake
 library(rms)
-fixed_efffect_model_nonlin <- lm(Life_expectancy ~ Alcohol + Hepatitis_B + Measles + rcs(BMI,4) + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m + factor(Country) + factor(Year), data = life_expectancy)
-
+fixed_effect_model_nonlin <- lm(Life_expectancy ~ Alcohol + Hepatitis_B + Measles + rcs(BMI,4) + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m + factor(Country) + factor(Year), data = life_expectancy)
 
 # Plot the predicted life expectancy vs. BMI for the first observation
 BMI_seq <- seq(min(life_expectancy$BMI),max(life_expectancy$BMI),1)
@@ -896,18 +1344,17 @@ obs <- life_expectancy[1,]
 obs <- obs[rep(1, length(BMI_seq)), ]
 obs$BMI  <- BMI_seq
 
-pred <- predict(fixed_efffect_model_nonlin ,obs,type = 'response')
+pred <- predict(fixed_effect_model_nonlin ,obs,type = 'response')
 plot(obs$BMI,pred,xlab = 'BMI', ylab = 'Life expectancy (Turkey)')
 ```
 
-<img src="First_circle_linear_regression_2_files/figure-markdown_github/unnamed-chunk-25-1.png" style="display: block; margin: auto;" />
+<img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-35-1.png" style="display: block; margin: auto;" />
 
-Overall, it is individual/time effects in the fixed effects model, which
-are seemingly playing a huge role here. Thus, our model is still quite
-lacking in providing explanations in this regard. Still, having
-identified BMI as a negative factor in a life expectancy model is not
-without some basis, see e.g., Oxford University research *Moderate
-obesity takes years off life expectancy*
+Overall, individual/time effects in the model play an important
+adjusting role in here. Hence, our model is lacking in this regard.
+Still, having identified BMI as a negative factor in a life expectancy
+model is not without some basis, see e.g., Oxford University research
+*Moderate obesity takes years off life expectancy*
 (<https://www.ox.ac.uk/news/2009-03-18-moderate-obesity-takes-years-life-expectancy>
 ) or 2023 paper from Nature Food, *Life expectancy can increase by up to
 10 years following sustained shifts towards healthier diets in the
@@ -916,10 +1363,10 @@ United Kingdom*.
 Overall, we kind of confirmed a statement about life expectancy on
 Wikipedia, which claims that *… great variations in life expectancy …
 (are) mostly caused by differences in public health, medical care, and
-diet*. With a bit of hyperbole, our stand-ins for these causes are the
-three factors in our model: HIV, infant mortality, and BMI. However, we
-also observed a lot of additional heterogeneity in the data unexplained
-by these three predictors (and other predictors included in the
-dataset). Thus, if were to investigate models of life expectancy
-further, we should explore including additional predictors in the future
-model.
+diet*. With some hyperbole, our stand-ins for these causes are the three
+time-varying factors in our model: HIV, infant mortality, and BMI.
+However, we also observed a lot of additional heterogeneity in the data
+unexplained by these three predictors (some of it is captured by the
+developed/developing factor). Thus, if we were to investigate models of
+life expectancy further, we should explore including additional
+predictors in the model.
