@@ -102,71 +102,71 @@ life_expectancy$Region <- factor(life_expectancy$Region)
 The rest of the predictors are correctly specified as numerical. Let us check that their values make some sense.
 <br/>
 
-* Infant_deaths
+* **Infant_deaths**
 ```{r}
 summary(life_expectancy$Infant_deaths)
 ```
 
-* Under_five_deaths
+* **Under_five_deaths**
 ```{r, echo=FALSE}
 summary(life_expectancy$Under_five_deaths)
 ```
 
-* Adult_mortality
+* **Adult_mortality**
 ```{r, echo=FALSE}
 summary(life_expectancy$Adult_mortality)
 ```
 
-* Alcohol_consumption
+* **Alcohol_consumption**
 ```{r, echo=FALSE}
 summary(life_expectancy$Alcohol_consumption)
 ```
 
-* Hepatitis_B
+* **Hepatitis_B**
 ```{r, echo=FALSE}
 summary(life_expectancy$Hepatitis_B)
 ```
 
-* Measles
+* **Measles**
 ```{r, echo=FALSE}
 summary(life_expectancy$Measles)
 ```
-* Polio
+* **Polio**
 ```{r, echo=FALSE}
 summary(life_expectancy$Polio)
 ```
 
-* Diphtheria
+* **Diphtheria**
 ```{r, echo=FALSE}
 summary(life_expectancy$Diphtheria)
 ```
 
-* Incidents_HIV
+* **Incidents_HIV**
 ```{r, echo=FALSE}
 summary(life_expectancy$Incidents_HIV)
 ```
 
-* GDP_per_capita
+* **GDP_per_capita**
 ```{r, echo=FALSE}
 summary(life_expectancy$GDP_per_capita)
 ```
 
-* Population_mln
+* **Population_mln**
 ```{r, echo=FALSE}
 summary(life_expectancy$Population_mln)
 ```
 
-* Thinness_ten_nineteen_years
+* **Thinness_ten_nineteen_years**
 ```{r, echo=FALSE}
 summary(life_expectancy$Thinness_ten_nineteen_years)
 ```
 
-* Thinness_five_nine_years
+* **Thinness_five_nine_years**
 ```{r, echo=FALSE}
 summary(life_expectancy$Thinness_five_nine_years)
 ```
 
-* Schooling
+* **Schooling**
 ```{r, echo=FALSE}
 summary(life_expectancy$Schooling)
 ```

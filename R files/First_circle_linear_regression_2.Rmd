@@ -1,7 +1,7 @@
 ---
 title: "The First Circle: Linear Regression, Part Two"
 author: "Jiří Fejlek"
-date: "2025-05-15"
+date: "2025-05-19"
 output:
   md_document:
     variant: GFM
@@ -45,10 +45,9 @@ life_expectancy <- life_expectancy %>% add_column(GDP_log)
 <br/>
 In Part Two of this demonstration of using linear regression, we seek to model **Life expectancy** using data that contains  health, immunization, and economic and demographic information about 179 countries from 2000 to 2015.
 
-<br/>
 I will not consider **Adult_mortality** as our predictor, because **Adult_mortality** is tightly connected to **Life_expectancy**, but does not give much additional insight into why life expectancy is lower, what the difference is between these countries, other than that people tend to die before reaching senior age. To illustrate this connection, we can see that a simple linear regression **Adult_mortality** on **Life_expectancy**
 <br/>
-<br/>
+
 
 ```{r}
 summary(lm(formula = Life_expectancy ~ Adult_mortality, data = life_expectancy))
@@ -249,7 +248,7 @@ Wald_test(linear_model_year, constraints = constrain_zero(c("factor(Year)2001","
 ```
 
 <br/>
-The estimates of main effects for the pooled model and the time fixed effects model are quite similar. However, we observe that the pooled model seems to slightly overestimate the life expectancy for earlier years and underestimate the life expectancy for the latter years. In the plot, blue: predicted mean life expectancy for linear model per year and red: predicted mean life expectancy for time fixed effect model per year (i.e, observed mean life expectancy per year due to how linear regression fits the data). 
+The estimates of main effects for the pooled model and the time fixed effects model are quite similar. However, we observe that the pooled model seems to slightly overestimate the life expectancy for earlier years and underestimate the life expectancy for the latter years. In the plot, blue: predicted mean life expectancy for linear model per year and red: predicted mean life expectancy for time fixed effect model per year (i.e, observed mean **Life_expectancy** per year due to how linear regression fits the data). 
 <br/>
 
 ```{r, fig.align = 'center'}
@@ -493,7 +492,7 @@ We see that the nonparametric bootstrap nicely corresponds to the confidence int
 <br/>
 Let us discuss the results. We notice that most of the predictors in the correlated random effects (CRE) model are not significant. 
 
-Concerning the time-invariant predictors, that we were able to estimate thanks to the CRE model, the significant predictors are *Economy* and some *Region*-specific factors. It seems that economically developed countries tend to have longer life expectancy than developing countries even after adjusting for other covariates. We can investigate this more formally post hoc using *lsmeans* (lsmeans computes estimated marginal means for a given factor, see https://cran.r-project.org/web/packages/emmeans/vignettes/basics.html for more details).
+Concerning the time-invariant predictors, that we were able to estimate thanks to the CRE model, the significant predictors are **Economy** and some **Region**-specific factors. It seems that economically developed countries tend to have higher life expectancy than developing countries even after adjusting for other covariates. We can investigate this more formally post hoc using *lsmeans* (lsmeans computes estimated marginal means for a given factor, see https://cran.r-project.org/web/packages/emmeans/vignettes/basics.html for more details).
 <br/>
 
 ```{r, fig.align = 'center', echo=FALSE}
@@ -512,13 +511,13 @@ plot(lsmeans(lmer_model, pairwise~ Region))
 ```
 
 <br/>
-If I were to guess why the factors for *Central*, *South America*, and *Asia* appeared (for *Asia* almost) significant in the CRE model, I would suspect that there is a significant difference between developing countries of South/Central America and Asia and the least developed countries (using the UN terminology) which are almost all in  Africa and the region specific factors serve as a kind of proxy for this fact.  
+If I were to guess why the factors for **Central**, **South America**, and **Asia** appeared (for **Asia** almost) significant in the CRE model, I would suspect that there is a significant difference between developing countries of South/Central America and Asia and the least developed countries (using the UN terminology) which are almost all in Africa and the region specific factors serve as a kind of proxy for this fact.  
 
-I also suspect that some other additional factors significantly influence life expectancy that are not directly present in the model, which are encompassed in the developed/developing countries factor. 
+I also suspect that some other additional factors significantly influence life expectancy that are not directly present in the model, which are encompassed in the **Economy** countries factor. 
 
 Concerning the time-varying  predictors in our model, the only significant ones appear to be **Inf5_m**, **BMI**, and **HIV**. Let us try to make some sense of this results. 
 
-The first significant predictor is **Inf5_m**, i.e., infant mortality/deaths of children under five years old per 1000 population. This effect is expected since the incidence of such early deaths drives the overall mean life expectancy down. We could observe this effect quite clearly from the data (the red curve is a LOESS fit of the data: span = 0.5, degree = 2)
+The first significant predictor is **Inf5_m**, i.e., infant mortality/deaths of children under five years old per 1000 population. This effect is expected since the incidence of such early deaths drives the life expectancy down. We could observe this effect quite clearly from the data (the red curve is a LOESS fit of the data: span = 0.5, degree = 2)
 <br/>
 
 ```{r, fig.align = 'center', echo=FALSE}
@@ -542,7 +541,7 @@ lines(b[,2],b[,1], col = "red", lwd = 2)
 ```
 
 <br/>
-The last significant predictor is average **BMI** of adult population. This one is a bit trickier to interpret. If we simply visualize the data, we could argue that life expectancy actually increases slightly with BMI. 
+The last significant predictor is average **BMI** of adult population. This one is a bit trickier to interpret. If we simply visualize the data, we could argue that **Life_expectancy** actually increases slightly with **BMI**. 
 <br/>
 
 ```{r, fig.align = 'center', echo=FALSE}
@@ -554,7 +553,7 @@ lines(b[,2],b[,1], col = "red", lwd = 2)
 ```
 
 <br/>
-However, more economically developed countries tend to have higher average BMI
+However, more economically developed countries tend to have higher average **BMI**
 <br/>
 
 ```{r, fig.align = 'center', echo=FALSE}
@@ -562,7 +561,7 @@ plot(life_expectancy$Economy,life_expectancy$BMI,xlab = '',ylab = 'BMI')
 ```
 
 <br/>
-and those countries tend to have higher life expectancy (and lower infant mortality/child deaths and lower HIV incidents count). Actually, if we plot BMI vs life expectancy for developed countries, this negative effect for large average BMI is hinted at (that low BMI and high life expectancy country is Japan)
+and those countries tend to have higher **Life_expectancy** (and lower **Infant_mortality/Child_deaths** and lower **HIV** incidents count). Actually, if we plot **BMI** vs **Life_expectancy** for developed countries, this negative effect for large average **BMI** is hinted at (that low **BMI** and high **Life_expectancy** country is Japan)
 <br/>
 
 ```{r, fig.align = 'center', echo=FALSE}
@@ -574,7 +573,7 @@ lines(b[,2],b[,1], col = "red", lwd = 2)
 
 ```
 
-If we plot again life expectancy vs. BMI for all countries, but adjust for other significant factors
+If we plot again **Life_expectancy** vs. **BMI** for all countries, but adjust for other significant factors
 
 ```{r, fig.align = 'center', echo=FALSE}
 
@@ -601,7 +600,7 @@ lines(b[,2],b[,1], col = "red", lwd = 2)
 
 ```
 
-The plot flattens a bit. We could suspect a nonlinear dependence in BMI, although interestingly enough, fitting a more complex nonlinear BMI model (via restricted cubic splines) does not change the apparent downward trend much.
+The plot flattens a bit. We could suspect a nonlinear dependence in **BMI**, although interestingly enough, fitting a more complex nonlinear (via restricted cubic splines) does not change the apparent downward trend much.
 
 ```{r, fig.align = 'center'}
 # I fit just a fixed effects model for simplicity's sake
@@ -620,5 +619,5 @@ plot(obs$BMI,pred,xlab = 'BMI', ylab = 'Life expectancy (Turkey)')
 
 Overall, individual/time effects in the model play an important adjusting role in here. Hence, our model is lacking in this regard. Still, having identified BMI as a negative factor in a life expectancy model is not without some basis, see e.g.,  Oxford University research *Moderate obesity takes years off life expectancy* (https://www.ox.ac.uk/news/2009-03-18-moderate-obesity-takes-years-life-expectancy )  or 2023 paper from Nature Food, *Life expectancy can increase by up to 10 years following sustained shifts towards healthier diets in the United Kingdom*. 
 
-Overall, we kind of confirmed a statement about life expectancy on Wikipedia, which claims that *... great variations in life expectancy ... (are) mostly caused by differences in public health, medical care, and diet*. With some hyperbole, our stand-ins for these causes are the three time-varying factors in our model: HIV, infant mortality, and BMI. However, we also observed a lot of additional heterogeneity in the data unexplained by these three predictors (some of it is captured by the developed/developing factor). Thus, if we were to investigate models of life expectancy further, we should explore including additional predictors in the model.  
+Overall, we kind of confirmed a statement about life expectancy on Wikipedia, which claims that *... great variations in life expectancy ... (are) mostly caused by differences in public health, medical care, and diet*. With some hyperbole, our stand-ins for these causes are the three time-varying factors in our model: **HIV**, **infant mortality**, and **BMI**. However, we also observed a lot of additional heterogeneity in the data unexplained by these three predictors (some of it is captured by the **Economy** factor). Thus, if we were to investigate models of life expectancy further, we should explore including additional predictors in the model.  
 

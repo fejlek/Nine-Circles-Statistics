@@ -2,7 +2,8 @@
 
 Jiří Fejlek
 <br/>
-2025-05-15
+2025-05-17
+
 
 ## Life Expectancy (WHO) dataset (*data exploration and redundancy analysis*)
 
@@ -141,7 +142,7 @@ life_expectancy$Region <- factor(life_expectancy$Region)
 <br/> The rest of the predictors are correctly specified as numerical.
 Let us check that their values make some sense. <br/>
 
-- Infant_deaths
+- **Infant_deaths**
 
 ``` r
 summary(life_expectancy$Infant_deaths)
@@ -150,91 +151,91 @@ summary(life_expectancy$Infant_deaths)
     ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
     ##    1.80    8.10   19.60   30.36   47.35  138.10
 
-- Under_five_deaths
+- **Under_five_deaths**
 
 <!-- -->
 
     ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
     ##   2.300   9.675  23.100  42.938  66.000 224.900
 
-- Adult_mortality
+- **Adult_mortality**
 
 <!-- -->
 
     ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
     ##   49.38  106.91  163.84  192.25  246.79  719.36
 
-- Alcohol_consumption
+- **Alcohol_consumption**
 
 <!-- -->
 
     ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
     ##   0.000   1.200   4.020   4.821   7.777  17.870
 
-- Hepatitis_B
+- **Hepatitis_B**
 
 <!-- -->
 
     ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
     ##   12.00   78.00   89.00   84.29   96.00   99.00
 
-- Measles
+- **Measles**
 
 <!-- -->
 
     ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
     ##   10.00   64.00   83.00   77.34   93.00   99.00
 
-- Polio
+- **Polio**
 
 <!-- -->
 
     ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
     ##     8.0    81.0    93.0    86.5    97.0    99.0
 
-- Diphtheria
+- **Diphtheria**
 
 <!-- -->
 
     ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
     ##   16.00   81.00   93.00   86.27   97.00   99.00
 
-- Incidents_HIV
+- **Incidents_HIV**
 
 <!-- -->
 
     ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
     ##  0.0100  0.0800  0.1500  0.8943  0.4600 21.6800
 
-- GDP_per_capita
+- **GDP_per_capita**
 
 <!-- -->
 
     ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
     ##     148    1416    4217   11541   12557  112418
 
-- Population_mln
+- **Population_mln**
 
 <!-- -->
 
     ##     Min.  1st Qu.   Median     Mean  3rd Qu.     Max. 
     ##    0.080    2.098    7.850   36.676   23.688 1379.860
 
-- Thinness_ten_nineteen_years
+- **Thinness_ten_nineteen_years**
 
 <!-- -->
 
     ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
     ##   0.100   1.600   3.300   4.866   7.200  27.700
 
-- Thinness_five_nine_years
+- **Thinness_five_nine_years**
 
 <!-- -->
 
     ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
     ##     0.1     1.6     3.4     4.9     7.3    28.6
 
-- Schooling
+- **Schooling**
 
 <!-- -->
 
@@ -412,7 +413,7 @@ redun(~.- Life_expectancy - Infant_deaths - Under_five_deaths - Year - Country  
     ##     Polio + Diphtheria + Incidents_HIV + Thinness_ten_nineteen_years + 
     ##     Thinness_five_nine_years + Schooling + Economy_status + Population_log + 
     ##     GDP_log + Inf5_m
-    ## <environment: 0x000001cc8751b1c0>
+    ## <environment: 0x0000028c3049b6c8>
     ## 
     ## n: 2864  p: 15   nk: 4 
     ## 
