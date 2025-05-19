@@ -1,3 +1,10 @@
+# The First Circle: Linear Regression, Part One
+
+<br/>
+Jiří Fejlek
+2025-05-17
+<br/>
+
 <br/> In this demonstration of using linear regression and some of its
 extensions (models for panel data to be more specific), our objective
 will be to build a model to identify predictors that seem to have a
