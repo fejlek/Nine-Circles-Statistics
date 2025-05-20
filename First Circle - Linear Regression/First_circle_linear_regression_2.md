@@ -3,7 +3,7 @@
 <br/>
 Jiří Fejlek
 
-2025-05-18
+2025-05-19
 <br/>
 
 ## Linear Regression Model (*for effect estimation and hypothesis testing*)
@@ -13,7 +13,7 @@ seek to model **Life expectancy** using data that contains health,
 immunization, and economic and demographic information about 179
 countries from 2000 to 2015. In this demonstration, we will start with a
 simple linear regression model, but we will eventually move to models
-for panel data. Thus, we will introduce random and fixed effects models
+for panel data. Thus, we will a give a brief introduction to random and fixed effects models
 for panel data and even lesser known *correlated random effects models*.
 
 Let us start the modelling with our choice of the predictors. I will not

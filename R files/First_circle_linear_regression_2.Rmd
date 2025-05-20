@@ -43,7 +43,7 @@ life_expectancy <- life_expectancy %>% add_column(GDP_log)
 ## Linear Regression Model (*for effect estimation and hypothesis testing*)
 
 <br/>
-In Part Two of this demonstration of using linear regression, we seek to model **Life expectancy** using data that contains  health, immunization, and economic and demographic information about 179 countries from 2000 to 2015. In this demonstration, we will start with a simple linear regression model, but we will eventually move to models for panel data. Thus, we will introduce random and fixed effects models for panel data and even lesser known *correlated random effects models*. 
+In Part Two of this demonstration of using linear regression, we seek to model **Life expectancy** using data that contains  health, immunization, and economic and demographic information about 179 countries from 2000 to 2015. In this demonstration, we will start with a simple linear regression model, but we will eventually move to models for panel data. Thus, we will a give a brief introduction to random and fixed effects models for panel data and even lesser known *correlated random effects models*. 
 
 Let us start the modelling with our choice of the predictors. I will not consider **Adult_mortality** as our predictor, because **Adult_mortality** is tightly connected to **Life_expectancy**, but does not give much additional insight into why life expectancy is lower, what the difference is between these countries, other than that people tend to die before reaching senior age. To illustrate this connection, we can see that a simple linear regression **Adult_mortality** on **Life_expectancy**
 <br/>
