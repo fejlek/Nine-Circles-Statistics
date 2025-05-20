@@ -6,15 +6,19 @@ Jiří Fejlek
 2025-05-19
 <br/>
 
-## Linear Regression Model (*for effect estimation and hypothesis testing*)
-
 <br/> In Part Two of this demonstration of using linear regression, we
 seek to model **Life expectancy** using data that contains health,
 immunization, and economic and demographic information about 179
-countries from 2000 to 2015. In this demonstration, we will start with a
-simple linear regression model, but we will eventually move to models
-for panel data. Thus, we will a give a brief introduction to random and fixed effects models
-for panel data and even lesser known *correlated random effects models*.
+countries from 2000 to 2015. We are mostly interested in determining
+which predictors from our dataset have a *significant* effect on life
+expectancy.
+
+In this demonstration, we will start with a simple linear regression
+model, but we will eventually move to models for panel data. Thus, we
+will give a brief introduction to random and fixed effects models for
+panel data, and even to lesser known *correlated random effects models*.
+
+## Linear Regression Model (*for effect estimation and hypothesis testing*)
 
 Let us start the modelling with our choice of the predictors. I will not
 consider **Adult_mortality** as our predictor, because
@@ -50,28 +54,29 @@ summary(lm(formula = Life_expectancy ~ Adult_mortality, data = life_expectancy))
 
 <br/> already explains almost 90% of the variability in the data. <br/>
 
-I will also not consider **Country** and **Year** as our predictors in
-our initial model, since we are not developing a model for a
+Initially, I will also not consider **Country** and **Year** as our
+predictors in our model. We are not developing a model for a
 *particular* country in a *particular* time. Although, as we will see
 later, it is actually quite important to acknowledge that our data are
-panel data (i.e., data for some individuals evolving in time). Such data
-for a given individual, in our case, for a given country, are usually
-significantly correlated. Consequently, it is quite incorrect to
+panel data (i.e., data for some individuals evolving in time).
+
+Such data for a given individual, in our case, for a given country, are
+usually significantly correlated. Consequently, it is quite incorrect to
 consider a model that sees these data as 2864 *independent*
 observations, since it would lead to overly optimistic estimates of
-effects (e.g, too narrow confidence intervals).
+effects (e.g, too narrow confidence intervals). In addition, including
+**Country** and **Year** in our model in some way allows us to reduce
+the omitted variable bias of our estimates (thus panel data allows us to
+hopefully get more accurate estimates of the predictors’ effects), as we
+see later.
 
-In addition, including **Country** and **Year** in our model allows us
-to reduce the omitted variable bias of our estimates, as we see later.
-Still, I will proceed to do this first, a simple linear regression model
-(mostly for illustrative purposes) anyway, and make corrections in the
-model later.
-
-Based on the data exploration in Part One, I will use the logarithm
-transformation of predictors **Population_mln** and **GDP_per_capita**,
-and the predictor **Inf5_m**, combining predictors **Infant_deaths** and
-**Under_five_deaths**. Hence, we will consider the following predictors
-<br/>
+Still, I will proceed to use a simple linear regression model (mostly
+for illustrative purposes) anyway, and make corrections in the model
+later. Based on the data exploration in Part One, I will use the
+logarithm transformation of predictors **Population_mln** and
+**GDP_per_capita**, and use the predictor **Inf5_m**, that combines the
+predictors **Infant_deaths** and **Under_five_deaths**. Hence, we will
+consider the following predictors <br/>
 
 - **Inf5_m** - Linear combination of **Infant_deaths** and
   **Under_five_deaths** (see Part One)
@@ -106,11 +111,10 @@ each country are correlated, and these correlations will be strong since
 such country characteristics do not change in time that much). The rule
 of thumb for a number of predictors in such a case is between ~ 179/10 =
 18 and ~179/20 = 9, which nicely corresponds to our total number of
-predictors of interest.
-
-Thus, to obtain reasonable estimates, we would have to guess which
-interactions (or nonlinear terms) to include from the data itself, which
-is not an advisable approach.
+predictors of interest. Thus, to obtain reasonable estimates of
+interactions and nonlinearities, we would have to guess which
+interactions (and/or nonlinear terms) to include from the data itself,
+which is not an advisable approach.
 
 Before we start the modelling, we will do some variable renaming to
 shorten the predictor names. <br/>
