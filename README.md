@@ -1,4 +1,4 @@
-# Nine Circles of Statistics
+# Nine Circles of Statistical Modeling
 
 The primary focus of this repository is *statistical models*, i.e., models such as linear regression, contingency tables, or survival models (I plan covering nine models at the time of writing this introduction). I will demonstrate their usage on datasets taken from Kaggle (https://www.kaggle.com). Even though each problem will be mainly focused on one particular model, I expect that due to dealing with more or less realistic datasets, I will have to cover other additional topics as the need emerges, e.g.,  dealing with missing data (multiple imputation) and dealing with dependent/correlated observations. 
 
