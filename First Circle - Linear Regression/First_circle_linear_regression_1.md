@@ -13,7 +13,7 @@ objective will be to build a model that should aid us to identify
 predictors that seem to have a significant effect on life expectancy
 based on this dataset. We will also explore whether the obtained model
 would be useful for predictions about life expectancy, although this
-will not be its primary purpose. I will split this presentation into
+will not be its primary purpose. We will split this presentation into
 three parts: data preparation & exploration, creating a model for effect
 estimation, and model predictions & discussion. <br/>
 
@@ -428,7 +428,7 @@ redun(~.- Life_expectancy - Infant_deaths - Under_five_deaths - Year - Country  
     ##     Polio + Diphtheria + Incidents_HIV + Thinness_ten_nineteen_years + 
     ##     Thinness_five_nine_years + Schooling + Economy_status + Population_log + 
     ##     GDP_log + Inf5_m
-    ## <environment: 0x0000017ded53f460>
+    ## <environment: 0x000002119f410660>
     ## 
     ## n: 2864  p: 15   nk: 4 
     ## 

@@ -13,7 +13,7 @@ knitr::opts_chunk$set(warning = FALSE, message = FALSE)
 ```
 
 <br/>
-In this project, we will demonstrate application of using linear regression and some of its extensions (we will eventually move to models for panel data and the final model will be a mixed effects model). Our objective will be to build a model that should aid us to identify predictors that seem to have a significant effect on life expectancy based on this dataset. We will also explore whether the obtained model would be useful for predictions about life expectancy, although this will not be its primary purpose. I will split this presentation into three parts: data preparation & exploration, creating a model for effect estimation, and model predictions & discussion.
+In this project, we will demonstrate application of using linear regression and some of its extensions (we will eventually move to models for panel data and the final model will be a mixed effects model). Our objective will be to build a model that should aid us to identify predictors that seem to have a significant effect on life expectancy based on this dataset. We will also explore whether the obtained model would be useful for predictions about life expectancy, although this will not be its primary purpose. We will split this presentation into three parts: data preparation & exploration, creating a model for effect estimation, and model predictions & discussion.
 <br/>
 
 
