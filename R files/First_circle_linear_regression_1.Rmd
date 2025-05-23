@@ -13,11 +13,11 @@ knitr::opts_chunk$set(warning = FALSE, message = FALSE)
 ```
 
 <br/>
-In this demonstration of using linear regression and some of its extensions (models for panel data to be more specific), our objective will be to build a model to identify predictors that seem to have a significant effect on life expectancy based on this dataset. I will split this presentation into three parts: data preparation/exploration, creating a model for effect estimation/hypothesis testing, and conclusion.
+In this project, we will demonstrate application of using linear regression and some of its extensions (we will eventually move to models for panel data and the final model will be a mixed effects model). Our objective will be to build a model that should aid us to identify predictors that seem to have a significant effect on life expectancy based on this dataset. We will also explore whether the obtained model would be useful for predictions about life expectancy, although this will not be its primary purpose. I will split this presentation into three parts: data preparation & exploration, creating a model for effect estimation, and model predictions & discussion.
 <br/>
 
 
-## Life Expectancy (WHO)  dataset (*data exploration and redundancy analysis*)
+## Life Expectancy (WHO)  dataset 
 
 
 Let us start with the description of our data set. Our data are taken from <https://www.kaggle.com/datasets/lashagoch/life-expectancy-who-updated>. Data contains life expectancy, health, immunization, and economic and demographic information about 179 countries from 2000 to 2015
@@ -59,7 +59,8 @@ life_expectancy <- read_csv('C:/Users/elini/Desktop/nine circles/Life-Expectancy
 head(life_expectancy)
 ```
 
-### Initial Data Exploration
+## Initial Data Exploration
+
 <br/>
 We start with a brief data exploration. We will mostly look for serious problems with the data such as missing values, nonsensical values, etc. Let us first look at the size of the dataset.
 <br/>
@@ -226,7 +227,7 @@ ggplot(life_expectancy, aes(x=Population_log)) + geom_histogram() + xlab("Popula
 ggplot(life_expectancy, aes(x=GDP_log)) + geom_histogram() + xlab("GDP_log") + ylab("Frequency")
 ```
 
-### Redundancy Analysis
+## Redundancy Analysis
 
 <br/>
 As we will discuss further in Part 2, our model of life expectancy will contain as the main predictors of interest all predictors except **Country**, **Year**, and **Adult_mortality**. Our dataset consists of a relatively small number of predictors. However, the effective size of our dataset is also much smaller than which would appear at the first glance, as we discuss in Part Two.  Hence, it is worthwhile to check whether some predictors contain redundant information. We first plot a correlation heatmap.

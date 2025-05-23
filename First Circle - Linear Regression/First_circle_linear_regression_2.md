@@ -14,11 +14,12 @@ which predictors from our dataset have a *significant* effect on life
 expectancy.
 
 In this demonstration, we will start with a simple linear regression
-model, but we will eventually move to models for panel data. Thus, we
-will give a brief introduction to random and fixed effects models for
-panel data, and even to lesser known *correlated random effects models*.
+model, but we will eventually move to models for panel data in the
+latter half of this text. Thus, we will give a brief introduction to
+random and fixed effects models for panel data and even to lesser-known
+*correlated random effects* models.
 
-## Linear Regression Model (*for effect estimation and hypothesis testing*)
+## Specification of predictors
 
 Let us start the modelling with our choice of the predictors. I will not
 consider **Adult_mortality** as our predictor, because
@@ -66,17 +67,18 @@ consider a model that sees these data as 2864 *independent*
 observations, since it would lead to overly optimistic estimates of
 effects (e.g, too narrow confidence intervals). In addition, including
 **Country** and **Year** in our model in some way allows us to reduce
-the omitted variable bias of our estimates (thus panel data allows us to
-hopefully get more accurate estimates of the predictors’ effects), as we
-see later.
+the omitted variable bias of our estimates (thus, panel data allows us
+to hopefully get more accurate estimates of the predictors’ effects), as
+we see later.
 
-Still, I will proceed to use a simple linear regression model (mostly
-for illustrative purposes) anyway, and make corrections in the model
-later. Based on the data exploration in Part One, I will use the
-logarithm transformation of predictors **Population_mln** and
-**GDP_per_capita**, and use the predictor **Inf5_m**, that combines the
-predictors **Infant_deaths** and **Under_five_deaths**. Hence, we will
-consider the following predictors <br/>
+Still, I will proceed to use a simple linear regression model as our
+starting point (mostly for illustrative purposes and to upheld the title
+of this project), and make the necessary corrections in the model later.
+Based on the data exploration in Part One, I will use the logarithm
+transformation of predictors **Population_mln** and **GDP_per_capita**,
+and use the predictor **Inf5_m**, that combines the predictors
+**Infant_deaths** and **Under_five_deaths**. Hence, we will consider the
+following predictors <br/>
 
 - **Inf5_m** - Linear combination of **Infant_deaths** and
   **Under_five_deaths** (see Part One)
@@ -99,8 +101,8 @@ consider the following predictors <br/>
 I will consider a simple model where all predictors enter linearly. I
 will not consider any interaction or nonlinear terms in the model. I do
 not have any prior knowledge of which specific interaction/nonlinear
-terms should be included in the model, nor do I have a specific
-hypothesis about interactions/nonlinearity I wish to test.
+terms should be included in the model, nor do I have posed a specific
+hypothesis about interactions/nonlinearity.
 
 Our dataset is not large enough to reasonably include even just all
 simple linear interaction terms, or for that matter, two cubic spline
@@ -127,7 +129,7 @@ library(dplyr)
 life_expectancy <- life_expectancy %>% rename(Thin_10_19 = Thinness_ten_nineteen_years) %>% rename(Thin_5_9 = Thinness_five_nine_years) %>% rename(Alcohol = Alcohol_consumption) %>% rename(HIV = Incidents_HIV) %>% rename(Economy = Economy_status ) %>% rename(Adult_m = Adult_mortality ) %>% rename(Pop_log = Population_log)
 ```
 
-### Simple linear model (and accounting for heteroskedasticity)
+## Simple linear model (and accounting for heteroskedasticity)
 
 <br/> As we discussed earlier, we first fit a simple linear model
 ignoring the panel nature of our data. <br/>
@@ -236,7 +238,9 @@ coeftest(linear_model, vcov = vcovHC(linear_model, type = c("HC0")))
 
 <br/> We can obtain similar heteroskedasticity-consistent estimates
 using a simple nonparametric bootstrap that resamples with repetitions
-the whole dataset (paired bootstrap). <br/>
+the whole dataset, a so-called paired bootstrap (*A. C. Cameron and P.
+K. Trivedi. Microeconometrics: methods and applications. Cambridge
+university press, 2005.*). <br/>
 
 ``` r
 set.seed(123) # for reproducibility
@@ -365,7 +369,7 @@ round(coeff_delete,4)
 all values stayed within the confidence intervals provided by the
 bootstrap. <br/>
 
-### Accounting for autocorrelation
+## Accounting for autocorrelation
 
 <br/> All of the aforementioned approaches, including
 heteroskedasticity-consistent standard errors and paired bootstrap,
@@ -418,7 +422,7 @@ coef_test(linear_model, vcov = "CR2", cluster = life_expectancy$Country)
 significantly larger and that many effects are no longer significant.
 <br/>
 
-### Pooled, fixed effects, and random effects panel data models
+## Pooled, fixed effects, and random effects panel data models
 
 <br/> This linear model we constructed is in the context of panel data
 models called *pooled* because it stacks the data for all individuals
@@ -549,11 +553,11 @@ than the assumption of the pooled model that this correlation is always
 zero. So overall, the random effects model should provide more accurate
 estimates than the pooled model provided that the exogeneity assumption
 (individual effects are uncorrelated with the rest of the predictors)
-holds (see, e.g., *Wooldridge, Jeffrey M. Econometric analysis of cross
-section and panel data* or *Cameron, A. Colin, and Pravin K. Trivedi.
-Microeconometrics: methods and applications* for a much more detailed
-explanation about pooled, fixed effects, and random effects models).
-<br/>
+holds (see, e.g., *J. M. Wooldridge. Econometric analysis of cross
+section and panel data* or (*A. C. Cameron and P. K. Trivedi.
+Microeconometrics: methods and applications. Cambridge university press,
+2005.*) for a much more detailed explanation about pooled, fixed
+effects, and random effects models). <br/>
 
 ``` r
 library(plm)
@@ -860,8 +864,8 @@ The CRE models are quite old (*Y. Mundlak. On the pooling of time series
 and cross section data. Econometrica: journal of the Econometric Society
 (1978): 69-85.*). However, it seems they got nowhere near as popular as
 fixed effects and random effects models. Although there seem to be
-recent papers emerging (e.g., *D. McNeish, and K. Kelley. Fixed effects
-models versus mixed effects models for clustered data: Reviewing the
+recent papers (e.g., *D. McNeish, and K. Kelley. Fixed effects models
+versus mixed effects models for clustered data: Reviewing the
 approaches, disentangling the differences, and making recommendations.
 Psychological Methods 24.1 (2019): 20*, *J. M. Wooldridge. Correlated
 random effects models with unbalanced panels. Journal of Econometrics
@@ -902,18 +906,91 @@ We also might have some overly influential observations/outliers.
 Unfortunately, *plm* package does not have support for computing
 influence diagnostics. Hence, we will refit our correlated random
 effects model using a package *lme4* that can be used to fit general
-linear mixed-effects models. We then use package *HLMdiag* to determine
-the influence of individual observations. Since we are dealing with
-panel data, we will consider diagnostics based on deleting whole
-clusters given by **Country.** We will again use the Cook’s distance and
-refit the model based on several Cook’s distance cut-offs based on the
-Cook’s distance plot. <br/>
+linear mixed-effects models. We should mention here, that while both
+*plm* and *lme4* will fit the same model, their methods are different:
+*plm* uses generalized least squares approaches (following an
+“econometrics’ tradition”) whereas *lme4* uses restricted maximum
+likelihood estimation (REML). Thus, these two functions may not always
+produce the same results, see
+<https://cran.r-project.org/web/packages/plm/vignettes/A_plmPackage.html>
+for a bit more detail. However, our model is fairly simple and our data
+“nice” enough, and thus, we observe that optimization of restricted
+maximum likelihood converged to the same solution as the one provided by
+*plm*.
 
 ``` r
-library(HLMdiag)
 library(lme4)
 
 lmer_model <- lmer(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m  + Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + Inf5_m_cent + factor(Year) + (1 | Country), life_expectancy_cent)
+
+sum_lmer <- summary(lmer_model)
+sum_plm <- summary(corr_random_effect_model_plm)
+cbind(sum_lmer$coefficients,sum_plm$coefficients)
+```
+
+    ##                       Estimate  Std. Error      t value      Estimate  Std. Error      z-value      Pr(>|z|)
+    ## (Intercept)       5.656610e+01 4.609598406  12.27137278  5.656610e+01 4.609598359  12.27137291  1.290465e-34
+    ## EconomyDeveloped  4.626282e+00 1.003182871   4.61160385  4.626282e+00 1.003182860   4.61160390  3.995738e-06
+    ## RegionAsia        1.425661e+00 0.704143273   2.02467514  1.425661e+00 0.704143266   2.02467516  4.290073e-02
+    ## RegionCAm         2.321407e+00 0.781755267   2.96948064  2.321407e+00 0.781755259   2.96948067  2.983036e-03
+    ## RegionEU         -8.121675e-01 1.159371218  -0.70052408 -8.121675e-01 1.159371206  -0.70052409  4.836001e-01
+    ## RegionMidE        2.045098e-01 0.894265298   0.22869028  2.045098e-01 0.894265289   0.22869028  8.191097e-01
+    ## RegionNAm         1.243602e-01 1.577379573   0.07883974  1.243602e-01 1.577379556   0.07883974  9.371601e-01
+    ## RegionOce        -6.862251e-01 0.963495072  -0.71222480 -6.862251e-01 0.963495062  -0.71222481  4.763256e-01
+    ## RegionNotEU       1.138108e+00 0.940219887   1.21047027  1.138108e+00 0.940219877   1.21047029  2.260985e-01
+    ## RegionSAm         2.058124e+00 0.886738522   2.32100465  2.058124e+00 0.886738513   2.32100467  2.028659e-02
+    ## Alcohol          -9.911882e-03 0.018996872  -0.52176387 -9.911882e-03 0.018996872  -0.52176387  6.018347e-01
+    ## Hepatitis_B       9.379298e-04 0.002132336   0.43986022  9.379298e-04 0.002132336   0.43986022  6.600383e-01
+    ## Measles          -6.291918e-03 0.002136680  -2.94471770 -6.291918e-03 0.002136680  -2.94471770  3.232494e-03
+    ## BMI              -9.757222e-01 0.095750956 -10.19020820 -9.757222e-01 0.095750956 -10.19020819  2.192941e-24
+    ## Polio             1.088063e-03 0.004269749   0.25483062  1.088063e-03 0.004269749   0.25483062  7.988539e-01
+    ## Diphtheria        1.297446e-02 0.004269995   3.03851897  1.297446e-02 0.004269995   3.03851897  2.377441e-03
+    ## HIV              -8.415721e-01 0.026776459 -31.42955299 -8.415721e-01 0.026776459 -31.42955297 7.988600e-217
+    ## GDP_log           4.552527e-01 0.124725653   3.65003259  4.552527e-01 0.124725653   3.65003259  2.622070e-04
+    ## Pop_log           2.634756e-01 0.281217762   0.93690967  2.634756e-01 0.281217762   0.93690966  3.488050e-01
+    ## Thin_10_19        4.313742e-05 0.011248233   0.00383504  4.313742e-05 0.011248233   0.00383504  9.969401e-01
+    ## Thin_5_9          7.770860e-04 0.011111985   0.06993224  7.770860e-04 0.011111985   0.06993224  9.442476e-01
+    ## Schooling        -2.304524e-02 0.044638263  -0.51626647 -2.304524e-02 0.044638263  -0.51626647  6.056683e-01
+    ## Inf5_m           -2.697373e+00 0.068372502 -39.45113849 -2.697373e+00 0.068372502 -39.45113846  0.000000e+00
+    ## Alcohol_cent     -2.009478e-01 0.080164507  -2.50669352 -2.009478e-01 0.080164506  -2.50669354  1.218663e-02
+    ## Hepatitis_B_cent -2.438138e-02 0.024259251  -1.00503414 -2.438138e-02 0.024259250  -1.00503415  3.148804e-01
+    ## Measles_cent      1.093243e-02 0.013043282   0.83816566  1.093243e-02 0.013043282   0.83816567  4.019377e-01
+    ## BMI_cent          1.014919e+00 0.175468480   5.78405467  1.014919e+00 0.175468479   5.78405471  7.292121e-09
+    ## Polio_cent        3.907611e-02 0.058607328   0.66674440  3.907611e-02 0.058607327   0.66674441  5.049354e-01
+    ## Diphtheria_cent  -3.119282e-02 0.059840856  -0.52126295 -3.119282e-02 0.059840855  -0.52126295  6.021836e-01
+    ## HIV_cent         -7.397030e-02 0.089966620  -0.82219715 -7.397030e-02 0.089966619  -0.82219716  4.109647e-01
+    ## GDP_log_cent      9.512888e-01 0.288151877   3.30134508  9.512888e-01 0.288151875   3.30134510  9.622245e-04
+    ## Pop_log_cent     -1.099326e-01 0.311940553  -0.35241525 -1.099326e-01 0.311940553  -0.35241525  7.245269e-01
+    ## Thin_10_19_cent  -1.014320e-01 0.243701352  -0.41621433 -1.014320e-01 0.243701350  -0.41621433  6.772532e-01
+    ## Thin_5_9_cent     8.899043e-02 0.243532193   0.36541548  8.899043e-02 0.243532191   0.36541548  7.148013e-01
+    ## Schooling_cent   -2.625272e-01 0.130991475  -2.00415520 -2.625272e-01 0.130991474  -2.00415522  4.505344e-02
+    ## Inf5_m_cent      -1.795269e+00 0.379168177  -4.73475660 -1.795269e+00 0.379168173  -4.73475665  2.193181e-06
+    ## factor(Year)2001  1.144670e-01 0.080670712   1.41894068  1.144670e-01 0.080670712   1.41894068  1.559163e-01
+    ## factor(Year)2002  1.798339e-01 0.082587123   2.17750504  1.798339e-01 0.082587123   2.17750504  2.944291e-02
+    ## factor(Year)2003  2.983014e-01 0.085673747   3.48183014  2.983014e-01 0.085673747   3.48183014  4.979995e-04
+    ## factor(Year)2004  5.307175e-01 0.090373122   5.87251436  5.307175e-01 0.090373122   5.87251435  4.292345e-09
+    ## factor(Year)2005  6.565482e-01 0.095513461   6.87388097  6.565482e-01 0.095513461   6.87388097  6.247835e-12
+    ## factor(Year)2006  8.810205e-01 0.101939007   8.64262426  8.810205e-01 0.101939007   8.64262426  5.493636e-18
+    ## factor(Year)2007  1.097475e+00 0.108483535  10.11651590  1.097475e+00 0.108483535  10.11651589  4.667351e-24
+    ## factor(Year)2008  1.392475e+00 0.115619570  12.04359092  1.392475e+00 0.115619570  12.04359091  2.096279e-33
+    ## factor(Year)2009  1.676455e+00 0.122291026  13.70873049  1.676455e+00 0.122291026  13.70873048  9.001911e-43
+    ## factor(Year)2010  1.990343e+00 0.129232637  15.40123799  1.990343e+00 0.129232637  15.40123798  1.605656e-53
+    ## factor(Year)2011  2.255256e+00 0.136985468  16.46346993  2.255256e+00 0.136985468  16.46346992  6.713890e-61
+    ## factor(Year)2012  2.513751e+00 0.144257025  17.42550409  2.513751e+00 0.144257025  17.42550408  5.284074e-68
+    ## factor(Year)2013  2.808439e+00 0.152073247  18.46766974  2.808439e+00 0.152073247  18.46766973  3.759668e-76
+    ## factor(Year)2014  3.109677e+00 0.160164110  19.41556420  3.109677e+00 0.160164110  19.41556418  5.700647e-84
+    ## factor(Year)2015  3.297179e+00 0.167305199  19.70757307  3.297179e+00 0.167305199  19.70757306  1.856601e-86
+
+<br/> We then use *lme4* in combination with *HLMdiag* to determine the
+influence of individual observations. Since we are dealing with panel
+data, we will consider diagnostics based on deleting whole clusters
+given by **Country.** We will again use the Cook’s distance and refit
+the model based on several Cook’s distance cut-offs based on the Cook’s
+distance plot. <br/>
+
+``` r
+library(HLMdiag)
+
 
 # Compute influence by deleting individual Countries
 inf <- hlm_influence(lmer_model, level = "Country")
@@ -922,7 +999,7 @@ inf <- hlm_influence(lmer_model, level = "Country")
 plot(inf$cooksd,ylab = "Cook's distance")
 ```
 
-<img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-21-1.png" style="display: block; margin: auto;" />
+<img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-22-1.png" style="display: block; margin: auto;" />
 
 ``` r
 # Refit model for deleted observations
@@ -978,7 +1055,9 @@ determine correct degrees of freedom, see
 that discusses several alternatives to use. Let us explore them.
 
 Let us start with the standard confidence intervals (i.e, standard error
-multiplied by *qnorm(0.975)*, thus ignoring degrees of freedom). <br/>
+multiplied by *qnorm(0.975)*, thus ignoring degrees of freedom). The
+p-values that *plm* provide are based on this approximation. I will use
+*confint* on *lmer_model*, because it provides more options. <br/>
 
 ``` r
 confint(lmer_model,method ='Wald')[3:25,]
@@ -1043,7 +1122,7 @@ confint(lmer_model,method ='profile')[3:25,]
 
 <br/> Another another method is based on *parametric* bootstrap (i.e.,
 bootstrap based on simulating new responses for our data from the
-estimated model and getting new estimates by refitting the model) <br/>
+estimated model) <br/>
 
 ``` r
 confint(lmer_model,method ='boot')[3:25,]
@@ -1080,22 +1159,22 @@ that computes cluster-robust standard errors (CR2) and Satterthwaite DOF
 correction (we used this approach for several tests before) <br/>
 
 ``` r
-coef_stats <- coef_test(lmer_model, vcov = "CR2", cluster = life_expectancy$Country)[1:23,]
-conf_int <- cbind(fixef(lmer_model)[1:23] - coef_stats$SE*qt(0.975,coef_stats$df_Satt),fixef(lmer_model)[1:23] + coef_stats$SE*qt(0.975,coef_stats$df_Satt))
+coef_stats <- coef_test(corr_random_effect_model_plm, vcov = "CR2", cluster = life_expectancy$Country)[1:23,]
+conf_int <- cbind(coefficients(corr_random_effect_model_plm)[1:23] - coef_stats$SE*qt(0.975,coef_stats$df_Satt),coefficients(corr_random_effect_model_plm)[1:23] + coef_stats$SE*qt(0.975,coef_stats$df_Satt))
 colnames(conf_int) <- c('2.5 %','97.5 %')
 conf_int
 ```
 
     ##                         2.5 %       97.5 %
-    ## (Intercept)      46.387583751 66.744617060
-    ## EconomyDeveloped  2.616563847  6.636000135
+    ## (Intercept)      46.387583765 66.744617077
+    ## EconomyDeveloped  2.616563848  6.636000135
     ## RegionAsia       -0.117700221  2.969022982
     ## RegionCAm         0.686834662  3.955979599
-    ## RegionEU         -3.145213314  1.520878392
-    ## RegionMidE       -1.616408543  2.025428100
-    ## RegionNAm        -5.148086642  5.396807020
-    ## RegionOce        -3.362797486  1.990347310
-    ## RegionNotEU      -0.991935825  3.268152273
+    ## RegionEU         -3.145213315  1.520878391
+    ## RegionMidE       -1.616408542  2.025428101
+    ## RegionNAm        -5.148086642  5.396807021
+    ## RegionOce        -3.362797487  1.990347309
+    ## RegionNotEU      -0.991935826  3.268152272
     ## RegionSAm         0.376744323  3.739504142
     ## Alcohol          -0.123232662  0.103408899
     ## Hepatitis_B      -0.007264218  0.009140078
@@ -1116,7 +1195,9 @@ choice: a nonparametric bootstrap. We cannot use a simple paired
 bootstrap, since this bootstrap would destroy the panel data structure.
 Instead, we have to use the fact that we assume that observations for
 each individual country are independent from each other, and thus,
-bootstrap over these whole time series. <br/>
+bootstrap over these whole time series (*A. C. Cameron and P. K.
+Trivedi. Microeconometrics: methods and applications. Cambridge
+university press, 2005.*). <br/>
 
 ``` r
 set.seed(123) # for reproducibility
@@ -1173,13 +1254,17 @@ boot_ci[1:23,]
     ## Schooling        -0.248854264 -0.0225201774  0.187523507
     ## Inf5_m           -3.260260023 -2.6941930363 -2.105902953
 
-<br/> We see that the nonparametric bootstrap nicely corresponds to the
+<br/> We see that the nonparametric bootstrap mostly corresponds to the
 confidence intervals based on the robust standard errors with the DOF
 correction. The parametric bootstrap and the other two methods provided
-slightly narrower confidence intervals. Since the intervals based on the
-robust standard errors and nonparametric bootstrap match, I guess the
-issue is indeed heteroskedasticity of errors (parametric bootstrap
-cannot account for this since it simulates directly from the model that
-assumes homoscedastic errors). With the validation complete, we end the
-Part Two. In the last part of this project, we will discuss our results.
-<br/>
+slightly narrower confidence intervals. Since the parametric bootstrap
+depends on the distributional assumption, it generates bootstrap samples
+using normal distributed errors with the variance estimated by the
+model. Meanwhile, the nonparametric bootstrap does not use this
+distributional assumption. Hence, I prefer the results of the
+nonparametric bootstrap / robust standard errors here (especially since
+the QQ-plot of the residuals showed noticeable deviation from
+normality).
+
+With the validation complete, we end Part Two. In the last part of this
+project, we will discuss our results. <br/>

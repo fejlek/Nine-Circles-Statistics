@@ -43,9 +43,9 @@ life_expectancy <- life_expectancy %>% add_column(GDP_log)
 <br/>
 In Part Two of this demonstration of using linear regression, we seek to model **Life expectancy** using data that contains  health, immunization, and economic and demographic information about 179 countries from 2000 to 2015. We are mostly interested in determining which predictors from our dataset have a *significant* effect on life expectancy.
 
-In this demonstration, we will start with a simple linear regression model, but we will eventually move to models for panel data. Thus, we will give a brief introduction to random and fixed effects models for panel data, and even to lesser known *correlated random effects models*. 
+In this demonstration, we will start with a simple linear regression model, but we will eventually move to models for panel data in the latter half of this text. Thus, we will give a brief introduction to random and fixed effects models for panel data and even to lesser-known *correlated random effects* models. 
 
-## Linear Regression Model (*for effect estimation and hypothesis testing*)
+## Specification of predictors 
 
 Let us start the modelling with our choice of the predictors. I will not consider **Adult_mortality** as our predictor, because **Adult_mortality** is tightly connected to **Life_expectancy**, but does not give much additional insight into why life expectancy is lower, what the difference is between these countries, other than that people tend to die before reaching senior age. To illustrate this connection, we can see that a simple linear regression **Adult_mortality** on **Life_expectancy**
 <br/>
@@ -61,9 +61,9 @@ already explains almost 90% of the variability in the data.
 
 Initially, I will also not consider **Country** and **Year** as our predictors in our model. We are not developing a model for a *particular* country in a *particular* time. Although, as we will see later, it is actually quite important to acknowledge that our data are panel data (i.e., data for some individuals evolving in time). 
 
-Such data for a given individual, in our case, for a given country, are usually significantly correlated. Consequently, it is quite incorrect to consider a model that sees these data as 2864 *independent* observations, since it would lead to overly optimistic estimates of effects (e.g, too narrow confidence intervals). In addition, including **Country** and **Year** in our model in some way allows us to reduce the omitted variable bias of our estimates (thus panel data allows us to hopefully get more accurate estimates of the predictors' effects), as we see later. 
+Such data for a given individual, in our case, for a given country, are usually significantly correlated. Consequently, it is quite incorrect to consider a model that sees these data as 2864 *independent* observations, since it would lead to overly optimistic estimates of effects (e.g, too narrow confidence intervals). In addition, including **Country** and **Year** in our model in some way allows us to reduce the omitted variable bias of our estimates (thus, panel data allows us to hopefully get more accurate estimates of the predictors' effects), as we see later. 
 
-Still, I will proceed to use a simple linear regression model (mostly for illustrative purposes) anyway, and make corrections in the model later. Based on the data exploration in Part One, I will use the logarithm transformation of predictors **Population_mln** and  **GDP_per_capita**, and use the predictor **Inf5_m**, that combines the predictors **Infant_deaths** and **Under_five_deaths**. Hence, we will consider the following predictors
+Still, I will proceed to use a simple linear regression model as our starting point (mostly for illustrative purposes and to upheld the title of this project), and make the necessary corrections in the model later. Based on the data exploration in Part One, I will use the logarithm transformation of predictors **Population_mln** and  **GDP_per_capita**, and use the predictor **Inf5_m**, that combines the predictors **Infant_deaths** and **Under_five_deaths**. Hence, we will consider the following predictors
 <br/>
 
 * **Inf5_m** - Linear combination of **Infant_deaths** and **Under_five_deaths** (see Part One)
@@ -83,7 +83,7 @@ Still, I will proceed to use a simple linear regression model (mostly for illust
 * **Economy** - Factor variable with levels **Developed** and **Developing** 
 <br/>
 
-I will consider a simple model where all predictors enter linearly. I will not consider any interaction or nonlinear terms in the model. I do not have any prior knowledge of which specific interaction/nonlinear terms should be included in the model, nor do I have a specific hypothesis about interactions/nonlinearity I wish to test. 
+I will consider a simple model where all predictors enter linearly. I will not consider any interaction or nonlinear terms in the model. I do not have any prior knowledge of which specific interaction/nonlinear terms should be included in the model, nor do I have posed a specific hypothesis about interactions/nonlinearity. 
 
 Our dataset is not large enough to reasonably include even just all simple linear interaction terms, or for that matter, two cubic spline knots for each numerical variable to model nonlinear terms. We should remember that this dataset consists of panel data of effective sample size of as low as 179 (depending on how strongly the observations for each country are correlated, and these correlations will be strong since such country characteristics do not change in time that much). The rule of thumb for a number of predictors in such a case is between ~ 179/10 = 18 and ~179/20 = 9, which nicely corresponds to our total number of predictors of interest. Thus, to obtain reasonable estimates of interactions and nonlinearities, we would have to guess which interactions (and/or nonlinear terms) to include from the data itself, which is not an advisable approach.
 
@@ -99,7 +99,7 @@ life_expectancy <- life_expectancy %>% rename(Thin_10_19 = Thinness_ten_nineteen
 
 ```
 
-### Simple linear model (and accounting for heteroskedasticity)
+## Simple linear model (and accounting for heteroskedasticity)
 
 <br/>
 As we discussed earlier, we first fit a simple linear model ignoring the panel nature of our data.
@@ -150,7 +150,7 @@ coeftest(linear_model, vcov = vcovHC(linear_model, type = c("HC0")))
 ```
 
 <br/>
-We can obtain similar heteroskedasticity-consistent estimates using a simple nonparametric bootstrap that resamples with repetitions the whole dataset (paired bootstrap). 
+We can obtain similar heteroskedasticity-consistent  estimates using a simple nonparametric bootstrap that resamples with repetitions the whole dataset, a so-called paired bootstrap (*A. C. Cameron and P. K. Trivedi. Microeconometrics: methods and applications. Cambridge university press, 2005.*). 
 <br/>
 
 ```{r}
@@ -199,7 +199,7 @@ round(coeff_delete,4)
 We see that no values of the parameters dramatically changed, and all values stayed within the confidence intervals provided by the bootstrap. 
 <br/>
 
-### Accounting for autocorrelation
+## Accounting for autocorrelation
 
 <br/>
 All of the aforementioned approaches, including heteroskedasticity-consistent standard errors and paired bootstrap, assume that the error terms are independent. However, our data set consists of longitudinal data for 179 countries, and hence, these observations might be significantly correlated. We can check our suspicion by plotting the residuals of our model for a given country against **Year**.
@@ -225,7 +225,7 @@ coef_test(linear_model, vcov = "CR2", cluster = life_expectancy$Country)
 We observe that the cluster-robust standard errors are significantly larger and that many effects are no longer significant.
 <br/>
 
-### Pooled, fixed effects, and random effects panel data models
+## Pooled, fixed effects, and random effects panel data models
 
 <br/>
 This linear model we constructed is in the context of panel data models called *pooled* because it stacks the data for all individuals and time instants together. This model is consistent provided there is no unobserved heterogeneity in the data that is *correlated* with the predictors in the model (i.e., there is no omitted variable bias). We can alleviate some of this potential bias by considering so-called *fixed effects*.
@@ -271,7 +271,7 @@ The second type of effects that could be considered in the model are effects cor
 
 There is also a third major model used for panel data, a *random effects* model. Random effects model individual effects as normal random variables with some constant mean and variance (in our case, a constant for each country and year). In other words, they are random intercepts that shift the regression hyperplane a bit up or down for each individual country. Now, the key assumption of the random effects model is that these individual effects are *not* correlated with other covariates, i.e., the random effects model does not help with accounting for unobserved heterogeneity that is correlated with the predictors in the model. Still, the random effects model is worth talking about due to its efficiency.
 
-The pooled model is an ordinary linear regression model; thus, to be efficient, the errors need to be independent, which is almost never the case for panel data. The random effects model, by introducing random effects, inherently creates a correlation structure between the observations for the same individual (in our case, for the same country). This structure is equicorrelated, i.e., the correlation of the composite error (random effect + error) between two distinct observations for the same individual is constant. This may not be as realistic for a long time series (we expect the correlation between observations to reduce over time). However, it is still more realistic than the assumption of the pooled model that this correlation is always zero. So overall, the random effects model should provide more accurate estimates than the pooled model provided that the exogeneity assumption (individual effects are uncorrelated with the rest of the predictors) holds (see, e.g., *Wooldridge, Jeffrey M. Econometric analysis of cross section and panel data* or *Cameron, A. Colin, and Pravin K. Trivedi. Microeconometrics: methods and applications* for a much more detailed explanation about pooled, fixed effects, and random effects models). 
+The pooled model is an ordinary linear regression model; thus, to be efficient, the errors need to be independent, which is almost never the case for panel data. The random effects model, by introducing random effects, inherently creates a correlation structure between the observations for the same individual (in our case, for the same country). This structure is equicorrelated, i.e., the correlation of the composite error (random effect + error) between two distinct observations for the same individual is constant. This may not be as realistic for a long time series (we expect the correlation between observations to reduce over time). However, it is still more realistic than the assumption of the pooled model that this correlation is always zero. So overall, the random effects model should provide more accurate estimates than the pooled model provided that the exogeneity assumption (individual effects are uncorrelated with the rest of the predictors) holds (see, e.g., *J. M. Wooldridge. Econometric analysis of cross section and panel data* or (*A. C. Cameron and P. K. Trivedi. Microeconometrics: methods and applications. Cambridge university press, 2005.*) for a much more detailed explanation about pooled, fixed effects, and random effects models). 
 <br/>
 
 
@@ -333,7 +333,7 @@ We reject the hypothesis; thus, the random effects model is not consistent and s
 
 The model we used to test the consistency of the random effects model is of particular interest. It is a so-called *correlated random effects* model (CRE). The CRE model is an extension of the random effects model that attempts to model the unobserved endogeneity via the cluster mean predictors. A nice property of the CRE model is that estimates of the time-varying predictors in the CRE model are identical to the fixed effects estimates. Hence, the CRE model provides an alternative to the fixed effects model that keeps the time-invariant predictors in the model. 
 
-The CRE models are quite old (*Y. Mundlak. On the pooling of time series and cross section data. Econometrica: journal of the Econometric Society (1978): 69-85.*). However, it seems they got nowhere near as popular as fixed effects and random effects models. Although there seem to be recent papers emerging  (e.g., *D. McNeish, and K. Kelley. Fixed effects models versus mixed effects models for clustered data: Reviewing the approaches, disentangling the differences, and making recommendations. Psychological Methods 24.1 (2019): 20*, *J. M. Wooldridge. Correlated random effects models with unbalanced panels. Journal of Econometrics 211.1 (2019): 137-150*, *J. Antonakis, N. Bastardoz, and M. Rönkkö. "On ignoring the random effects assumption in multilevel models: Review, critique, and recommendations." Organizational Research Methods 24.2 (2021): 443-483.*
+The CRE models are quite old (*Y. Mundlak. On the pooling of time series and cross section data. Econometrica: journal of the Econometric Society (1978): 69-85.*). However, it seems they got nowhere near as popular as fixed effects and random effects models. Although there seem to be recent papers  (e.g., *D. McNeish, and K. Kelley. Fixed effects models versus mixed effects models for clustered data: Reviewing the approaches, disentangling the differences, and making recommendations. Psychological Methods 24.1 (2019): 20*, *J. M. Wooldridge. Correlated random effects models with unbalanced panels. Journal of Econometrics 211.1 (2019): 137-150*, *J. Antonakis, N. Bastardoz, and M. Rönkkö. "On ignoring the random effects assumption in multilevel models: Review, critique, and recommendations." Organizational Research Methods 24.2 (2021): 443-483.*
 ) that encourage usage of CRE models instead of random effects models (that are often significantly biased in practice) and fixed effects models (that make time-invariant predictors inestimable).
 
 <br/>
@@ -378,14 +378,27 @@ qqline(ranef(corr_random_effect_model_plm))
 ```
 
 <br/>
-We see that random effects are approximately normally distributed as assumed. Residuals are symmetric, although the tails are a bit heavier than a normal distribution would have. We suspect that there might be some heteroscedasticity (developing vs. developed countries). We also might have some overly influential observations/outliers. Unfortunately, *plm* package does not have support for computing influence diagnostics. Hence, we will refit our correlated random effects model using a package *lme4* that can be used to fit general linear mixed-effects models. We then use package *HLMdiag* to determine the influence of individual observations. Since we are dealing with panel data, we will consider diagnostics based on deleting whole clusters given by **Country.** We will again use the Cook's distance and refit the model based on several Cook's distance cut-offs based on the Cook's distance plot.
+We see that random effects are approximately normally distributed as assumed. Residuals are symmetric, although the tails are a bit heavier than a normal distribution would have. We suspect that there might be some heteroscedasticity (developing vs. developed countries). We also might have some overly influential observations/outliers. Unfortunately, *plm* package does not have support for computing influence diagnostics. Hence, we will refit our correlated random effects model using a package *lme4* that can be used to fit general linear mixed-effects models. We should mention here, that while both *plm* and *lme4* will fit the same model, their methods are different: *plm* uses generalized least squares approaches (following an "econometrics' tradition") whereas *lme4* uses restricted maximum likelihood estimation (REML). Thus, these two functions may not always produce the same results, see https://cran.r-project.org/web/packages/plm/vignettes/A_plmPackage.html for a bit more detail. However, our model is fairly simple and our data "nice" enough, and thus, we observe that optimization of restricted maximum likelihood converged to the same solution as the one provided by *plm*.
+
+
+```{r, fig.align = 'center'}
+library(lme4)
+
+lmer_model <- lmer(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m  + Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + Inf5_m_cent + factor(Year) + (1 | Country), life_expectancy_cent)
+
+sum_lmer <- summary(lmer_model)
+sum_plm <- summary(corr_random_effect_model_plm)
+cbind(sum_lmer$coefficients,sum_plm$coefficients)
+
+```
+
+<br/>
+We then use *lme4* in combination with *HLMdiag* to determine the influence of individual observations. Since we are dealing with panel data, we will consider diagnostics based on deleting whole clusters given by **Country.** We will again use the Cook's distance and refit the model based on several Cook's distance cut-offs based on the Cook's distance plot.
 <br/>
 
 ```{r, fig.align = 'center'}
 library(HLMdiag)
-library(lme4)
 
-lmer_model <- lmer(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m  + Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + Inf5_m_cent + factor(Year) + (1 | Country), life_expectancy_cent)
 
 # Compute influence by deleting individual Countries
 inf <- hlm_influence(lmer_model, level = "Country")
@@ -413,7 +426,7 @@ We see that our estimates  did not change much, thus, there is no reason to dele
 
 The last thing that remains is finding the significant predictors and validating the results. We already discussed that random effects account for the correlation of observations within the same clusters, thus we could take the standard errors as is. However, with random effect models, things are a bit murky, because it is in general non-trivial to determine correct degrees of freedom, see https://bbolker.github.io/mixedmodels-misc/glmmFAQ.html#why-doesnt-lme4-display-denominator-degrees-of-freedomp-values-what-other-options-do-i-have that discusses several alternatives to use. Let us explore them.
 
-Let us start with the standard confidence intervals (i.e, standard error multiplied by   *qnorm(0.975)*, thus ignoring degrees of freedom).
+Let us start with the standard confidence intervals (i.e, standard error multiplied by *qnorm(0.975)*, thus ignoring degrees of freedom). The p-values that *plm* provide are based on this approximation. I will use *confint* on *lmer_model*, because it provides more options.
 <br/>
 
 ```{r}
@@ -429,7 +442,7 @@ confint(lmer_model,method ='profile')[3:25,]
 ```
 
 <br/>
-Another another method is based on *parametric* bootstrap (i.e., bootstrap based on simulating new responses for our data from the estimated model and getting new estimates by refitting the model)
+Another another method is based on *parametric* bootstrap (i.e., bootstrap based on simulating new responses for our data from the estimated model)
 <br/>
 
 ```{r}
@@ -442,14 +455,14 @@ Another another another alternative is t-test statistics with a degrees of freed
 
 
 ```{r}
-coef_stats <- coef_test(lmer_model, vcov = "CR2", cluster = life_expectancy$Country)[1:23,]
-conf_int <- cbind(fixef(lmer_model)[1:23] - coef_stats$SE*qt(0.975,coef_stats$df_Satt),fixef(lmer_model)[1:23] + coef_stats$SE*qt(0.975,coef_stats$df_Satt))
+coef_stats <- coef_test(corr_random_effect_model_plm, vcov = "CR2", cluster = life_expectancy$Country)[1:23,]
+conf_int <- cbind(coefficients(corr_random_effect_model_plm)[1:23] - coef_stats$SE*qt(0.975,coef_stats$df_Satt),coefficients(corr_random_effect_model_plm)[1:23] + coef_stats$SE*qt(0.975,coef_stats$df_Satt))
 colnames(conf_int) <- c('2.5 %','97.5 %')
 conf_int
 ```
 
 <br/>
-Lastly, we consider a method that is our validation method of choice: a nonparametric bootstrap. We cannot use a simple paired bootstrap, since this bootstrap would destroy the panel data structure. Instead, we have to use the fact that we assume that observations for each individual country are independent from each other, and thus, bootstrap over these whole time series.
+Lastly, we consider a method that is our validation method of choice: a nonparametric bootstrap. We cannot use a simple paired bootstrap, since this bootstrap would destroy the panel data structure. Instead, we have to use the fact that we assume that observations for each individual country are independent from each other, and thus, bootstrap over these whole time series (*A. C. Cameron and P. K. Trivedi. Microeconometrics: methods and applications. Cambridge university press, 2005.*).
 <br/>
 
 ```{r}
@@ -483,5 +496,7 @@ boot_ci[1:23,]
 ```
 
 <br/>
-We see that the nonparametric bootstrap nicely corresponds to the confidence intervals based on the robust standard errors with the DOF correction. The parametric bootstrap and the other two methods provided slightly narrower confidence intervals. Since the intervals based on the robust standard errors and nonparametric bootstrap match, I guess the issue is indeed heteroskedasticity of errors (parametric bootstrap cannot account for this since it simulates directly from the model that assumes homoscedastic errors). With the validation complete, we end the Part Two. In the last part of this project, we will discuss our results.
+We see that the nonparametric bootstrap mostly corresponds to the confidence intervals based on the robust standard errors with the DOF correction. The parametric bootstrap and the other two methods provided slightly narrower confidence intervals. Since the parametric bootstrap depends on the distributional assumption, it generates bootstrap samples using normal distributed errors with the variance estimated by the model. Meanwhile, the nonparametric bootstrap does not use this distributional assumption. Hence, I prefer the results of the nonparametric bootstrap / robust standard errors here (especially since the QQ-plot of the residuals showed noticeable deviation from normality).
+
+With the validation complete, we end Part Two. In the last part of this project, we will discuss our results.
 <br/>

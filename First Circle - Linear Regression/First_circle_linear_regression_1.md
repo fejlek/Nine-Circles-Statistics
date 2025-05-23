@@ -6,15 +6,18 @@ Jiří Fejlek
 2025-05-17
 <br/>
 
-<br/> In this demonstration of using linear regression and some of its
-extensions (models for panel data to be more specific), our objective
-will be to build a model to identify predictors that seem to have a
-significant effect on life expectancy based on this dataset. I will
-split this presentation into three parts: data preparation/exploration,
-creating a model for effect estimation/hypothesis testing, and
-conclusion. <br/>
+<br/> In this project, we will demonstrate application of using linear
+regression and some of its extensions (we will eventually move to models
+for panel data and the final model will be a mixed effects model). Our
+objective will be to build a model that should aid us to identify
+predictors that seem to have a significant effect on life expectancy
+based on this dataset. We will also explore whether the obtained model
+would be useful for predictions about life expectancy, although this
+will not be its primary purpose. I will split this presentation into
+three parts: data preparation & exploration, creating a model for effect
+estimation, and model predictions & discussion. <br/>
 
-## Life Expectancy (WHO) dataset (*data exploration and redundancy analysis*)
+## Life Expectancy (WHO) dataset
 
 Let us start with the description of our data set. Our data are taken
 from
@@ -94,7 +97,7 @@ head(life_expectancy)
     ## #   Schooling <dbl>, Economy_status_Developed <dbl>,
     ## #   Economy_status_Developing <dbl>, Life_expectancy <dbl>
 
-### Initial Data Exploration
+## Initial Data Exploration
 
 <br/> We start with a brief data exploration. We will mostly look for
 serious problems with the data such as missing values, nonsensical
@@ -291,7 +294,7 @@ life_expectancy <- life_expectancy %>% add_column(GDP_log)
 
 <img src="First_circle_linear_regression_1_files/figure-GFM/unnamed-chunk-24-1.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_1_files/figure-GFM/unnamed-chunk-24-2.png" style="display: block; margin: auto;" />
 
-### Redundancy Analysis
+## Redundancy Analysis
 
 <br/> As we will discuss further in Part 2, our model of life expectancy
 will contain as the main predictors of interest all predictors except
@@ -425,7 +428,7 @@ redun(~.- Life_expectancy - Infant_deaths - Under_five_deaths - Year - Country  
     ##     Polio + Diphtheria + Incidents_HIV + Thinness_ten_nineteen_years + 
     ##     Thinness_five_nine_years + Schooling + Economy_status + Population_log + 
     ##     GDP_log + Inf5_m
-    ## <environment: 0x00000203d8704040>
+    ## <environment: 0x0000017ded53f460>
     ## 
     ## n: 2864  p: 15   nk: 4 
     ## 
