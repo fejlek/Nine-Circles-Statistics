@@ -43,7 +43,7 @@ life_expectancy <- life_expectancy %>% add_column(GDP_log)
 <br/>
 In Part Two of this demonstration of using linear regression, we seek to model **Life expectancy** using data that contains  health, immunization, and economic and demographic information about 179 countries from 2000 to 2015. We are mostly interested in determining which predictors from our dataset have a *significant* effect on life expectancy.
 
-In this demonstration, we will start with a simple linear regression model, but we will eventually move to models for panel data in the latter half of this text. Thus, we will give a brief introduction to random and fixed effects models for panel data and even to lesser-known *correlated random effects* models. 
+In this demonstration, we will start with a simple linear regression model, but we will eventually move to models for panel data in the latter half of this text. Thus, we will give a brief introduction to random and fixed effects models for panel data and even to a lesser-known *correlated random effects* models. 
 
 ## Specification of predictors 
 
@@ -240,7 +240,7 @@ coef_test(linear_model_year, vcov = "CR2", cluster = life_expectancy$Country)
 ```
 
 <br/>
-Time fixed effects appear to be significant. We can test it formally by a robust Wald test.
+Time fixed effects appear to be significant. We can test it formally by a robust Wald test (https://cran.r-project.org/web/packages/clubSandwich/vignettes/panel-data-CRVE.html).
 <br/>
 
 ```{r}
@@ -271,7 +271,7 @@ The second type of effects that could be considered in the model are effects cor
 
 There is also a third major model used for panel data, a *random effects* model. Random effects model individual effects as normal random variables with some constant mean and variance (in our case, a constant for each country and year). In other words, they are random intercepts that shift the regression hyperplane a bit up or down for each individual country. Now, the key assumption of the random effects model is that these individual effects are *not* correlated with other covariates, i.e., the random effects model does not help with accounting for unobserved heterogeneity that is correlated with the predictors in the model. Still, the random effects model is worth talking about due to its efficiency.
 
-The pooled model is an ordinary linear regression model; thus, to be efficient, the errors need to be independent, which is almost never the case for panel data. The random effects model, by introducing random effects, inherently creates a correlation structure between the observations for the same individual (in our case, for the same country). This structure is equicorrelated, i.e., the correlation of the composite error (random effect + error) between two distinct observations for the same individual is constant. This may not be as realistic for a long time series (we expect the correlation between observations to reduce over time). However, it is still more realistic than the assumption of the pooled model that this correlation is always zero. So overall, the random effects model should provide more accurate estimates than the pooled model provided that the exogeneity assumption (individual effects are uncorrelated with the rest of the predictors) holds (see, e.g., *J. M. Wooldridge. Econometric analysis of cross section and panel data* or (*A. C. Cameron and P. K. Trivedi. Microeconometrics: methods and applications. Cambridge university press, 2005.*) for a much more detailed explanation about pooled, fixed effects, and random effects models). 
+The pooled model is an ordinary linear regression model; thus, to be efficient, the errors need to be independent, which is almost never the case for panel data. The random effects model, by introducing random effects, inherently creates a correlation structure between the observations for the same individual (in our case, for the same country). This structure is equicorrelated, i.e., the correlation of the composite error (random effect + error) between two distinct observations for the same individual is constant. This may not be as realistic for a long time series (we expect the correlation between observations to reduce over time). However, it is still more realistic than the assumption of the pooled model that this correlation is always zero. So overall, the random effects model should provide more accurate estimates than the pooled model provided that the exogeneity assumption (individual effects are uncorrelated with the rest of the predictors) holds (see, e.g., *J. M. Wooldridge. Econometric analysis of cross section and panel data* or *A. C. Cameron and P. K. Trivedi. Microeconometrics: methods and applications. Cambridge university press, 2005.*) for a much more detailed explanation about pooled, fixed effects, and random effects models). 
 <br/>
 
 
@@ -378,7 +378,7 @@ qqline(ranef(corr_random_effect_model_plm))
 ```
 
 <br/>
-We see that random effects are approximately normally distributed as assumed. Residuals are symmetric, although the tails are a bit heavier than a normal distribution would have. We suspect that there might be some heteroscedasticity (developing vs. developed countries). We also might have some overly influential observations/outliers. Unfortunately, *plm* package does not have support for computing influence diagnostics. Hence, we will refit our correlated random effects model using a package *lme4* that can be used to fit general linear mixed-effects models. We should mention here, that while both *plm* and *lme4* will fit the same model, their methods are different: *plm* uses generalized least squares approaches (following an "econometrics' tradition") whereas *lme4* uses restricted maximum likelihood estimation (REML). Thus, these two functions may not always produce the same results, see https://cran.r-project.org/web/packages/plm/vignettes/A_plmPackage.html for a bit more detail. However, our model is fairly simple and our data "nice" enough, and thus, we observe that optimization of restricted maximum likelihood converged to the same solution as the one provided by *plm*.
+We see that random effects are approximately normally distributed as assumed. Residuals are symmetric, although the tails are a bit heavier than a normal distribution would have. We suspect that there might be some heteroscedasticity (developing vs. developed countries). We also might have some overly influential observations/outliers. Unfortunately, *plm* package does not have support for computing influence diagnostics. Hence, we will refit our correlated random effects model using a package *lme4* that can be used to fit general linear mixed-effects models. We should mention here, that while both *plm* and *lme4* will fit the same model, their methods are different: *plm* uses generalized least squares approaches (following an "econometrics' tradition") whereas *lme4* uses restricted maximum likelihood estimation (REML). Thus, these two functions may not always produce the same results, see https://cran.r-project.org/web/packages/plm/vignettes/A_plmPackage.html for a bit more details. However, our model is fairly simple and our data "nice" enough, and thus, we observe that optimization of restricted maximum likelihood converged to the same solution as the one provided by *plm*.
 
 
 ```{r, fig.align = 'center'}
@@ -498,5 +498,5 @@ boot_ci[1:23,]
 <br/>
 We see that the nonparametric bootstrap mostly corresponds to the confidence intervals based on the robust standard errors with the DOF correction. The parametric bootstrap and the other two methods provided slightly narrower confidence intervals. Since the parametric bootstrap depends on the distributional assumption, it generates bootstrap samples using normal distributed errors with the variance estimated by the model. Meanwhile, the nonparametric bootstrap does not use this distributional assumption. Hence, I prefer the results of the nonparametric bootstrap / robust standard errors here (especially since the QQ-plot of the residuals showed noticeable deviation from normality).
 
-With the validation complete, we end Part Two. In the last part of this project, we will discuss our results.
+With the validation complete, we end Part Two. In the last part of this project, we will discuss our resulting model.
 <br/>

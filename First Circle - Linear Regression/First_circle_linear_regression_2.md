@@ -16,8 +16,8 @@ expectancy.
 In this demonstration, we will start with a simple linear regression
 model, but we will eventually move to models for panel data in the
 latter half of this text. Thus, we will give a brief introduction to
-random and fixed effects models for panel data and even to lesser-known
-*correlated random effects* models.
+random and fixed effects models for panel data and even to a
+lesser-known *correlated random effects* models.
 
 ## Specification of predictors
 
@@ -485,7 +485,9 @@ coef_test(linear_model_year, vcov = "CR2", cluster = life_expectancy$Country)
     ##  factor(Year)2015  0.85478 0.25176          0   3.395      176.54      < 0.001  ***
 
 <br/> Time fixed effects appear to be significant. We can test it
-formally by a robust Wald test. <br/>
+formally by a robust Wald test
+(<https://cran.r-project.org/web/packages/clubSandwich/vignettes/panel-data-CRVE.html>).
+<br/>
 
 ``` r
 Wald_test(linear_model_year, constraints = constrain_zero(c("factor(Year)2001","factor(Year)2002","factor(Year)2003","factor(Year)2004","factor(Year)2005","factor(Year)2006","factor(Year)2007","factor(Year)2008","factor(Year)2009","factor(Year)2010","factor(Year)2011","factor(Year)2012","factor(Year)2013","factor(Year)2014","factor(Year)2015")), vcov = "CR2", cluster = life_expectancy$Country)
@@ -554,7 +556,7 @@ zero. So overall, the random effects model should provide more accurate
 estimates than the pooled model provided that the exogeneity assumption
 (individual effects are uncorrelated with the rest of the predictors)
 holds (see, e.g., *J. M. Wooldridge. Econometric analysis of cross
-section and panel data* or (*A. C. Cameron and P. K. Trivedi.
+section and panel data* or *A. C. Cameron and P. K. Trivedi.
 Microeconometrics: methods and applications. Cambridge university press,
 2005.*) for a much more detailed explanation about pooled, fixed
 effects, and random effects models). <br/>
@@ -913,7 +915,7 @@ linear mixed-effects models. We should mention here, that while both
 likelihood estimation (REML). Thus, these two functions may not always
 produce the same results, see
 <https://cran.r-project.org/web/packages/plm/vignettes/A_plmPackage.html>
-for a bit more detail. However, our model is fairly simple and our data
+for a bit more details. However, our model is fairly simple and our data
 “nice” enough, and thus, we observe that optimization of restricted
 maximum likelihood converged to the same solution as the one provided by
 *plm*.
@@ -1267,4 +1269,4 @@ the QQ-plot of the residuals showed noticeable deviation from
 normality).
 
 With the validation complete, we end Part Two. In the last part of this
-project, we will discuss our results. <br/>
+project, we will discuss our resulting model. <br/>
