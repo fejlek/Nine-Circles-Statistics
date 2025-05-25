@@ -17,12 +17,12 @@ In this demonstration, we will start with a simple linear regression
 model, but we will eventually move to models for panel data in the
 latter half of this text. Thus, we will give a brief introduction to
 random and fixed effects models for panel data and even to a
-lesser-known *correlated random effects* models.
+lesser-known *correlated random effects* models. <br/>
 
 ## Specification of predictors
 
-Let us start the modelling with our choice of the predictors. I will not
-consider **Adult_mortality** as our predictor, because
+<br/> Let us start the modelling with our choice of the predictors. We
+will not consider **Adult_mortality** as our predictor, because
 **Adult_mortality** is tightly connected to **Life_expectancy**, but
 does not give much additional insight into why life expectancy is lower,
 what the difference is between these countries, other than that people
@@ -53,9 +53,9 @@ summary(lm(formula = Life_expectancy ~ Adult_mortality, data = life_expectancy))
     ## Multiple R-squared:  0.8937, Adjusted R-squared:  0.8937 
     ## F-statistic: 2.406e+04 on 1 and 2862 DF,  p-value: < 2.2e-16
 
-<br/> already explains almost 90% of the variability in the data. <br/>
+<br/> already explains almost 90% of the variability in the data.
 
-Initially, I will also not consider **Country** and **Year** as our
+Initially, we will also not consider **Country** and **Year** as our
 predictors in our model. We are not developing a model for a
 *particular* country in a *particular* time. Although, as we will see
 later, it is actually quite important to acknowledge that our data are
@@ -71,14 +71,14 @@ the omitted variable bias of our estimates (thus, panel data allows us
 to hopefully get more accurate estimates of the predictors’ effects), as
 we see later.
 
-Still, I will proceed to use a simple linear regression model as our
+Still, we will proceed to use a simple linear regression model as our
 starting point (mostly for illustrative purposes and to upheld the title
 of this project), and make the necessary corrections in the model later.
-Based on the data exploration in Part One, I will use the logarithm
+Based on the data exploration in Part One, we will use the logarithm
 transformation of predictors **Population_mln** and **GDP_per_capita**,
 and use the predictor **Inf5_m**, that combines the predictors
-**Infant_deaths** and **Under_five_deaths**. Hence, we will consider the
-following predictors <br/>
+**Infant_deaths** and **Under_five_deaths**Overall, we get the following
+predictors <br/>
 
 - **Inf5_m** - Linear combination of **Infant_deaths** and
   **Under_five_deaths** (see Part One)
@@ -98,25 +98,24 @@ following predictors <br/>
 - **Economy** - Factor variable with levels **Developed** and
   **Developing** <br/>
 
-I will consider a simple model where all predictors enter linearly. I
-will not consider any interaction or nonlinear terms in the model. I do
+We will consider a simple model where all predictors enter linearly. We
+will not consider any interaction or nonlinear terms in the model. We do
 not have any prior knowledge of which specific interaction/nonlinear
-terms should be included in the model, nor do I have posed a specific
-hypothesis about interactions/nonlinearity.
-
-Our dataset is not large enough to reasonably include even just all
-simple linear interaction terms, or for that matter, two cubic spline
-knots for each numerical variable to model nonlinear terms. We should
-remember that this dataset consists of panel data of effective sample
-size of as low as 179 (depending on how strongly the observations for
-each country are correlated, and these correlations will be strong since
-such country characteristics do not change in time that much). The rule
-of thumb for a number of predictors in such a case is between ~ 179/10 =
-18 and ~179/20 = 9, which nicely corresponds to our total number of
-predictors of interest. Thus, to obtain reasonable estimates of
-interactions and nonlinearities, we would have to guess which
-interactions (and/or nonlinear terms) to include from the data itself,
-which is not an advisable approach.
+terms should be included in the model, nor we have posed a specific
+hypothesis about interactions/nonlinearity. Our dataset is not large
+enough to reasonably include even just all simple linear interaction
+terms, or for that matter, two cubic spline knots for each numerical
+variable to model nonlinear terms. We should remember that this dataset
+consists of panel data of effective sample size of as low as 179
+(depending on how strongly the observations for each country are
+correlated, and these correlations will be strong since such country
+characteristics do not change in time that much). The rule of thumb for
+a number of predictors in such a case is between ~ 179/10 = 18 and
+~179/20 = 9, which nicely corresponds to our total number of predictors
+of interest. Thus, to obtain reasonable estimates of interactions and
+nonlinearities, we would have to guess which interactions (and/or
+nonlinear terms) to include from the data itself, which is not an
+advisable approach.
 
 Before we start the modelling, we will do some variable renaming to
 shorten the predictor names. <br/>
@@ -238,8 +237,8 @@ coeftest(linear_model, vcov = vcovHC(linear_model, type = c("HC0")))
 
 <br/> We can obtain similar heteroskedasticity-consistent estimates
 using a simple nonparametric bootstrap that resamples with repetitions
-the whole dataset, a so-called paired bootstrap (*A. C. Cameron and P.
-K. Trivedi. Microeconometrics: methods and applications. Cambridge
+the whole dataset, a so-called pairs bootstrap (*A. C. Cameron and P. K.
+Trivedi. Microeconometrics: methods and applications. Cambridge
 university press, 2005.*). <br/>
 
 ``` r
@@ -372,7 +371,7 @@ bootstrap. <br/>
 ## Accounting for autocorrelation
 
 <br/> All of the aforementioned approaches, including
-heteroskedasticity-consistent standard errors and paired bootstrap,
+heteroskedasticity-consistent standard errors and pairs bootstrap,
 assume that the error terms are independent. However, our data set
 consists of longitudinal data for 179 countries, and hence, these
 observations might be significantly correlated. We can check our
@@ -905,6 +904,7 @@ as assumed. Residuals are symmetric, although the tails are a bit
 heavier than a normal distribution would have. We suspect that there
 might be some heteroscedasticity (developing vs. developed countries).
 We also might have some overly influential observations/outliers.
+
 Unfortunately, *plm* package does not have support for computing
 influence diagnostics. Hence, we will refit our correlated random
 effects model using a package *lme4* that can be used to fit general
@@ -1047,18 +1047,18 @@ round(coeff_delete,4)[1:23,]
 <br/> We see that our estimates did not change much, thus, there is no
 reason to delete some observations from the data.
 
-The last thing that remains is finding the significant predictors and
-validating the results. We already discussed that random effects account
-for the correlation of observations within the same clusters, thus we
-could take the standard errors as is. However, with random effect
-models, things are a bit murky, because it is in general non-trivial to
-determine correct degrees of freedom, see
+The last thing that remains is finding the significant predictors. We
+already discussed that random effects account for the correlation of
+observations within the same clusters, thus we could take the standard
+errors as is. However, with random effect models, things are a bit
+murky, because it is in general non-trivial to determine correct degrees
+of freedom, see
 <https://bbolker.github.io/mixedmodels-misc/glmmFAQ.html#why-doesnt-lme4-display-denominator-degrees-of-freedomp-values-what-other-options-do-i-have>
 that discusses several alternatives to use. Let us explore them.
 
 Let us start with the standard confidence intervals (i.e, standard error
 multiplied by *qnorm(0.975)*, thus ignoring degrees of freedom). The
-p-values that *plm* provide are based on this approximation. I will use
+p-values that *plm* provide are based on this approximation. We will use
 *confint* on *lmer_model*, because it provides more options. <br/>
 
 ``` r
@@ -1122,9 +1122,10 @@ confint(lmer_model,method ='profile')[3:25,]
     ## Schooling        -0.110108386  0.064017909
     ## Inf5_m           -2.830727801 -2.564018268
 
-<br/> Another another method is based on *parametric* bootstrap (i.e.,
+<br/> Another another method is based on *parametric* bootstrap, i.e.,
 bootstrap based on simulating new responses for our data from the
-estimated model) <br/>
+estimated model (see Part Three for an implementation of the parametric
+bootstrap from scratch). <br/>
 
 ``` r
 confint(lmer_model,method ='boot')[3:25,]
@@ -1192,14 +1193,14 @@ conf_int
     ## Schooling        -0.257634833  0.211544356
     ## Inf5_m           -3.311423816 -2.083322253
 
-<br/> Lastly, we consider a method that is our validation method of
-choice: a nonparametric bootstrap. We cannot use a simple paired
-bootstrap, since this bootstrap would destroy the panel data structure.
-Instead, we have to use the fact that we assume that observations for
-each individual country are independent from each other, and thus,
-bootstrap over these whole time series (*A. C. Cameron and P. K.
-Trivedi. Microeconometrics: methods and applications. Cambridge
-university press, 2005.*). <br/>
+<br/> Lastly, we consider a nonparametric bootstrap. We cannot use a
+simple pairs bootstrap, since this bootstrap would destroy the panel
+data structure. Instead, we have to use the fact that we assume that
+observations for each individual country are independent from each
+other, and thus, bootstrap over these whole time series(*A. C. Cameron
+and P. K. Trivedi. Microeconometrics: methods and applications.
+Cambridge university press, 2005.*). We obtain a so-called *pairs
+cluster bootstrap*. <br/>
 
 ``` r
 set.seed(123) # for reproducibility
@@ -1259,14 +1260,28 @@ boot_ci[1:23,]
 <br/> We see that the nonparametric bootstrap mostly corresponds to the
 confidence intervals based on the robust standard errors with the DOF
 correction. The parametric bootstrap and the other two methods provided
-slightly narrower confidence intervals. Since the parametric bootstrap
-depends on the distributional assumption, it generates bootstrap samples
-using normal distributed errors with the variance estimated by the
-model. Meanwhile, the nonparametric bootstrap does not use this
-distributional assumption. Hence, I prefer the results of the
-nonparametric bootstrap / robust standard errors here (especially since
-the QQ-plot of the residuals showed noticeable deviation from
-normality).
+slightly narrower confidence intervals. However, the first three methods
+rely on the fact that our model correctly specified (mainly residual
+errors are i.i.d. normally distributed). Meanwhile, the nonparametric
+bootstrap and cluster robust errors are robust to the heteroskedasticity
+and within cluster correlation. Hence, we prefer the results of the
+nonparametric bootstrap / robust standard errors (especially since the
+QQ-plot of the residuals showed noticeable deviation from normality and
+residuals vs. predictors indicated heteroskedasticity).
 
-With the validation complete, we end Part Two. In the last part of this
-project, we will discuss our resulting model. <br/>
+We should note here that there are other more sophisticated bootstrap
+techniques (wild bootstrap that we show in Part Three and asymptotic
+refinement method that improve the asymptotic properties of bootstraps)
+that perform even more reliably than robust standard errors/ pairs
+cluster bootstrap, especially in cases when the usual asymptotic
+assumptions do not hold (a low number of clusters, unbalanced clusters),
+see *A. C. Cameron and D. L. Miller. A practitioner’s guide to
+cluster-robust inference. Journal of human resources 50.2 (2015):
+317-372* for more details. But our data is “nice” in that regard, thus
+we can end our computation here.
+
+With the final model obtained and the evaluation of the confidence
+intervals complete, we end Part Two. In the last part of this project,
+we will discuss our resulting model. We will look at its predictive
+performance, and we will discuss the effect of the significant
+predictors. <br/>

@@ -1,0 +1,670 @@
+---
+title: "The First Circle: Linear Regression, Part Three"
+author: "Jiří Fejlek"
+date: "2025-05-25"
+output:
+  md_document:
+    variant: GFM
+code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+```
+
+
+```{r include=FALSE}
+library(readr)
+library(tibble)
+library(dplyr)
+library(lme4)
+
+life_expectancy <- read_csv('C:/Users/elini/Desktop/nine circles/Life-Expectancy-Data-Updated.csv')
+life_expectancy$Economy_status_Developed <- factor(life_expectancy$Economy_status_Developed)
+levels(life_expectancy$Economy_status_Developed) <- c('Developing','Developed')                                               
+life_expectancy$Region <- factor(life_expectancy$Region)
+levels(life_expectancy$Region) <-  c('Afr','Asia','CAm','EU','MidE','NAm','Oce','NotEU','SAm')
+
+life_expectancy <- life_expectancy %>% rename(Economy_status = Economy_status_Developed)
+life_expectancy$Economy_status_Developing <- NULL
+
+pc_infant_and_under_five <- prcomp(~life_expectancy$Infant_deaths+life_expectancy$Under_five_deaths,'scale' = TRUE,'center' = TRUE)
+
+pc1 <- pc_infant_and_under_five$x[,1]
+life_expectancy$Infant_deaths <- NULL
+life_expectancy$Under_five_deaths <- NULL
+life_expectancy <- life_expectancy %>% add_column(pc1) %>% rename(Inf5_m = pc1)
+
+Population_log <- log(life_expectancy$Population_mln + 1)
+GDP_log <- log(life_expectancy$GDP_per_capita)
+life_expectancy <- life_expectancy %>% add_column(Population_log)
+life_expectancy <- life_expectancy %>% add_column(GDP_log)
+
+life_expectancy <- life_expectancy %>% rename(Thin_10_19 = Thinness_ten_nineteen_years) %>% rename(Thin_5_9 = Thinness_five_nine_years) %>% rename(Alcohol = Alcohol_consumption) %>% rename(HIV = Incidents_HIV) %>% rename(Economy = Economy_status ) %>% rename(Adult_m = Adult_mortality ) %>% rename(Pop_log = Population_log)
+
+
+life_expectancy_cent <- within(life_expectancy, {
+  Alcohol_cent <- tapply(Alcohol, Country, mean)[factor(Country)]
+  Hepatitis_B_cent <- tapply(Hepatitis_B, Country, mean)[factor(Country)]
+  Measles_cent <- tapply(Measles, Country, mean)[factor(Country)]
+  BMI_cent <- tapply(BMI, Country, mean)[factor(Country)]
+  Polio_cent <- tapply(Polio, Country, mean)[factor(Country)]
+  Diphtheria_cent <- tapply(Diphtheria, Country, mean)[factor(Country)]
+  HIV_cent <- tapply(HIV, Country, mean)[factor(Country)]
+  GDP_log_cent <- tapply(GDP_log, Country, mean)[factor(Country)]
+  Pop_log_cent <- tapply(Pop_log, Country, mean)[factor(Country)]
+  Thin_10_19_cent <- tapply(Thin_10_19, Country, mean)[factor(Country)]
+  Thin_5_9_cent <- tapply(Thin_5_9, Country, mean)[factor(Country)]
+  Schooling_cent <- tapply(Schooling, Country, mean)[factor(Country)]
+  Inf5_m_cent <- tapply(Inf5_m, Country, mean)[factor(Country)]
+})
+
+
+lmer_model <- lmer(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m  + Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + Inf5_m_cent + factor(Year) + (1 | Country), life_expectancy_cent)
+```
+
+<br/>
+In Part Three of this demonstration of using linear regression and some of its extensions, we seek to evaluate the 
+**Life expectancy** model  (we created in Part Two) based on the data containing health, immunization, and economic and demographic information about 179 countries from 2000 to 2015. Namely, we will look at its significant predictors and evaluate its predictive performance.
+<br/>
+
+## Evaluation of predictive performance (via cross-validation) 
+
+<br/>
+Let us discuss the correlated random effects model (CRE) we constructed in Part Two in terms of predictive performance. We created this model primarily to estimate the effect of our predictors on life expectancy. Still, it is worth a look at how these apparently significant effects in the model would be useful in the actual prediction of life expectancy.
+
+As a reminder, our model is (we will use *lmer* for the fit instead of *plm*, because we plan to compare models using a likelihood ratio test in a bit and *plm* does not compute likelihood function since it uses estimates based on generalized least squares).
+<br/>
+
+```{r}
+library(lme4)
+library(sandwich)
+library(clubSandwich)
+
+## We will order the dataset by Country and Year (it will be useful later)
+
+life_expectancy_pred <- life_expectancy_cent[order(life_expectancy_cent$Country,life_expectancy_cent$Year),]
+
+## Correlated random effects model
+cre_model <- lmer(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m  + Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + Inf5_m_cent + factor(Year) + (1 | Country), life_expectancy_pred)
+
+summary(lmer_model)
+```
+
+<br/>
+Let us start with an obligatory actual vs. predicted plot. We should note that prediction for a known individual is computed (using function *predict*)  as $X\hat{beta} + \hat{tau} + \hat{mu}$, where $X$ are our "main" predictors, $\hat{beta}$ is the estimate of fixed effects coefficients from the model, $\hat{tau}$ are the estimates of the fixed time effects in the model, and $\hat{mu}$ is the estimate of the individual random effect from the model (this estimate is known as *BLUP*, the best linear unbiased predictor). 
+<br/>
+
+```{r}
+plot(life_expectancy_pred$Life_expectancy,predict(cre_model),xlab = 'Life expectancy',ylab = 'Predicted Life expectancy')
+abline(0,1, col="red", lwd = 2)
+```
+
+<br/>
+It seem that the model fits the data pretty well. Let us evaluate, how good this model would be for the predictions of life expectancy (even though this is not its primary purpose which was effect estimation/hypothesis testing).  
+
+Unlike fixed effects models, we have some options. Remember that the fixed effects model uses a factor for each individual. Hence, we can only make a reasonable prediction for the individuals in the model. With random effects, we can actually make a prediction about new individuals since the random effects model directly models the distribution of individual effects (i.i.d. normally distributed with mean zero). Thus, for an unknown individual, the random effect effectively becomes just another error term. 
+
+Concerning the effects for individual years, we use the fixed effects. Hence, we cannot make a prediction, for example, for the year 2016. To make such predictions, we have to change the model by either replacing time-fixed effects with time-random effects or, probably even better; we could try to model the dependency in time directly by including numerical predictor **Year** in some form (life expectancy seems to steadily increase in time and our fixed effects estimates corresponded to that, which is a far cry from estimates of individual effects). Let us try that (we will model **Year** using a restricted cubic spline)
+<br/>
+
+```{r}
+library(rms)
+cre_model_year <- lmer(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m  + Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + Inf5_m_cent + rcs(Year,4) + (1 | Country), life_expectancy_pred)
+```
+
+<br/>
+We can compare these two models using the likelihood ratio test. The function *anova* refits the model using maximum likelihood instead of using restricted maximum likelihood (REML) because restricted likelihood functions of distinct models are not comparable if they do not have the same *fixed effects*. We should mention here that the *fixed effects *(in the context of general mixed models) mean just terms in the model that are not random effects (i.e., they are terms that would form an ordinary regression model). 
+<br/>
+
+
+```{r}
+anova(cre_model,cre_model_year)
+```
+
+<br/>
+As we mentioned in Part Two, the asymptotic properties of test statistics about mixed models are quite complicated, and thus, we should always check the results using a bootstrap.
+<br/>
+
+```{r}
+set.seed(123) # for reproducibility
+nb <- 500
+
+lrstat <- numeric(nb)
+Countries_list <- unique(life_expectancy_pred$Country)
+
+for(i in 1:nb){
+Countries_new <- sample(Countries_list , rep=TRUE)
+life_expectancy_pred_new <- life_expectancy_pred[life_expectancy_pred$Country == Countries_new[1],]
+
+for (j in 2:length(Countries_list)){
+  life_expectancy_pred_new <- rbind(life_expectancy_pred_new,life_expectancy_pred[life_expectancy_pred$Country == Countries_new[j],])
+}
+
+## We want to compare models with different fixed effects, thus, REML=FALSE
+cre_model_new <- lmer(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m  + Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + Inf5_m_cent + factor(Year) + (1 | Country), life_expectancy_pred_new, REML=FALSE)
+
+
+cre_model_year_new <- lmer(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m  + Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + Inf5_m_cent + rcs(Year,4) + (1 | Country), life_expectancy_pred_new, REML=FALSE)
+
+lrstat[i] <- as.numeric(2*(logLik(cre_model_new)-logLik(cre_model_year_new)))
+}
+
+## Bootstrap estimate of p-value
+mean(lrstat > qchisq(0.95,12))
+```
+
+<br/>
+As can be seen from the results, these two models indeed seem almost identical. Hence, we will use the model with **Year** modeled using a restricted cubic spline. This model allows us to predict life expectancy for unobserved years. Hence, let us evaluate its performance via a cross-validation. To respect the structure of the panel data and keep it balanced, I will consider cross-validation over the whole columns. Since we have the data for only 16 years, I will perform merely a simple leave-one-out cross-validation with mean square error as a performance metric.
+<br/>
+
+```{r}
+years <- seq(2000,2015,1)
+MSE_pred <- numeric(16)
+
+for(i in 1:16){
+  
+  train_set <- life_expectancy_pred[life_expectancy_pred$Year != years[i],]
+  test_set <- life_expectancy_pred[life_expectancy_pred$Year == years[i],]
+  
+  
+cre_model_year_new <- lmer(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m  + Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + Inf5_m_cent + rcs(Year,4) + (1 | Country), train_set)
+  
+  MSE_pred[i] <- mean((test_set$Life_expectancy - predict(cre_model_year_new,test_set))^2)
+  }
+MSE_pred
+mean(MSE_pred)
+```
+
+<br/>
+We see that predictions are fairly accurate on average. The squared root of MSE (0.81) is just a bit higher than the estimated standard deviation of the residual error (0.76). Notice that the worst predictions are, as one would expect, outside the boundaries of the dataset (i.e., the prediction for the year 2000 using the data from 2001-2015 and the prediction for the year 2015 using the data from 2000-2014).
+
+Let us try the predictions for a new individual. Thus, we will now perform a cross-validation on the countries, i.e., using the rows of the dataset. I will perform 100 repetitions of the 10-fold cross-validation. We should emphasize that for a new individual, the prediction of the individual random effect is simply zero.
+<br/>
+
+
+```{r}
+library(caret)
+
+## Define not in function
+`%!in%` = Negate(`%in%`)
+
+## Number of repetitions and folds
+rep <- 100
+folds <- 10
+
+## List of countries
+countries_list <- unique(life_expectancy$Country)
+
+## I add dummies for Region to data explicitly to make prediction work even when some levels of factor 
+## would be missing due to resampling
+
+le_cc <- life_expectancy_pred %>% add_column(as.data.frame(dummy(life_expectancy_pred$Region)))
+
+MSE_pred <- matrix(0,folds,rep)
+
+set.seed(123) # for reproducibility
+
+
+for(j in 1:rep){
+  
+  d <- createFolds(countries_list, k = folds)
+
+  for(i in 1:folds){
+
+    countries_test <- countries_list[unlist(d[i])]
+    train_set <- le_cc[le_cc$Country %!in% countries_test,]
+    test_set <- le_cc[le_cc$Country %in% countries_test,]
+
+    cre_model_year_new <- lmer(Life_expectancy ~ Economy + NAm + Asia + CAm + EU + MidE + Oce + NotEU + SAm + 
+                                 Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + 
+                                 Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m  + Alcohol_cent + 
+                                 Hepatitis_B_cent+ Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + 
+                                 HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent +
+                                 Schooling_cent + Inf5_m_cent + rcs(Year,4) + (1 | Country), train_set)
+
+    ## Set random effect prediction zero via re.form=~0
+    MSE_pred[i,j] <- mean((test_set$Life_expectancy - predict(cre_model_year_new,test_set, re.form=~0))^2)
+    
+  }
+}
+
+mean(MSE_pred)  
+```
+
+<br/>
+We see that the mean square error is significantly higher than in the previous setup. Still, the squared root of MSE (2.5) again mostly corresponds to the estimates of deviance of individual random effects and residual error (2.2)
+<br/>
+
+```{r}
+VarCorr(cre_model_year)
+```
+
+<br/>
+Overall, our predictors model life expectancy fairly well. Still, a noticeable portion of the variance in life expectancy is captured by individual random effects, which could be perhaps explained by new additional predictions.
+<br/>
+
+## Predictions for individual countries (confidence intervals)
+
+<br/>
+Let us now move to predictions for an individual country. We will assume the dataset without one country, e.g., France, and try to predict France's life expectancy from the rest of the data. We will first compute the confidence interval, i.e., an interval estimate for the mean prediction. 
+
+The default method for mixed effects models is a parametric bootstrap. This bootstrap assumes that the model is correctly specified, and thus, creates bootstrap samples directly from the model.
+<br/>
+
+```{r}
+## Design matrices and no France model
+le_france <- life_expectancy_pred[life_expectancy_pred$Country == 'France',]
+le_nofrance <- life_expectancy_pred[life_expectancy_pred$Country != 'France',]
+
+model_nofrance <- lmer(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m  + Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + Inf5_m_cent + rcs(Year,4) + (1 | Country), le_nofrance)
+
+## Random effects & error estimates
+country_sd <- as.data.frame(VarCorr(model_nofrance))$sdcor[1]
+resid_sd <- as.data.frame(VarCorr(model_nofrance))$sdcor[2]
+
+## Parametric bootstrap
+set.seed(123) # for reproducibility
+
+pred_france_pb <- matrix(0,1000,16)
+
+for(i in 1:1000){
+## New observations (we have to remember that we need to generate random effect for each country only once)
+new_ref <- rep(rnorm(178,0,country_sd),each = 16)
+le_new <-  predict(model_nofrance,le_nofrance, re.form=~0) + new_ref + rnorm(dim(le_nofrance)[1],0,resid_sd)
+  
+## Refit the model and predict France (confidence interval)
+model_new <- refit(model_nofrance, le_new)
+pred_france_pb[i,] <-  predict(model_new,le_france, re.form=~0)
+}
+```
+
+<br/>
+The parametric bootstrap is sensitive to a misspecification of the model. Remember that we noticed from the diagnostic plots that residuals are not normally distributed, and there might be heteroskedasticity between the clusters. Let us focus on the nonnormality first.
+<br/>
+
+```{r, fig.align = 'center'}
+par(mfrow = c(1, 2))
+qqnorm(residuals(model_nofrance), main = "Residuals")
+qqline((residuals(model_nofrance)))
+
+qqnorm(unlist(ranef(model_nofrance)), main = "Random effects")
+qqline(unlist(ranef(model_nofrance)))
+```
+
+<br/>
+We see that residuals do not have a normal distribution. Thus, instead of a parametric bootstrap, we can consider a semi-parametric bootstrap: a residual (cluster) bootstrap, which, instead of generating new individual (so-called idiosyncratic) errors from the assumed distribution, resamples observed residuals by clusters. Notice that this approach assumes that each cluster's distributions of individual errors are identical. 
+<br/>
+
+```{r}
+## Residual cluster bootstrap
+set.seed(123) # for reproducibility
+
+country_index <- seq(1,178,1)
+res_nofrance <- matrix(residuals(model_nofrance),ncol = 16,byrow = TRUE)
+pred_france_spb <- matrix(0,1000,16)
+
+for(i in 1:1000){
+## Resample residuals by clusters
+new_res <- res_nofrance[sample(country_index, rep=TRUE),]
+new_res <- matrix(t(new_res),ncol = 1)
+new_ref <- rep(rnorm(178,0,country_sd),each = 16)
+
+le_new <- predict(model_nofrance,le_nofrance, re.form=~0) + new_ref + new_res
+
+## Refit the model and predict France (confidence interval)
+
+model_new <- refit(model_nofrance, le_new)
+pred_france_spb[i,] <-  predict(model_new,le_france, re.form=~0)
+}
+```
+
+<br/>
+The disadvantage of parametric bootstrap is that this approach is not robust to hetereskodasticity between clusters. Thus, we can consider another semi-parametric bootstrap: *wild bootstrap*. Instead of resampling the residuals themselves, the wild bootstrap rescales residuals with a random variable *v* such that $\mathrm{E} v = 0$ and $\mathrm{Var}\;v = 1$. Often, these weights are chosen simply as *-1* with a probability *0.5* and *1* with a probability *0.5*, the so-called Rademacher weights. This is why the bootstrap is termed wild, because it is kind of *wild* that such a bootstrap provides asymptotically valid results, see, e.g., *A. A. Djogbenou, J. G. MacKinnon, and M. Ø. Nielsen. Asymptotic theory and wild bootstrap inference with clustered errors. Journal of Econometrics 212.2 (2019): 393-412*.
+<br/>
+
+```{r}
+## Wild cluster bootstrap
+set.seed(123) # for reproducibility
+
+res_nofrance <- residuals(model_nofrance)
+pred_france_wb <- matrix(0,1000,16)
+
+for(i in 1:1000){
+## Scale  residuals by Rademacher weights
+new_res <-rep(2*round(runif(178),0)-1,each = 16) * res_nofrance
+new_ref <- rep(rnorm(178,0,country_sd),each = 16)
+
+le_new <- predict(model_nofrance,le_nofrance, re.form=~0) + new_ref + new_res
+
+## Refit the model and predict France (confidence interval)
+model_new <- refit(model_nofrance, le_new)
+pred_france_wb[i,] <- predict(model_new,le_france, re.form=~0)
+}
+```
+
+<br/>
+The last variant of bootstrap we will try is pairs cluster bootstrap that we already used few times in this project. 
+<br/>
+
+```{r}
+## Pairs cluster bootstrap
+set.seed(123) # for reproducibility
+
+Countries_list <- unique(le_nofrance$Country)
+pred_france_pcb <- matrix(0,1000,16)
+
+for(i in 1:1000){
+## Resample observations by clusters  
+Countries_new <- sample(Countries_list , rep=TRUE)
+le_nofrance_new <- le_nofrance[le_nofrance$Country == Countries_new[1],]
+
+for (j in 2:length(Countries_list)){
+  le_nofrance_new <- rbind(le_nofrance_new,le_nofrance[le_nofrance$Country == Countries_new[j],])
+}
+
+## Refit the model and predict France (confidence interval)
+model_new <- lmer(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m  + Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + Inf5_m_cent + rcs(Year,4) + (1 | Country), le_nofrance_new)
+
+pred_france_pcb[i,] <- predict(model_new, le_france, re.form=~0)
+}
+```
+
+<br/>
+Let us check the results.
+<br/>
+
+```{r}
+pb <- t(apply(pred_france_pb,2,function(x) quantile(x[!is.na(x)],c(0.025,0.975)))) 
+spb <- t(apply(pred_france_spb,2,function(x) quantile(x[!is.na(x)],c(0.025,0.975))))
+wb <-  t(apply(pred_france_wb,2,function(x) quantile(x[!is.na(x)],c(0.025,0.975))))
+pcb <- t(apply(pred_france_pcb,2,function(x) quantile(x[!is.na(x)],c(0.025,0.975))))
+
+ci_france <- cbind(pb,spb,wb,pcb)
+colnames(ci_france) <- c('2.5% (Par)','97.5% (Par)','2.5% (Semi-Par)','97.5% (Semi-Par)','2.5% (Wild)','97.5% (Wild)','2.5% (Pairs)','97.5% (Pairs)')
+ci_france
+```
+
+<br/>
+We see that the results of all four bootstraps are fairly similar in this particular case. Interestingly enough, it seems that parametric/semi-parametric bootstraps slightly overestimate the confidence intervals. Having demonstrated the computation of confidence intervals for any single observation, let us investigate *prediction* intervals.
+<br/>
+
+## Predictions for individual countries (prediction intervals)
+
+<br/>
+Prediction intervals are interval estimates for a new observations. Provided that the model is correctly specified, the computation of the prediction interval is straightforward via the parametric bootstrap. 
+<br/>
+
+```{r}
+## Parametric bootstrap
+set.seed(123) # for reproducibility
+
+pred_france_pb <- matrix(0,1000,16)
+
+for(i in 1:1000){
+## New observations
+new_ref <- rep(rnorm(178,0,country_sd),each = 16)
+le_new <- predict(model_nofrance,le_nofrance, re.form=~0) + new_ref + rnorm(dim(le_nofrance)[1],0,resid_sd)
+
+## Refit the model and predict France (prediction interval)
+model_new <- refit(model_nofrance, le_new)
+country_sd_new <- as.data.frame(VarCorr(model_new))$sdcor[1]
+resid_sd_new <- as.data.frame(VarCorr(model_new))$sdcor[2]
+
+pred_france_pb[i,] <- predict(model_new, le_france, re.form=~0) + rnorm(1,0,country_sd_new) + rnorm(16,0,resid_sd_new)
+}
+```
+
+<br/>
+Alternatively, we can also use residual cluster bootstrap to account for non-normal distribution and inter-cluster correlation.
+<br/>
+
+```{r}
+## Residual cluster bootstrap
+set.seed(123) # for reproducibility
+
+country_index <- seq(1,178,1)
+res_nofrance <- residuals(model_nofrance)
+res_nofrance <- matrix(res_nofrance,ncol = 16,byrow = TRUE)
+pred_france_spb <- matrix(0,1000,16)
+
+for(i in 1:1000){
+## We resample residuals by clusters
+new_res <- res_nofrance[sample(country_index, rep=TRUE),]
+new_res <- matrix(t(new_res),ncol = 1)
+new_ref <- rep(rnorm(178,0,country_sd),each = 16)
+le_new <- predict(model_nofrance,le_nofrance, re.form=~0) + new_ref + new_res
+
+## Refit the model and predict France (prediction interval)
+model_new <- refit(model_nofrance, le_new)
+country_sd_new <- as.data.frame(VarCorr(model_new))$sdcor[1]
+res_nofrance_new <- residuals(model_new)
+res_nofrance_new <- matrix(res_nofrance,ncol = 16,byrow = TRUE)
+new_res <- res_nofrance_new[sample(seq(1,178,1),1),]
+
+pred_france_spb[i,] <- predict(model_new, le_france, re.form=~0) + rnorm(1,0,country_sd_new) + new_res
+}
+```
+
+<br/>
+However, the residual cluster bootstrap does not help with heteroskedasticity. Provided that the variance of individual errors changes with the value of predictors, our prediction interval could be severely underestimated or overestimated (residual cluster bootstrap, in essence, pools these errors together, creating an "averaged" estimate of the individual error). And to remedy that, we would need a heteroskedasticity model. This is unlike confidence intervals, which we could compute in a way that was robust to heteroskedasticity.
+
+For example, we can notice that there seems  to be heteroskedasticity  wrt. the **Economy** factor developing/developed.
+<br/>
+
+```{r, fig.align = 'center', echo=FALSE}
+par(mfrow = c(1, 1))
+plot(le_nofrance$Economy,residuals(model_nofrance), xlab="Economy", ylab="Residuals")
+```
+
+<br/>
+We can fit a new model that models this heteroskedasticity by assuming a different individual error variance per stratum developed and developing. We need to use a different package, *nlme*, which allows us to fit a mixed effects model with variance structure functions (see https://stat.ethz.ch/R-manual/R-devel/library/nlme/html/varClasses.html for the available options).
+br/>
+
+```{r}
+library(nlme)
+library(lmeInfo)
+model_economy <- lme(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m  + Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + Inf5_m_cent + rcs(Year,4), random = ~1|Country, weights=varIdent(form =  ~ 1|Economy), data = le_nofrance)
+summary(model_economy)
+```
+
+<br/>
+We see that, indeed, the estimated standard deviation of individual errors is lower for developed countries. Thus, we can use this model instead to construct the prediction interval for France. We will use a wild bootstrap to generate new datasets and a residual bootstrap to simulate new observations for France. 
+<br/>
+
+```{r}
+economy_sd <- extract_varcomp(model_economy)$var_params
+
+## Wild cluster bootstrap + residual cluster bootstrap, modeling heteroskedasticity using factor Economy
+set.seed(123) # for reproducibility
+
+country_index <- seq(1,178,1)
+country_sd <- as.numeric(VarCorr(model_economy)[1,2])
+developing_ind <- matrix(le_nofrance$Economy,ncol = 16,byrow = TRUE)[,1] # index for developed countries
+  
+res_nofrance <- residuals(model_economy)
+pred_france_ec <- matrix(0,1000,16)
+
+X_nofrance <- model.matrix(model_nofrance)
+X_france <- model.matrix(cre_model_year)[which(life_expectancy_pred$Country == 'France'),]
+
+for(i in 1:1000){
+## Perform a wild bootstrap
+new_res <- rep(2*round(runif(178),0)-1,each = 16) * res_nofrance
+new_ref <- rep(rnorm(178,0,country_sd),each = 16)
+le_new <- X_nofrance %*% fixef(model_economy) + new_ref + new_res
+
+## Refit the model
+model_new <- lme(le_new ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m  + Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + Inf5_m_cent + rcs(Year,4), random = ~1|Country, weights=varIdent(form =  ~ 1|Economy), data = le_nofrance)
+
+country_sd_new <-  as.numeric(VarCorr(model_economy)[1,2])
+res_nofrance_new <- residuals(model_new)
+res_nofrance_new <- matrix(res_nofrance,ncol = 16,byrow = TRUE)
+
+## Choose a residual from the new sample, reweigh the one for developing countries and predict France (prediction interval)
+index <- sample(seq(1,178,1),1)
+
+if (developing_ind[index] == 'Developing') {
+  new_res <- res_nofrance_new[index,]*extract_varcomp(model_economy)$var_params
+} else if (developing_ind[index] == 'Developed') {
+  new_res <- res_nofrance_new[index,]
+}
+
+pred_france_ec[i,] <- X_france %*% fixef(model_new) + rnorm(1,0,country_sd_new) + new_res
+}
+```
+
+<br/>
+Let us compare the results.
+<br/>
+
+```{r}
+pb <-  t(apply(pred_france_pb,2,function(x) quantile(x[!is.na(x)],c(0.025,0.975)))) 
+spb <- t(apply(pred_france_spb,2,function(x) quantile(x[!is.na(x)],c(0.025,0.975))))
+pecb <- t(apply(pred_france_ec,2,function(x) quantile(x[!is.na(x)],c(0.025,0.975))))
+
+pi_france <- cbind(pb,spb,pecb)
+colnames(pi_france) <- c('2.5% (Par)','97.5% (Par)','2.5% (Semi-Par)','97.5% (Semi-Par)','2.5% (Het. Eco)','97.5% (Het. Eco)')
+pi_france
+```
+
+<br/>
+We see that the prediction intervals did not change that much. Still we cannot be really sure that the coverage of the prediction is valid since we did not account for the heteroskedasticity in a systematic manner. To do so, we would have to stray away from the ordinary regression even farther and use, e.g., *quantile regression* which seek to model quantiles of the response instead of just mean response. 
+
+To summarize the results concerning the predictive performance of our model, we see that our predictors can predict life expectancy reasonably well on average (our estimate of RMSE for a new individual using the 10-fold cross-validation was 2.5). This corresponds to our estimate of the prediction interval for predicting France from the rest of the data: $\pm$ 5 years according to our computational experiments. Overall, there is still a lot of unobserved heterogeneity modeled by individual effects, and thus, to get more accurate predictions, we would have to consider additional predictors in the model.
+<br/>
+
+## Significant effects in the life expectancy model
+
+<br/>
+Let us return to the model we used for effect estimation. 
+<br/>
+
+```{r}
+library(lme4)
+life_expectancy <- life_expectancy_cent
+
+## Correlated random effects model
+cre_model <- lmer(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m  + Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + Inf5_m_cent + factor(Year) + (1 | Country), life_expectancy)
+```
+
+<br/>
+We will use cluster-robust standard errors (CR2) and Satterthwaite DOF correction to identify significant predictors.
+<br/>
+
+```{r}
+library(clubSandwich)
+coef_test(cre_model, vcov = "CR2", cluster = life_expectancy$Country)[1:23,]
+```
+
+<br/>
+We see that most of the predictors are not significant. Let us start with the time-invariant predictors that we were able to estimate thanks to the CRE model. The significant predictors are **Economy** and some **Region**-specific factors. As far as **Economy** is concerned, it seems that economically developed countries tend to have higher life expectancy than developing countries, even after adjusting for other covariates. We can investigate this more formally post hoc using *lsmeans* (lsmeans computes estimated marginal means for a given factor, see https://cran.r-project.org/web/packages/emmeans/vignettes/basics.html for more details).
+<br/>
+
+```{r, fig.align = 'center', echo=FALSE}
+library(emmeans)
+lsmeans(cre_model, pairwise~ Economy)
+plot(lsmeans(cre_model, pairwise~ Economy),xlab = 'Estimated marginal means (Life expectancy)')
+```
+
+<br/>
+Next, we focus on the **Region**-specific factors. First, we can test formally whether the factor **Region** is significant in the model. 
+<br/>
+
+```{r}
+Wald_test(cre_model, constraints = constrain_zero(c("RegionAsia","RegionCAm","RegionEU","RegionMidE","RegionNAm","RegionOce","RegionNotEU","RegionSAm")), vcov = "CR2", cluster = life_expectancy$Country)
+```
+
+<br/>
+Indeed, it is. However, the differences between the estimated marginal means for regions seem much less significant.
+<br/>
+
+```{r, fig.align = 'center', echo=FALSE}
+lsmeans(cre_model, pairwise~ Region)
+plot(lsmeans(cre_model, pairwise~ Region),xlab = 'Estimated marginal means (Life expectancy)')
+```
+
+<br/>
+If I were to guess why the factors for **Central**, **South America**, and **Asia** appeared (for **Asia** almost) significant in the CRE model, I would suspect that there is a noticeable difference between developing countries of South/Central America and Asia and the developing countries in Africa many of them which are considered least developed countries (using the UN terminology) and the region-specific factors serve as a kind of proxy for this fact.  
+
+Let us move to the time-varying  predictors in our model, the only significant ones appear to be **Inf5_m**, **BMI**, and **HIV**. Let us try to make some sense of this results. 
+
+The first significant predictor is **Inf5_m**, i.e., infant mortality/deaths of children under five years old per 1000 population. This effect is expected since the incidence of such early deaths necessarily drives the life expectancy down. We could observe this effect quite clearly from the data (the red curve is a LOESS fit of the data: span = 0.5, degree = 2)
+<br/>
+
+```{r, fig.align = 'center', echo=FALSE}
+a <- loess(Life_expectancy~Inf5_m,data = life_expectancy, span = 0.5, degree = 2)
+b <- cbind(predict(a),life_expectancy$Inf5_m)[order(life_expectancy$Inf5_m),]
+plot(life_expectancy$Inf5_m,life_expectancy$Life_expectancy,xlab = 'Inf5_m',
+ylab = 'Life expectancy')
+lines(b[,2],b[,1], col = "red", lwd = 2) 
+```
+
+<br/>
+Another significant predictor is the number of **HIV** incidents, and it is the only disease that proved to be significant in our model. The significance of this effect is again to be expected. For example, the UNAIDS report *THE URGENCY OF NOW AIDS AT A CROSSROADS* shows that from successes in the treatment of HIV, life expectancy in Africa increased from 56 to 61 between 2010 and 2024. Again, if we visualize the data, the effect of **HIV** is also quite noticeable.
+<br/>
+
+```{r, fig.align = 'center', echo=FALSE}
+a <- loess(Life_expectancy~HIV,data = life_expectancy, span = 0.5, degree = 2)
+b <- cbind(predict(a),life_expectancy$HIV)[order(life_expectancy$HIV),]
+plot(life_expectancy$HIV,life_expectancy$Life_expectancy,xlab = 'HIV',
+ylab = 'Life expectancy')
+lines(b[,2],b[,1], col = "red", lwd = 2) 
+```
+
+<br/>
+The last significant predictor is the average **BMI** of the adult population. This one is a bit trickier to interpret. If we simply visualize the data, we could argue that **Life_expectancy** actually increases slightly with **BMI**. 
+<br/>
+
+```{r, fig.align = 'center', echo=FALSE}
+a <- loess(Life_expectancy~BMI,data = life_expectancy, span = 0.5, degree = 2)
+b <- cbind(predict(a),life_expectancy$BMI)[order(life_expectancy$BMI),]
+plot(life_expectancy$BMI,life_expectancy$Life_expectancy,xlab = 'BMI',
+ylab = 'Life expectancy')
+lines(b[,2],b[,1], col = "red", lwd = 2) 
+```
+
+<br/>
+However, more economically developed countries tend to have higher average **BMI**. Actually, if we plot **BMI** vs **Life_expectancy** for developed countries, this negative effect for large average **BMI** is hinted at (that low **BMI** and high **Life_expectancy** country is Japan)
+<br/>
+
+```{r, fig.align = 'center', echo=FALSE}
+a <- loess(Life_expectancy[life_expectancy$Economy == 'Developed' ]~BMI[life_expectancy$Economy == 'Developed' ],data = life_expectancy, span = 0.5, degree = 2)
+b <- cbind(predict(a),life_expectancy$BMI[life_expectancy$Economy == 'Developed' ])[order(life_expectancy$BMI[life_expectancy$Economy == 'Developed' ]),]
+plot(life_expectancy$BMI[life_expectancy$Economy == 'Developed' ],life_expectancy$Life_expectancy[life_expectancy$Economy == 'Developed' ],xlab = 'BMI',
+ylab = 'Life expectancy')
+lines(b[,2],b[,1], col = "red", lwd = 2) 
+```
+
+<br/>
+We could suspect a nonlinear dependence in **BMI**, although interestingly enough, fitting a more complex nonlinear (via restricted cubic splines) does not change the downward trend much.
+<br/>
+
+```{r, fig.align = 'center'}
+# I fit just a fixed effects model for simplicity's sake
+library(rms)
+fixed_effect_model_nonlin <- lm(Life_expectancy ~ Alcohol + Hepatitis_B + Measles + rcs(BMI,4) + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m + factor(Country) + factor(Year), data = life_expectancy)
+
+# Plot the predicted life expectancy vs. BMI for the first observation
+BMI_seq <- seq(min(life_expectancy$BMI),max(life_expectancy$BMI),1)
+obs <- life_expectancy[1,]
+obs <- obs[rep(1, length(BMI_seq)), ]
+obs$BMI  <- BMI_seq
+
+pred <- predict(fixed_effect_model_nonlin ,obs,type = 'response')
+plot(obs$BMI,pred,xlab = 'BMI', ylab = 'Life expectancy (Turkey)')
+```
+
+<br/>
+Having identified BMI as a negative factor in a life expectancy model is not without some basis. BMI is associated with an increased mortality rate. See, e.g., *H.L. Walls et al. Obesity and trends in life expectancy. Journal of Obesity 2012.1 (2012): 107989*, **K. Bhaskaran et al. "Association of BMI with overall and cause-specific mortality: a population-based cohort study of 3· 6 million adults in the UK." The Lancet Diabetes & Endocrinology 6.12 (2018): 944-953**. Still, if the dependency in terms of the country-level life expectancy should follow individual trends, this dependence should be "J-shaped," i.e., life expectancy shows a decrease for very low and very high BMIs
+<br/>
+
+
+## Conclusions
+
+<br/>
+Overall, we kind of confirmed a statement about life expectancy on Wikipedia, which claims that *... great variations in life expectancy ... (are) mostly caused by differences in public health, medical care, and diet*. With some hyperbole, our stand-ins for these causes are the three time-varying factors in our model: **HIV**, **infant mortality**, and **BMI**. However, we also observed a lot of additional heterogeneity in the data (see, e.g., our analysis of the predictive performance of our model) unexplained by these three predictors (some of it is captured by the **Economy** factor). Thus, if we were to investigate models of life expectancy further, we should explore including additional predictors in the model.  
+
+This conclusion wraps up the The First Circle: Linear Regression. I strayed a bit from ordinary linear regression by including random effects, using a correlated random effects model instead of a fixed effects model. However, thanks to that road we took, we got the model that could partially model the individual effects and could be employed for predictions, so moving the analysis in this direction felt right. Lastly, I would like to mention that most of the methods showed here for mixed effects models (robust standard  error estimates, various bootstraps) would be used in a similar fashion for ordinary linear regression models. 
+<br/>
+
