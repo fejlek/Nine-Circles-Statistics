@@ -396,7 +396,7 @@ not robust to hetereskodasticity between clusters. Thus, we can consider
 another semi-parametric bootstrap: *wild bootstrap*. Instead of
 resampling the residuals themselves, the wild bootstrap rescales
 residuals with a random variable *v* such that $\mathrm{E} v = 0$ and
-$\mathrm{Var}\;v = 1$. Often, these weights are chosen simply as *-1*
+$\mathrm{Var} v = 1$. Often, these weights are chosen simply as *-1*
 with a probability *0.5* and *1* with a probability *0.5*, the so-called
 Rademacher weights. This is why the bootstrap is termed wild, because it
 is kind of *wild* that such a bootstrap provides asymptotically valid
