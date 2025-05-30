@@ -123,39 +123,7 @@ anova(cre_model,cre_model_year)
 ```
 
 <br/>
-As we mentioned in Part Two, the asymptotic properties of test statistics about mixed models are quite complicated, and thus, we should always check the results using a bootstrap.
-<br/>
-
-```{r}
-set.seed(123) # for reproducibility
-nb <- 500
-
-lrstat <- numeric(nb)
-Countries_list <- unique(life_expectancy_pred$Country)
-
-for(i in 1:nb){
-Countries_new <- sample(Countries_list , rep=TRUE)
-life_expectancy_pred_new <- life_expectancy_pred[life_expectancy_pred$Country == Countries_new[1],]
-
-for (j in 2:length(Countries_list)){
-  life_expectancy_pred_new <- rbind(life_expectancy_pred_new,life_expectancy_pred[life_expectancy_pred$Country == Countries_new[j],])
-}
-
-## We want to compare models with different fixed effects, thus, REML=FALSE
-cre_model_new <- lmer(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m  + Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + Inf5_m_cent + factor(Year) + (1 | Country), life_expectancy_pred_new, REML=FALSE)
-
-
-cre_model_year_new <- lmer(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m  + Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + Inf5_m_cent + rcs(Year,4) + (1 | Country), life_expectancy_pred_new, REML=FALSE)
-
-lrstat[i] <- as.numeric(2*(logLik(cre_model_new)-logLik(cre_model_year_new)))
-}
-
-## Bootstrap estimate of p-value
-mean(lrstat > qchisq(0.95,12))
-```
-
-<br/>
-As can be seen from the results, these two models indeed seem almost identical. Hence, we will use the model with **Year** modeled using a restricted cubic spline. This model allows us to predict life expectancy for unobserved years. Hence, let us evaluate its performance via a cross-validation. To respect the structure of the panel data and keep it balanced, I will consider cross-validation over the whole columns. Since we have the data for only 16 years, I will perform merely a simple leave-one-out cross-validation with mean square error as a performance metric.
+As can be seen from the results, these two models indeed seem almost identical in terms of log-likelihood. Hence, we will use the model with **Year** modeled using a restricted cubic spline. This model allows us to predict life expectancy for unobserved years. Hence, let us evaluate its performance via a cross-validation. To respect the structure of the panel data and keep it balanced, I will consider cross-validation over the whole columns. Since we have the data for only 16 years, I will perform merely a simple leave-one-out cross-validation with mean square error as a performance metric.
 <br/>
 
 ```{r}
@@ -375,6 +343,8 @@ Let us check the results.
 <br/>
 
 ```{r}
+options(width = 1000)
+
 pb <- t(apply(pred_france_pb,2,function(x) quantile(x[!is.na(x)],c(0.025,0.975)))) 
 spb <- t(apply(pred_france_spb,2,function(x) quantile(x[!is.na(x)],c(0.025,0.975))))
 wb <-  t(apply(pred_france_wb,2,function(x) quantile(x[!is.na(x)],c(0.025,0.975))))
@@ -386,7 +356,7 @@ ci_france
 ```
 
 <br/>
-We see that the results of all four bootstraps are fairly similar in this particular case. Interestingly enough, it seems that parametric/semi-parametric bootstraps slightly overestimate the confidence intervals. Having demonstrated the computation of confidence intervals for any single observation, let us investigate *prediction* intervals.
+We see that the results of all four bootstraps are fairly similar in this particular case. Having demonstrated the computation of confidence intervals for any single observation, let us investigate *prediction* intervals.
 <br/>
 
 ## Predictions for individual countries (prediction intervals)
@@ -459,7 +429,7 @@ plot(le_nofrance$Economy,residuals(model_nofrance), xlab="Economy", ylab="Residu
 
 <br/>
 We can fit a new model that models this heteroskedasticity by assuming a different individual error variance per stratum developed and developing. We need to use a different package, *nlme*, which allows us to fit a mixed effects model with variance structure functions (see https://stat.ethz.ch/R-manual/R-devel/library/nlme/html/varClasses.html for the available options).
-br/>
+<br/>
 
 ```{r}
 library(nlme)
@@ -519,6 +489,8 @@ Let us compare the results.
 <br/>
 
 ```{r}
+options(width = 1000)
+
 pb <-  t(apply(pred_france_pb,2,function(x) quantile(x[!is.na(x)],c(0.025,0.975)))) 
 spb <- t(apply(pred_france_spb,2,function(x) quantile(x[!is.na(x)],c(0.025,0.975))))
 pecb <- t(apply(pred_france_ec,2,function(x) quantile(x[!is.na(x)],c(0.025,0.975))))
@@ -554,6 +526,7 @@ We will use cluster-robust standard errors (CR2) and Satterthwaite DOF correctio
 
 ```{r}
 library(clubSandwich)
+options(width = 1000)
 coef_test(cre_model, vcov = "CR2", cluster = life_expectancy$Country)[1:23,]
 ```
 
@@ -656,7 +629,7 @@ plot(obs$BMI,pred,xlab = 'BMI', ylab = 'Life expectancy (Turkey)')
 ```
 
 <br/>
-Having identified BMI as a negative factor in a life expectancy model is not without some basis. BMI is associated with an increased mortality rate. See, e.g., *H.L. Walls et al. Obesity and trends in life expectancy. Journal of Obesity 2012.1 (2012): 107989*, **K. Bhaskaran et al. "Association of BMI with overall and cause-specific mortality: a population-based cohort study of 3· 6 million adults in the UK." The Lancet Diabetes & Endocrinology 6.12 (2018): 944-953**. Still, if the dependency in terms of the country-level life expectancy should follow individual trends, this dependence should be "J-shaped," i.e., life expectancy shows a decrease for very low and very high BMIs
+Having identified BMI as a negative factor in a life expectancy model is not without some basis. BMI is associated with an increased mortality rate. See, e.g., *H.L. Walls et al. Obesity and trends in life expectancy. Journal of Obesity 2012.1 (2012): 107989*, *K. Bhaskaran et al. "Association of BMI with overall and cause-specific mortality: a population-based cohort study of 3· 6 million adults in the UK." The Lancet Diabetes & Endocrinology 6.12 (2018): 944-953*. Still, if the dependency in terms of the country-level life expectancy should follow individual trends, this dependence should be "J-shaped," i.e., life expectancy shows a decrease for very low and very high BMIs
 <br/>
 
 

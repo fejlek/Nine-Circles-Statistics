@@ -185,49 +185,15 @@ anova(cre_model,cre_model_year)
     ## cre_model_year   41 7424.9 7669.2 -3671.4   7342.9                     
     ## cre_model        53 7445.9 7761.8 -3669.9   7339.9 3.0132 12     0.9954
 
-<br/> As we mentioned in Part Two, the asymptotic properties of test
-statistics about mixed models are quite complicated, and thus, we should
-always check the results using a bootstrap. <br/>
-
-``` r
-set.seed(123) # for reproducibility
-nb <- 500
-
-lrstat <- numeric(nb)
-Countries_list <- unique(life_expectancy_pred$Country)
-
-for(i in 1:nb){
-Countries_new <- sample(Countries_list , rep=TRUE)
-life_expectancy_pred_new <- life_expectancy_pred[life_expectancy_pred$Country == Countries_new[1],]
-
-for (j in 2:length(Countries_list)){
-  life_expectancy_pred_new <- rbind(life_expectancy_pred_new,life_expectancy_pred[life_expectancy_pred$Country == Countries_new[j],])
-}
-
-## We want to compare models with different fixed effects, thus, REML=FALSE
-cre_model_new <- lmer(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m  + Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + Inf5_m_cent + factor(Year) + (1 | Country), life_expectancy_pred_new, REML=FALSE)
-
-
-cre_model_year_new <- lmer(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m  + Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + Inf5_m_cent + rcs(Year,4) + (1 | Country), life_expectancy_pred_new, REML=FALSE)
-
-lrstat[i] <- as.numeric(2*(logLik(cre_model_new)-logLik(cre_model_year_new)))
-}
-
-## Bootstrap estimate of p-value
-mean(lrstat > qchisq(0.95,12))
-```
-
-    ## [1] 0
-
 <br/> As can be seen from the results, these two models indeed seem
-almost identical. Hence, we will use the model with **Year** modeled
-using a restricted cubic spline. This model allows us to predict life
-expectancy for unobserved years. Hence, let us evaluate its performance
-via a cross-validation. To respect the structure of the panel data and
-keep it balanced, I will consider cross-validation over the whole
-columns. Since we have the data for only 16 years, I will perform merely
-a simple leave-one-out cross-validation with mean square error as a
-performance metric. <br/>
+almost identical in terms of log-likelihood. Hence, we will use the
+model with **Year** modeled using a restricted cubic spline. This model
+allows us to predict life expectancy for unobserved years. Hence, let us
+evaluate its performance via a cross-validation. To respect the
+structure of the panel data and keep it balanced, I will consider
+cross-validation over the whole columns. Since we have the data for only
+16 years, I will perform merely a simple leave-one-out cross-validation
+with mean square error as a performance metric. <br/>
 
 ``` r
 years <- seq(2000,2015,1)
@@ -392,7 +358,7 @@ qqnorm(unlist(ranef(model_nofrance)), main = "Random effects")
 qqline(unlist(ranef(model_nofrance)))
 ```
 
-<img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-11-1.png" style="display: block; margin: auto;" />
+<img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-10-1.png" style="display: block; margin: auto;" />
 
 <br/> We see that residuals do not have a normal distribution. Thus,
 instead of a parametric bootstrap, we can consider a semi-parametric
@@ -591,14 +557,14 @@ could compute in a way that was robust to heteroskedasticity.
 For example, we can notice that there seems to be heteroskedasticity
 wrt. the **Economy** factor developing/developed. <br/>
 
-<img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-18-1.png" style="display: block; margin: auto;" />
+<img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-17-1.png" style="display: block; margin: auto;" />
 
 <br/> We can fit a new model that models this heteroskedasticity by
 assuming a different individual error variance per stratum developed and
 developing. We need to use a different package, *nlme*, which allows us
 to fit a mixed effects model with variance structure functions (see
 <https://stat.ethz.ch/R-manual/R-devel/library/nlme/html/varClasses.html>
-for the available options). br/\>
+for the available options). <br/>
 
 ``` r
 library(nlme)
@@ -885,7 +851,7 @@ for more details). <br/>
     ## Results are averaged over the levels of: Region, Year 
     ## Degrees-of-freedom method: kenward-roger
 
-<img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-24-1.png" style="display: block; margin: auto;" />
+<img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-23-1.png" style="display: block; margin: auto;" />
 
 <br/> Next, we focus on the **Region**-specific factors. First, we can
 test formally whether the factor **Region** is significant in the model.
@@ -960,7 +926,7 @@ marginal means for regions seem much less significant. <br/>
     ## Degrees-of-freedom method: kenward-roger 
     ## P value adjustment: tukey method for comparing a family of 9 estimates
 
-<img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-26-1.png" style="display: block; margin: auto;" />
+<img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-25-1.png" style="display: block; margin: auto;" />
 
 <br/> If I were to guess why the factors for **Central**, **South
 America**, and **Asia** appeared (for **Asia** almost) significant in
@@ -981,7 +947,7 @@ necessarily drives the life expectancy down. We could observe this
 effect quite clearly from the data (the red curve is a LOESS fit of the
 data: span = 0.5, degree = 2) <br/>
 
-<img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-27-1.png" style="display: block; margin: auto;" />
+<img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-26-1.png" style="display: block; margin: auto;" />
 
 <br/> Another significant predictor is the number of **HIV** incidents,
 and it is the only disease that proved to be significant in our model.
@@ -991,14 +957,14 @@ from successes in the treatment of HIV, life expectancy in Africa
 increased from 56 to 61 between 2010 and 2024. Again, if we visualize
 the data, the effect of **HIV** is also quite noticeable. <br/>
 
-<img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-28-1.png" style="display: block; margin: auto;" />
+<img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-27-1.png" style="display: block; margin: auto;" />
 
 <br/> The last significant predictor is the average **BMI** of the adult
 population. This one is a bit trickier to interpret. If we simply
 visualize the data, we could argue that **Life_expectancy** actually
 increases slightly with **BMI**. <br/>
 
-<img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-29-1.png" style="display: block; margin: auto;" />
+<img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-28-1.png" style="display: block; margin: auto;" />
 
 <br/> However, more economically developed countries tend to have higher
 average **BMI**. Actually, if we plot **BMI** vs **Life_expectancy** for
@@ -1006,7 +972,7 @@ developed countries, this negative effect for large average **BMI** is
 hinted at (that low **BMI** and high **Life_expectancy** country is
 Japan) <br/>
 
-<img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-30-1.png" style="display: block; margin: auto;" />
+<img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-29-1.png" style="display: block; margin: auto;" />
 
 <br/> We could suspect a nonlinear dependence in **BMI**, although
 interestingly enough, fitting a more complex nonlinear (via restricted
@@ -1027,15 +993,15 @@ pred <- predict(fixed_effect_model_nonlin ,obs,type = 'response')
 plot(obs$BMI,pred,xlab = 'BMI', ylab = 'Life expectancy (Turkey)')
 ```
 
-<img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-31-1.png" style="display: block; margin: auto;" />
+<img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-30-1.png" style="display: block; margin: auto;" />
 
 <br/> Having identified BMI as a negative factor in a life expectancy
 model is not without some basis. BMI is associated with an increased
 mortality rate. See, e.g., *H.L. Walls et al. Obesity and trends in life
-expectancy. Journal of Obesity 2012.1 (2012): 107989*, **K. Bhaskaran et
+expectancy. Journal of Obesity 2012.1 (2012): 107989*, *K. Bhaskaran et
 al. “Association of BMI with overall and cause-specific mortality: a
 population-based cohort study of 3· 6 million adults in the UK.” The
-Lancet Diabetes & Endocrinology 6.12 (2018): 944-953**. Still, if the
+Lancet Diabetes & Endocrinology 6.12 (2018): 944-953*. Still, if the
 dependency in terms of the country-level life expectancy should follow
 individual trends, this dependence should be “J-shaped,” i.e., life
 expectancy shows a decrease for very low and very high BMIs <br/>
