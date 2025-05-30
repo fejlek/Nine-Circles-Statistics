@@ -92,7 +92,7 @@ summary(lmer_model)
 ```
 
 <br/>
-Let us start with an obligatory actual vs. predicted plot. We should note that prediction for a known individual is computed (using function *predict*)  as $X\hat{\beta} + \hat{\tau} + \hat{\mu}$, where $X$ are our "main" predictors, $\hat{beta}$ is the estimate of fixed effects coefficients from the model, $\hat{tau}$ are the estimates of the fixed time effects in the model, and $\hat{\mu}$ is the estimate of the individual random effect from the model (this estimate is known as *BLUP*, the best linear unbiased predictor). 
+Let us start with an obligatory actual vs. predicted plot. We should note that prediction for a known individual is computed (using function *predict*)  as $X\hat{\beta} + \hat{\tau} + \hat{\mu}$, where $X$ are our "main" predictors, $\hat{beta}$ is the estimate of coefficients for the "main" predictors, $\hat{tau}$ are the estimates of the fixed time effects in the model, and $\hat{\mu}$ is the estimate of the individual random effect from the model (this estimate is known as *BLUP*, the best linear unbiased predictor). 
 <br/>
 
 ```{r}
@@ -288,7 +288,7 @@ pred_france_spb[i,] <-  predict(model_new,le_france, re.form=~0)
 ```
 
 <br/>
-The disadvantage of parametric bootstrap is that this approach is not robust to hetereskodasticity between clusters. Thus, we can consider another semi-parametric bootstrap: *wild bootstrap*. Instead of resampling the residuals themselves, the wild bootstrap rescales residuals with a random variable *v* such that $\mathrm{E} v = 0$ and $\mathrm{Var}\;v = 1$. Often, these weights are chosen simply as *-1* with a probability *0.5* and *1* with a probability *0.5*, the so-called Rademacher weights. This is why the bootstrap is termed wild, because it is kind of *wild* that such a bootstrap provides asymptotically valid results, see, e.g., *A. A. Djogbenou, J. G. MacKinnon, and M. Ø. Nielsen. Asymptotic theory and wild bootstrap inference with clustered errors. Journal of Econometrics 212.2 (2019): 393-412*.
+The disadvantage of parametric bootstrap is that this approach is not robust to hetereskodasticity between clusters. Thus, we can consider another semi-parametric bootstrap: *wild bootstrap*. Instead of resampling the residuals themselves, the wild bootstrap rescales residuals with a random variable *v* such that $\mathrm{E} v = 0$ and $\mathrm{Var} v = 1$. Often, these weights are chosen simply as *-1* with a probability *0.5* and *1* with a probability *0.5*, the so-called Rademacher weights. This is why the bootstrap is termed wild, because it is kind of *wild* that such a bootstrap provides asymptotically valid results, see, e.g., *A. A. Djogbenou, J. G. MacKinnon, and M. Ø. Nielsen. Asymptotic theory and wild bootstrap inference with clustered errors. Journal of Econometrics 212.2 (2019): 393-412*.
 <br/>
 
 ```{r}
