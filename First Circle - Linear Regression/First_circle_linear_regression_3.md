@@ -20,7 +20,9 @@ constructed in Part Two in terms of predictive performance. We created
 this model primarily to estimate the effect of our predictors on life
 expectancy. Still, it is worth a look at how these apparently
 significant effects in the model would be useful in the actual
-prediction of life expectancy.
+prediction of life expectancy (if our model predicts life expectancy
+reasonably well, we can have greater confidence in our identification of
+signification variables and estimation of their effect).
 
 As a reminder, our model is (we will use *lmer* for the fit instead of
 *plm*, because we plan to compare models using a likelihood ratio test
@@ -120,12 +122,12 @@ summary(lmer_model)
 
 <br/> Let us start with an obligatory actual vs. predicted plot. We
 should note that prediction for a known individual is computed (using
-function *predict*) as $X\hat{\beta} + \hat{\tau} + \hat{\mu}$, where $X$
-are our “main” predictors, $\hat{\beta}$ is the estimate of the coefficients 
-for the “main” predictors, $\hat{\tau}$ are the estimates of the fixed
-time effects in the model, and $\hat{\mu}$ is the estimate of the
-individual random effect from the model (this estimate is known as
-*BLUP*, the best linear unbiased predictor). <br/>
+function *predict*) as $X\hat{\beta} + \hat{\tau} + \hat{\mu}$, where
+$X$ are our “main” predictors, $\hat{\beta}$ is the estimate of the
+coefficients for the “main” predictors, $\hat{\tau}$ are the estimates
+of the fixed time effects in the model, and $\hat{\mu}$ is the estimate
+of the individual random effect from the model (this estimate is known
+as *BLUP*, the best linear unbiased predictor). <br/>
 
 ``` r
 plot(life_expectancy_pred$Life_expectancy,predict(cre_model),xlab = 'Life expectancy',ylab = 'Predicted Life expectancy')
