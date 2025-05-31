@@ -22,7 +22,7 @@ expectancy. Still, it is worth a look at how these apparently
 significant effects in the model would be useful in the actual
 prediction of life expectancy (if our model predicts life expectancy
 reasonably well, we can have greater confidence in our identification of
-signification variables and estimation of their effect).
+significant variables and estimation of their effect).
 
 As a reminder, our model is (we will use *lmer* for the fit instead of
 *plm*, because we plan to compare models using a likelihood ratio test

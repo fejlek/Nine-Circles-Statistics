@@ -71,7 +71,7 @@ In Part Three of this demonstration of using linear regression and some of its e
 ## Evaluation of predictive performance (via cross-validation) 
 
 <br/>
-Let us discuss the correlated random effects model (CRE) we constructed in Part Two in terms of predictive performance. We created this model primarily to estimate the effect of our predictors on life expectancy. Still, it is worth a look at how these apparently significant effects in the model would be useful in the actual prediction of life expectancy (if our model predicts life expectancy reasonably well, we can have greater confidence in our identification of signification variables and estimation of their effect).
+Let us discuss the correlated random effects model (CRE) we constructed in Part Two in terms of predictive performance. We created this model primarily to estimate the effect of our predictors on life expectancy. Still, it is worth a look at how these apparently significant effects in the model would be useful in the actual prediction of life expectancy (if our model predicts life expectancy reasonably well, we can have greater confidence in our identification of significant variables and estimation of their effect).
 
 As a reminder, our model is (we will use *lmer* for the fit instead of *plm*, because we plan to compare models using a likelihood ratio test in a bit and *plm* does not compute likelihood function since it uses estimates based on generalized least squares).
 <br/>
