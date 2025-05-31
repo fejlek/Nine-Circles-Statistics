@@ -22,7 +22,7 @@ expectancy. Still, it is worth a look at how these apparently
 significant effects in the model would be useful in the actual
 prediction of life expectancy (if our model predicts life expectancy
 reasonably well, we can have greater confidence in our identification of
-significant variables and estimation of their effect).
+signification variables and estimation of their effect).
 
 As a reminder, our model is (we will use *lmer* for the fit instead of
 *plm*, because we plan to compare models using a likelihood ratio test
@@ -452,7 +452,12 @@ pred_france_pcb[i,] <- predict(model_new, le_france, re.form=~0)
 }
 ```
 
-<br/> Let us check the results. <br/>
+<br/> Let us check the results. For simplicity’s sake, we will compute a
+simple percentile-based confidence intervals (another popular more
+sophisticated option would be bias-corrected and accelerated (BCa)
+bootstrap that better handles skew and bias *B. Efron. Better bootstrap
+confidence intervals. Journal of the American statistical Association
+82.397 (1987): 171-185.*) <br/>
 
 ``` r
 options(width = 1000)

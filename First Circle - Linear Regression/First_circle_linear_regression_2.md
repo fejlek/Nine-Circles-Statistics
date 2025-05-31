@@ -4,6 +4,7 @@
 Jiří Fejlek
 
 2025-05-19
+<br/>
 
 <br/> In Part Two of this demonstration of using linear regression, we
 seek to model **Life expectancy** using data that contains health,

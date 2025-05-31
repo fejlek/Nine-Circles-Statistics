@@ -71,7 +71,7 @@ In Part Three of this demonstration of using linear regression and some of its e
 ## Evaluation of predictive performance (via cross-validation) 
 
 <br/>
-Let us discuss the correlated random effects model (CRE) we constructed in Part Two in terms of predictive performance. We created this model primarily to estimate the effect of our predictors on life expectancy. Still, it is worth a look at how these apparently significant effects in the model would be useful in the actual prediction of life expectancy (if our model predicts life expectancy reasonably well, we can have greater confidence in our identification of significant variables and estimation of their effect).
+Let us discuss the correlated random effects model (CRE) we constructed in Part Two in terms of predictive performance. We created this model primarily to estimate the effect of our predictors on life expectancy. Still, it is worth a look at how these apparently significant effects in the model would be useful in the actual prediction of life expectancy (if our model predicts life expectancy reasonably well, we can have greater confidence in our identification of signification variables and estimation of their effect).
 
 As a reminder, our model is (we will use *lmer* for the fit instead of *plm*, because we plan to compare models using a likelihood ratio test in a bit and *plm* does not compute likelihood function since it uses estimates based on generalized least squares).
 <br/>
@@ -340,7 +340,7 @@ pred_france_pcb[i,] <- predict(model_new, le_france, re.form=~0)
 ```
 
 <br/>
-Let us check the results.
+Let us check the results. For simplicity's sake, we will compute a simple percentile-based confidence intervals (another popular more sophisticated option would be bias-corrected and accelerated (BCa) bootstrap that better handles skew and bias *B. Efron. Better bootstrap confidence intervals. Journal of the American statistical Association 82.397 (1987): 171-185.*)
 <br/>
 
 ```{r}
@@ -420,7 +420,7 @@ pred_france_spb[i,] <- predict(model_new, le_france, re.form=~0) + rnorm(1,0,cou
 <br/>
 However, the residual cluster bootstrap does not help with heteroskedasticity. Provided that the variance of individual errors changes with the value of predictors, our prediction interval could be severely underestimated or overestimated (residual cluster bootstrap, in essence, pools these errors together, creating an "averaged" estimate of the individual error). And to remedy that, we would need a heteroskedasticity model. This is unlike confidence intervals, which we could compute in a way that was robust to heteroskedasticity.
 
-For example, we can notice that there seems  to be heteroskedasticity  wrt. the **Economy** factor developing/developed.
+For example, we can notice that there seems  to be heteroskedasticity wrt. the **Economy** factor developing/developed.
 <br/>
 
 ```{r, fig.align = 'center', echo=FALSE}
