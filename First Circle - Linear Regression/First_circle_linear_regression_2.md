@@ -4,7 +4,6 @@
 Jiří Fejlek
 
 2025-05-19
-<br/>
 
 <br/> In Part Two of this demonstration of using linear regression, we
 seek to model **Life expectancy** using data that contains health,
@@ -239,7 +238,14 @@ coeftest(linear_model, vcov = vcovHC(linear_model, type = c("HC0")))
 using a simple nonparametric bootstrap that resamples with repetitions
 the whole dataset, a so-called pairs bootstrap (*A. C. Cameron and P. K.
 Trivedi. Microeconometrics: methods and applications. Cambridge
-university press, 2005.*). <br/>
+university press, 2005.*).
+
+We should note here that we will compute a simple percentile-based
+confidence intervals, which works well when the distribution is
+symmetrical and centered on the observed statistic, i.e, unbiased (*T.
+C. Hesterberg. What teachers should know about the bootstrap: Resampling
+in the undergraduate statistics curriculum. The american statistician
+69.4 (2015): 371-386.*). <br/>
 
 ``` r
 set.seed(123) # for reproducibility
