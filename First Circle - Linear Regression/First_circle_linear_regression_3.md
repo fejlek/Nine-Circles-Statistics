@@ -114,10 +114,12 @@ summary(lmer_model)
 <br/> (we will use *lmer* for the fit instead of *plm*,
 because we plan to compare models using a likelihood ratio test in a bit
 and *plm* does not compute likelihood function since it uses estimates
-based on generalized least squares). Let us start with an obligatory actual 
-vs. predicted plot. We should note that prediction for a known individual is 
-computed (using function *predict*) as $X\hat{\beta} + \hat{\tau} + \hat{\mu}$, 
-where $X$ are our “main” predictors, $\hat{\beta}$ is the estimate of the
+based on generalized least squares).
+
+Let us start with an obligatory actual vs. predicted plot. We
+should note that prediction for a known individual is computed (using
+function *predict*) as $X\hat{\beta} + \hat{\tau} + \hat{\mu}$, where
+$X$ are our “main” predictors, $\hat{\beta}$ is the estimate of the
 coefficients for the “main” predictors, $\hat{\tau}$ are the estimates
 of the fixed time effects in the model, and $\hat{\mu}$ is the estimate
 of the individual random effect from the model (this estimate is known
