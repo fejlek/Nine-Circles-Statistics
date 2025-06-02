@@ -133,9 +133,7 @@ abline(0,1, col="red", lwd = 2)
 ![](First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-3-1.png)<!-- -->
 
 <br/> It seem that the model fits the data pretty well. Let us evaluate,
-how good this model would be for the predictions of life expectancy
-(even though this is not its primary purpose which was effect
-estimation/hypothesis testing).
+how good this model would be for the predictions of life expectancy.
 
 Unlike fixed effects models, we have some options. Remember that the
 fixed effects model uses a factor for each individual. Hence, we can
