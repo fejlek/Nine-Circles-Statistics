@@ -18,10 +18,7 @@ the greatest effect on predictions. <br/>
 
 <br/> Let us discuss the correlated random effects model (CRE) we
 constructed in Part Two in terms of predictive performance. As a
-reminder, our model is (we will use *lmer* for the fit instead of *plm*,
-because we plan to compare models using a likelihood ratio test in a bit
-and *plm* does not compute likelihood function since it uses estimates
-based on generalized least squares). <br/>
+reminder, our model is <br/>
 
 ``` r
 library(lme4)
@@ -114,10 +111,13 @@ summary(lmer_model)
     ## factor(Year)2014  3.110e+00  1.602e-01  19.416
     ## factor(Year)2015  3.297e+00  1.673e-01  19.708
 
-<br/> Let us start with an obligatory actual vs. predicted plot. We
-should note that prediction for a known individual is computed (using
-function *predict*) as $X\hat{\beta} + \hat{\tau} + \hat{\mu}$, where
-$X$ are our “main” predictors, $\hat{\beta}$ is the estimate of the
+<br/> (we will use *lmer* for the fit instead of *plm*,
+because we plan to compare models using a likelihood ratio test in a bit
+and *plm* does not compute likelihood function since it uses estimates
+based on generalized least squares). Let us start with an obligatory actual 
+vs. predicted plot. We should note that prediction for a known individual is 
+computed (using function *predict*) as $X\hat{\beta} + \hat{\tau} + \hat{\mu}$, 
+where $X$ are our “main” predictors, $\hat{\beta}$ is the estimate of the
 coefficients for the “main” predictors, $\hat{\tau}$ are the estimates
 of the fixed time effects in the model, and $\hat{\mu}$ is the estimate
 of the individual random effect from the model (this estimate is known
