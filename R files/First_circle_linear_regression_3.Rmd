@@ -564,7 +564,7 @@ Measles_obs$Measles  <- Measles_seq
 
 
 # BMI
-BMI_seq <- seq(min(life_expectancy$BMI),max(life_expectancy$BMI),2)
+BMI_seq <- seq(min(life_expectancy$BMI),max(life_expectancy$BMI),1)
 BMI_obs <- life_expectancy[1,]
 BMI_obs <- BMI_obs[rep(1, length(BMI_seq)), ]
 BMI_obs$BMI  <- BMI_seq
