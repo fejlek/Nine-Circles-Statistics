@@ -147,7 +147,7 @@ another error term.
 Concerning the effects for individual years, we use the fixed effects.
 Hence, we cannot make a prediction, for example, for the year 2016. To
 make such predictions, we have to change the model by either replacing
-time-fixed effects with time-random effects or, probably even better; we
+fixed time effects with random time effects or, probably even better; we
 could try to model the dependency in time directly by including
 numerical predictor **Year** in some form (life expectancy seems to
 steadily increase in time and our fixed effects estimates corresponded
@@ -779,7 +779,7 @@ consider additional predictors in the model. <br/>
 
 ## Effects of predictors in the life expectancy model
 
-<br/> Let us return to the model we used for effect estimation. <br/>
+<br/> Let us return to our original model with fixed time effects. <br/>
 
 ``` r
 library(lme4)
@@ -882,7 +882,7 @@ bootstrap (we assume that the individual random effects are fixed).
 
 <br/> We see that many predictors seem to have little absolute effect:
 **Alcohol**, **Hepatitis_B**, **Measles**, **Polio**, **Diphtheria**,
-**Pop_log**, **Thin_10_19 **, **Thin_5_9**, and **Schooling**. Let us
+**Pop_log**, **Thin_10_19**, **Thin_5_9**, and **Schooling**. Let us
 have a closer look at the rest.
 
 Let us start with the time-invariant predictors that we were able to
