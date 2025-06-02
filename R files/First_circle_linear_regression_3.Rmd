@@ -64,16 +64,13 @@ lmer_model <- lmer(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + 
 ```
 
 <br/>
-In Part Three of this demonstration of using linear regression and some of its extensions, we seek to evaluate the 
-**Life expectancy** model  (we created in Part Two) based on the data containing health, immunization, and economic and demographic information about 179 countries from 2000 to 2015. Namely, we will look at its significant predictors and evaluate its predictive performance.
+In Part Three of this demonstration of using linear regression and some of its extensions, we seek to evaluate the **Life expectancy** model  (we created in Part Two) based on the data containing health, immunization, and economic and demographic information about 179 countries from 2000 to 2015. Namely, we will look at its predictive performance and we will also discuss the predictors that seem to have the greatest effect on predictions.
 <br/>
 
 ## Evaluation of predictive performance (via cross-validation) 
 
 <br/>
-Let us discuss the correlated random effects model (CRE) we constructed in Part Two in terms of predictive performance. We created this model primarily to estimate the effect of our predictors on life expectancy. Still, it is worth a look at how these apparently significant effects in the model would be useful in the actual prediction of life expectancy (if our model predicts life expectancy reasonably well, we can have greater confidence in our identification of signification variables and estimation of their effect).
-
-As a reminder, our model is (we will use *lmer* for the fit instead of *plm*, because we plan to compare models using a likelihood ratio test in a bit and *plm* does not compute likelihood function since it uses estimates based on generalized least squares).
+Let us discuss the correlated random effects model (CRE) we constructed in Part Two in terms of predictive performance. As a reminder, our model is (we will use *lmer* for the fit instead of *plm*, because we plan to compare models using a likelihood ratio test in a bit and *plm* does not compute likelihood function since it uses estimates based on generalized least squares).
 <br/>
 
 ```{r}
@@ -91,7 +88,6 @@ cre_model <- lmer(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + M
 summary(lmer_model)
 ```
 
-
 <br/> 
 Let us start with an obligatory actual vs. predicted plot. We should note that prediction for a known individual is computed (using function *predict*) as $X\hat{\beta} + \hat{\tau} + \hat{\mu}$, where $X$ are our “main” predictors, $\hat{\beta}$ is the estimate of the coefficients for the “main” predictors, $\hat{\tau}$ are the estimates of the fixed time effects in the model, and $\hat{\mu}$ is the estimate of the individual random effect from the model (this estimate is known as *BLUP*, the best linear unbiased predictor). 
 <br/>
@@ -106,7 +102,7 @@ It seem that the model fits the data pretty well. Let us evaluate, how good this
 
 Unlike fixed effects models, we have some options. Remember that the fixed effects model uses a factor for each individual. Hence, we can only make a reasonable prediction for the individuals in the model. With random effects, we can actually make a prediction about new individuals since the random effects model directly models the distribution of individual effects (i.i.d. normally distributed with mean zero). Thus, for an unknown individual, the random effect effectively becomes just another error term. 
 
-Concerning the effects for individual years, we use the fixed effects. Hence, we cannot make a prediction, for example, for the year 2016. To make such predictions, we have to change the model by either replacing time-fixed effects with time-random effects or, probably even better; we could try to model the dependency in time directly by including numerical predictor **Year** in some form (life expectancy seems to steadily increase in time and our fixed effects estimates corresponded to that, which is a far cry from estimates of individual effects). Let us try that (we will model **Year** using a restricted cubic spline)
+Concerning the effects for individual years, we use the fixed effects. Hence, we cannot make a prediction, for example, for the year 2016. To make such predictions, we have to change the model by either replacing time-fixed effects with time-random effects or, probably even better; we could try to model the dependency in time directly by including numerical predictor **Year** in some form (life expectancy seems to steadily increase in time and our fixed effects estimates corresponded to that, which is a far cry from estimates of individual effects). Let us try that (we will model **Year** using a restricted cubic spline).
 <br/>
 
 ```{r}
@@ -117,7 +113,6 @@ cre_model_year <- lmer(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_
 <br/>
 We can compare these two models using the likelihood ratio test. The function *anova* refits the model using maximum likelihood instead of using restricted maximum likelihood (REML) because restricted likelihood functions of distinct models are not comparable if they do not have the same *fixed effects*. We should mention here that the *fixed effects *(in the context of general mixed models) mean just terms in the model that are not random effects (i.e., they are terms that would form an ordinary regression model). 
 <br/>
-
 
 ```{r}
 anova(cre_model,cre_model_year)
@@ -420,7 +415,7 @@ pred_france_spb[i,] <- predict(model_new, le_france, re.form=~0) + rnorm(1,0,cou
 <br/>
 However, the residual cluster bootstrap does not help with heteroskedasticity. Provided that the variance of individual errors changes with the value of predictors, our prediction interval could be severely underestimated or overestimated (residual cluster bootstrap, in essence, pools these errors together, creating an "averaged" estimate of the individual error). And to remedy that, we would need a heteroskedasticity model. This is unlike confidence intervals, which we could compute in a way that was robust to heteroskedasticity.
 
-For example, we can notice that there seems  to be heteroskedasticity wrt. the **Economy** factor developing/developed.
+For example, we can notice that there seems to be heteroskedasticity wrt. the **Economy** factor developing/developed.
 <br/>
 
 ```{r, fig.align = 'center', echo=FALSE}
@@ -507,7 +502,7 @@ We see that the prediction intervals did not change that much. Still we cannot b
 To summarize the results concerning the predictive performance of our model, we see that our predictors can predict life expectancy reasonably well on average (our estimate of RMSE for a new individual using the 10-fold cross-validation was 2.5). This corresponds to our estimate of the prediction interval for predicting France from the rest of the data: $\pm$ 5 years according to our computational experiments. Overall, there is still a lot of unobserved heterogeneity modeled by individual effects, and thus, to get more accurate predictions, we would have to consider additional predictors in the model.
 <br/>
 
-## Significant effects in the life expectancy model
+## Effects of predictors in the life expectancy model
 
 <br/>
 Let us return to the model we used for effect estimation. 
@@ -522,17 +517,229 @@ cre_model <- lmer(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + M
 ```
 
 <br/>
-We will use cluster-robust standard errors (CR2) and Satterthwaite DOF correction to identify significant predictors.
+We will determine which predictors appeared to be significant in the model based on cluster-robust standard errors (CR2) and Satterthwaite DOF correction. We will also recompute confidence intervals based on these errors. Let us also remind ourselves of the ranges of values for the continuous variables. 
 <br/>
 
 ```{r}
 library(clubSandwich)
 options(width = 1000)
-coef_test(cre_model, vcov = "CR2", cluster = life_expectancy$Country)[1:23,]
+
+coef_stats <- coef_test(cre_model, vcov = "CR2", cluster = life_expectancy$Country)[1:23,]
+coef_stats
+
+conf_int <- cbind(fixef(cre_model)[1:23] - coef_stats$SE*qt(0.975,coef_stats$df_Satt),fixef(cre_model)[1:23] + coef_stats$SE*qt(0.975,coef_stats$df_Satt))
+colnames(conf_int) <- c('2.5 %','97.5 %')
+conf_int
+
+summary(life_expectancy[,c(5:11,14:16,19,20,21)])
 ```
 
 <br/>
-We see that most of the predictors are not significant. Let us start with the time-invariant predictors that we were able to estimate thanks to the CRE model. The significant predictors are **Economy** and some **Region**-specific factors. As far as **Economy** is concerned, it seems that economically developed countries tend to have higher life expectancy than developing countries, even after adjusting for other covariates. We can investigate this more formally post hoc using *lsmeans* (lsmeans computes estimated marginal means for a given factor, see https://cran.r-project.org/web/packages/emmeans/vignettes/basics.html for more details).
+First, we will compute the confidence intervals for the predictions, varying one predictor while keeping the other fixed (other fixed effects are chosen as Turkey 2015) using a simple parametric bootstrap (we assume that the individual random effects are fixed).
+<br/>
+
+```{r, fig.align = 'center', echo=FALSE}
+library(ggplot2)
+library(gridExtra)
+
+resid_sd <- as.data.frame(VarCorr(cre_model))$sdcor[2]
+
+# Alcohol
+Alcohol_seq <- seq(min(life_expectancy$Alcohol),max(life_expectancy$Alcohol),1)
+Alcohol_obs <- life_expectancy[1,]
+Alcohol_obs <- Alcohol_obs[rep(1, length(Alcohol_seq)), ]
+Alcohol_obs$Alcohol  <- Alcohol_seq
+
+# Hepatitis_B
+Hepatitis_B_seq <- seq(min(life_expectancy$Hepatitis_B),max(life_expectancy$Hepatitis_B),5)
+Hepatitis_B_obs <- life_expectancy[1,]
+Hepatitis_B_obs <- Hepatitis_B_obs[rep(1, length(Hepatitis_B_seq)), ]
+Hepatitis_B_obs$Hepatitis_B  <- Hepatitis_B_seq
+
+# Measles
+Measles_seq <- seq(min(life_expectancy$Measles),max(life_expectancy$Measles),5)
+Measles_obs <- life_expectancy[1,]
+Measles_obs <- Measles_obs[rep(1, length(Measles_seq)), ]
+Measles_obs$Measles  <- Measles_seq
+
+
+# BMI
+BMI_seq <- seq(min(life_expectancy$BMI),max(life_expectancy$BMI),2)
+BMI_obs <- life_expectancy[1,]
+BMI_obs <- BMI_obs[rep(1, length(BMI_seq)), ]
+BMI_obs$BMI  <- BMI_seq
+
+# Polio
+Polio_seq <- seq(min(life_expectancy$Polio),max(life_expectancy$Polio),5)
+Polio_obs <- life_expectancy[1,]
+Polio_obs <- Polio_obs[rep(1, length(Polio_seq)), ]
+Polio_obs$Polio  <- Polio_seq
+
+# Diphtheria
+Diphtheria_seq <- seq(min(life_expectancy$Diphtheria),max(life_expectancy$Diphtheria),5)
+Diphtheria_obs <- life_expectancy[1,]
+Diphtheria_obs <- Diphtheria_obs[rep(1, length(Diphtheria_seq)), ]
+Diphtheria_obs$Diphtheria  <- Diphtheria_seq
+
+# Thin_5_9
+Thin_5_9_seq <- seq(min(life_expectancy$Thin_5_9),max(life_expectancy$Thin_5_9),2)
+Thin_5_9_obs <- life_expectancy[1,]
+Thin_5_9_obs <- Thin_5_9_obs[rep(1, length(Thin_5_9_seq)), ]
+Thin_5_9_obs$Thin_5_9  <- Thin_5_9_seq
+
+
+# HIV
+HIV_seq <- seq(min(life_expectancy$HIV),max(life_expectancy$HIV),1)
+HIV_obs <- life_expectancy[1,]
+HIV_obs <- Thin_5_9_obs[rep(1, length(HIV_seq)), ]
+HIV_obs$HIV  <- HIV_seq
+
+# Thin_10_19
+Thin_10_19_seq <- seq(min(life_expectancy$Thin_10_19),max(life_expectancy$Thin_10_19),2)
+Thin_10_19_obs <- life_expectancy[1,]
+Thin_10_19_obs <- Thin_10_19_obs[rep(1, length(Thin_10_19_seq)), ]
+Thin_10_19_obs$Thin_10_19  <- Thin_10_19_seq
+
+# Schooling
+Schooling_seq <- seq(min(life_expectancy$Schooling),max(life_expectancy$Schooling),1)
+Schooling_obs <- life_expectancy[1,]
+Schooling_obs <- Schooling_obs[rep(1, length(Schooling_seq)), ]
+Schooling_obs$Schooling  <- Schooling_seq
+
+# GDP_log
+GDP_log_seq <- seq(min(life_expectancy$GDP_log),max(life_expectancy$GDP_log),0.5)
+GDP_log_obs <- life_expectancy[1,]
+GDP_log_obs <- GDP_log_obs[rep(1, length(GDP_log_seq)), ]
+GDP_log_obs$GDP_log  <- GDP_log_seq
+
+# Pop_log
+Pop_log_seq <- seq(min(life_expectancy$Pop_log),max(life_expectancy$Pop_log),0.5)
+Pop_log_obs <- life_expectancy[1,]
+Pop_log_obs <- Pop_log_obs[rep(1, length(Pop_log_seq)), ]
+Pop_log_obs$Pop_log  <- Pop_log_seq
+
+
+# Inf5_m
+Inf5_m_seq <- seq(min(life_expectancy$Inf5_m),max(life_expectancy$Inf5_m),0.2)
+Inf5_m_obs <- life_expectancy[1,]
+Inf5_m_obs <- Inf5_m_obs[rep(1, length(Inf5_m_seq)), ]
+Inf5_m_obs$Inf5_m  <- Inf5_m_seq
+
+Alcohol_pred <- matrix(0,1000,length(Alcohol_seq))
+Hepatitis_B_pred <- matrix(0,1000,length(Hepatitis_B_seq))
+Measles_pred <- matrix(0,1000,length(Measles_seq))
+BMI_pred <- matrix(0,1000,length(BMI_seq))
+Polio_pred <- matrix(0,1000,length(Polio_seq))
+Diphtheria_pred <- matrix(0,1000,length(Diphtheria_seq))
+HIV_pred <- matrix(0,1000,length(HIV_seq))
+Thin_5_9_pred <- matrix(0,1000,length(Thin_5_9_seq))
+Thin_10_19_pred <- matrix(0,1000,length(Thin_10_19_seq))
+Schooling_pred <- matrix(0,1000,length(Schooling_seq))
+GDP_log_pred <- matrix(0,1000,length(GDP_log_seq))
+Pop_log_pred <- matrix(0,1000,length(Pop_log_seq))
+Inf5_m_pred <- matrix(0,1000,length(Inf5_m_seq))
+
+
+for(i in 1:1000){
+y <- predict(cre_model) + rnorm(dim(life_expectancy)[1],0,resid_sd)
+bmod <- refit(cre_model, y)
+Alcohol_pred[i,] <- predict(bmod,Alcohol_obs)
+Hepatitis_B_pred[i,] <- predict(bmod,Hepatitis_B_obs)
+Measles_pred[i,] <- predict(bmod,Measles_obs)
+BMI_pred[i,] <- predict(bmod,BMI_obs)
+Polio_pred[i,] <- predict(bmod,Polio_obs)
+Diphtheria_pred[i,] <- predict(bmod,Diphtheria_obs)
+HIV_pred[i,] <- predict(bmod,HIV_obs)
+Thin_5_9_pred[i,] <- predict(bmod,Thin_5_9_obs)
+Thin_10_19_pred[i,] <- predict(bmod,Thin_10_19_obs)
+Schooling_pred[i,] <- predict(bmod,Schooling_obs)
+Pop_log_pred[i,] <- predict(bmod,Pop_log_obs)
+GDP_log_pred[i,] <- predict(bmod,GDP_log_obs)
+Inf5_m_pred[i,] <- predict(bmod,Inf5_m_obs)
+}
+
+
+Alcohol_CI <- cbind(predict(cre_model,Alcohol_obs), t(apply(Alcohol_pred,2,function(x) quantile(x[!is.na(x)],c(0.025,0.975)))))
+colnames(Alcohol_CI) <- c('fit','lwr','upr')
+
+Hepatitis_B_CI <- cbind(predict(cre_model,Hepatitis_B_obs), t(apply(Hepatitis_B_pred,2,function(x) quantile(x[!is.na(x)],c(0.025,0.975)))))
+colnames(Hepatitis_B_CI) <- c('fit','lwr','upr')
+
+Measles_CI <- cbind(predict(cre_model,Measles_obs), t(apply(Measles_pred,2,function(x) quantile(x[!is.na(x)],c(0.025,0.975)))))
+colnames(Measles_CI) <- c('fit','lwr','upr')
+
+BMI_CI <- cbind(predict(cre_model,BMI_obs), t(apply(BMI_pred,2,function(x) quantile(x[!is.na(x)],c(0.025,0.975)))))
+colnames(BMI_CI) <- c('fit','lwr','upr')
+
+Polio_CI <- cbind(predict(cre_model,Polio_obs), t(apply(Polio_pred,2,function(x) quantile(x[!is.na(x)],c(0.025,0.975)))))
+colnames(Polio_CI) <- c('fit','lwr','upr')
+
+Diphtheria_CI <- cbind(predict(cre_model,Diphtheria_obs), t(apply(Diphtheria_pred,2,function(x) quantile(x[!is.na(x)],c(0.025,0.975)))))
+colnames(Diphtheria_CI) <- c('fit','lwr','upr')
+
+HIV_CI <- cbind(predict(cre_model,HIV_obs), t(apply(HIV_pred,2,function(x) quantile(x[!is.na(x)],c(0.025,0.975)))))
+colnames(HIV_CI) <- c('fit','lwr','upr')
+
+Thin_10_19_CI <- cbind(predict(cre_model,Thin_10_19_obs), t(apply(Thin_10_19_pred,2,function(x) quantile(x[!is.na(x)],c(0.025,0.975)))))
+colnames(Thin_10_19_CI) <- c('fit','lwr','upr')
+
+Thin_5_9_CI <- cbind(predict(cre_model,Thin_5_9_obs), t(apply(Thin_5_9_pred,2,function(x) quantile(x[!is.na(x)],c(0.025,0.975)))))
+colnames(Thin_5_9_CI) <- c('fit','lwr','upr')
+
+Schooling_CI <- cbind(predict(cre_model,Schooling_obs), t(apply(Schooling_pred,2,function(x) quantile(x[!is.na(x)],c(0.025,0.975)))))
+colnames(Schooling_CI) <- c('fit','lwr','upr')
+
+GDP_log_CI <- cbind(predict(cre_model,GDP_log_obs), t(apply(GDP_log_pred,2,function(x) quantile(x[!is.na(x)],c(0.025,0.975)))))
+colnames(GDP_log_CI) <- c('fit','lwr','upr')
+
+Pop_log_CI <- cbind(predict(cre_model,Pop_log_obs), t(apply(Pop_log_pred,2,function(x) quantile(x[!is.na(x)],c(0.025,0.975)))))
+colnames(Pop_log_CI) <- c('fit','lwr','upr')
+
+Inf5_m_CI <- cbind(predict(cre_model,Inf5_m_obs), t(apply(Inf5_m_pred,2,function(x) quantile(x[!is.na(x)],c(0.025,0.975)))))
+colnames(Inf5_m_CI) <- c('fit','lwr','upr')
+
+
+# Alcohol and Hepatitis_B
+plot1 <- ggplot(aes(x=Alcohol_seq, y=fit, ymin=lwr, ymax=upr), data=Alcohol_CI) + geom_point() + geom_ribbon(linetype=2, alpha=0.1) + labs(x="Alcohol", y="Prediction (Turkey 2015) w/ 95% CI") + theme_bw()
+plot2 <- ggplot(aes(x=Hepatitis_B_seq, y=fit, ymin=lwr, ymax=upr), data=Hepatitis_B_CI) + geom_point() + geom_ribbon(linetype=2, alpha=0.1) + labs(x="Hepatitis_B", y="Prediction (Turkey 2015) w/ 95% CI") + theme_bw()
+grid.arrange(plot1, plot2, ncol=2)
+
+# Measles and Polio
+plot1 <- ggplot(aes(x=Measles_seq, y=fit, ymin=lwr, ymax=upr), data=Measles_CI) + geom_point() + geom_ribbon(linetype=2, alpha=0.1) + labs(x="Measles", y="Prediction (Turkey 2015) w/ 95% CI") + theme_bw()
+plot2 <- ggplot(aes(x=Polio_seq, y=fit, ymin=lwr, ymax=upr), data=Polio_CI) + geom_point() + geom_ribbon(linetype=2, alpha=0.1) + labs(x="Polio", y="Prediction (Turkey 2015) w/ 95% CI") + theme_bw()
+grid.arrange(plot1, plot2, ncol=2)
+
+# Diphtheria and Pop_log
+plot1 <- ggplot(aes(x=Diphtheria_seq, y=fit, ymin=lwr, ymax=upr), data=Diphtheria_CI) + geom_point() + geom_ribbon(linetype=2, alpha=0.1) + labs(x="Diphtheria", y="Prediction (Turkey 2015) w/ 95% CI") + theme_bw()
+plot2 <- ggplot(aes(x=Pop_log_seq, y=fit, ymin=lwr, ymax=upr), data=Pop_log_CI) + geom_point() + geom_ribbon(linetype=2, alpha=0.1) + labs(x="Pop_log", y="Prediction (Turkey 2015) w/ 95% CI") + theme_bw()
+
+
+# Thin_10_19 and Thin_5_9
+plot1 <- ggplot(aes(x=Thin_10_19_seq, y=fit, ymin=lwr, ymax=upr), data=Thin_10_19_CI) + geom_point() + geom_ribbon(linetype=2, alpha=0.1) + labs(x="Thin_10_19", y="Prediction (Turkey 2015) w/ 95% CI") + theme_bw()
+plot2 <- ggplot(aes(x=Thin_5_9_seq, y=fit, ymin=lwr, ymax=upr), data=Thin_5_9_CI) + geom_point() + geom_ribbon(linetype=2, alpha=0.1) + labs(x="Thin_5_9", y="Prediction (Turkey 2015) w/ 95% CI") + theme_bw()
+grid.arrange(plot1, plot2, ncol=2)
+
+# Schooling and GDP_log
+plot1 <- ggplot(aes(x=Schooling_seq, y=fit, ymin=lwr, ymax=upr), data=Schooling_CI) + geom_point() + geom_ribbon(linetype=2, alpha=0.1) + labs(x="Schooling", y="Prediction (Turkey 2015) w/ 95% CI") + theme_bw()
+plot2 <- ggplot(aes(x=GDP_log_seq, y=fit, ymin=lwr, ymax=upr), data=GDP_log_CI) + geom_point() + geom_ribbon(linetype=2, alpha=0.1) + labs(x="GDP_log", y="Prediction (Turkey 2015) w/ 95% CI") + theme_bw()
+grid.arrange(plot1, plot2, ncol=2)
+
+# BMI
+ggplot(aes(x=BMI_seq, y=fit, ymin=lwr, ymax=upr), data=BMI_CI) + geom_point() + geom_ribbon(linetype=2, alpha=0.1) + labs(x="BMI", y="Prediction (Turkey 2015) w/ 95% CI") + theme_bw()
+
+# HIV
+ggplot(aes(x=HIV_seq, y=fit, ymin=lwr, ymax=upr), data=HIV_CI) + geom_point() + geom_ribbon(linetype=2, alpha=0.1) + labs(x="HIV", y="Prediction (Turkey 2015) w/ 95% CI") + theme_bw()
+
+# Inf5_m
+ggplot(aes(x=Inf5_m_seq, y=fit, ymin=lwr, ymax=upr), data=Inf5_m_CI) + geom_point() + geom_ribbon(linetype=2, alpha=0.1) + labs(x="Inf5_m", y="Prediction (Turkey 2015) w/ 95% CI") + theme_bw()
+
+```
+
+<br/>
+We see that many predictors seem to have little absolute effect: **Alcohol**, **Hepatitis_B**, **Measles**, **Polio**, **Diphtheria**, **Pop_log**, **Thin_10_19 **, **Thin_5_9**, and **Schooling**.
+Let us have a closer look at the rest. 
+
+Let us start with the time-invariant predictors that we were able to estimate thanks to the CRE model: **Economy** and **Region**-specific factors. As far as **Economy** is concerned, it is a highly significant predictor in the model. It seems that economically developed countries tend to have higher life expectancy than developing countries, even after adjusting for other covariates in the model. We can investigate this more formally post hoc using *lsmeans* (lsmeans computes estimated marginal means for a given factor, see https://cran.r-project.org/web/packages/emmeans/vignettes/basics.html for more details).
 <br/>
 
 ```{r, fig.align = 'center', echo=FALSE}
@@ -542,7 +749,7 @@ plot(lsmeans(cre_model, pairwise~ Economy),xlab = 'Estimated marginal means (Lif
 ```
 
 <br/>
-Next, we focus on the **Region**-specific factors. First, we can test formally whether the factor **Region** is significant in the model. 
+Next, we focus on the **Region**-specific factors. We can test formally that this factor **Region** is significant in the model. 
 <br/>
 
 ```{r}
@@ -550,7 +757,7 @@ Wald_test(cre_model, constraints = constrain_zero(c("RegionAsia","RegionCAm","Re
 ```
 
 <br/>
-Indeed, it is. However, the differences between the estimated marginal means for regions seem much less significant.
+However, the differences between the estimated marginal means for regions seem overall pretty close. 
 <br/>
 
 ```{r, fig.align = 'center', echo=FALSE}
@@ -559,11 +766,9 @@ plot(lsmeans(cre_model, pairwise~ Region),xlab = 'Estimated marginal means (Life
 ```
 
 <br/>
-If I were to guess why the factors for **Central**, **South America**, and **Asia** appeared (for **Asia** almost) significant in the CRE model, I would suspect that there is a noticeable difference between developing countries of South/Central America and Asia and the developing countries in Africa many of them which are considered least developed countries (using the UN terminology) and the region-specific factors serve as a kind of proxy for this fact.  
+So overall, the differences between regions after adjusting for other covariates are not that noticeable.
 
-Let us move to the time-varying  predictors in our model, the only significant ones appear to be **Inf5_m**, **BMI**, and **HIV**. Let us try to make some sense of this results. 
-
-The first significant predictor is **Inf5_m**, i.e., infant mortality/deaths of children under five years old per 1000 population. This effect is expected since the incidence of such early deaths necessarily drives the life expectancy down. We could observe this effect quite clearly from the data (the red curve is a LOESS fit of the data: span = 0.5, degree = 2)
+Let us move to the time-varying  predictors in our model. We start with **Inf5_m**, i.e., infant mortality/deaths of children under five years old per 1000 population. This effect appears strongly significant in the model. This is expected since the incidence of such early deaths necessarily drives the life expectancy down. We could observe this effect quite clearly from the data (the red curve is a LOESS fit of the data: span = 0.5, degree = 2)
 <br/>
 
 ```{r, fig.align = 'center', echo=FALSE}
@@ -575,7 +780,19 @@ lines(b[,2],b[,1], col = "red", lwd = 2)
 ```
 
 <br/>
-Another significant predictor is the number of **HIV** incidents, and it is the only disease that proved to be significant in our model. The significance of this effect is again to be expected. For example, the UNAIDS report *THE URGENCY OF NOW AIDS AT A CROSSROADS* shows that from successes in the treatment of HIV, life expectancy in Africa increased from 56 to 61 between 2010 and 2024. Again, if we visualize the data, the effect of **HIV** is also quite noticeable.
+Another predictor worth mentioning is **GDP_log**. Now, this predictor is not significant (using a commonly used p-value cut-off 0.05) in the model. The confidence interval for the estimated effect is a bit too large. However, its point estimate is positive, as one would expect; more economically developed countries tend to have higher life expectancy.
+<br/>
+
+```{r, fig.align = 'center', echo=FALSE}
+a <- loess(Life_expectancy~GDP_log,data = life_expectancy, span = 0.5, degree = 2)
+b <- cbind(predict(a),life_expectancy$GDP_log)[order(life_expectancy$GDP_log),]
+plot(life_expectancy$GDP_log,life_expectancy$Life_expectancy,xlab = 'GDP_log',
+ylab = 'Life expectancy')
+lines(b[,2],b[,1], col = "red", lwd = 2) 
+```
+
+<br/>
+Another highly significant predictor in the model is the number of **HIV** incidents. The importance of this effect is again to be expected. For example, the UNAIDS report *THE URGENCY OF NOW AIDS AT A CROSSROADS* shows that from successes in the treatment of HIV, life expectancy in Africa increased from 56 to 61 between 2010 and 2024. Again, if we visualize the data, the effect of **HIV** is also quite noticeable.
 <br/>
 
 ```{r, fig.align = 'center', echo=FALSE}
@@ -587,7 +804,7 @@ lines(b[,2],b[,1], col = "red", lwd = 2)
 ```
 
 <br/>
-The last significant predictor is the average **BMI** of the adult population. This one is a bit trickier to interpret. If we simply visualize the data, we could argue that **Life_expectancy** actually increases slightly with **BMI**. 
+The last predictor we need to  mention is the average **BMI** of the adult population. This one is a bit trickier to interpret. If we simply visualize the data, we could argue that **Life_expectancy** actually increases slightly with **BMI**. 
 <br/>
 
 ```{r, fig.align = 'center', echo=FALSE}

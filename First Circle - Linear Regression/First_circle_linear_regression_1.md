@@ -9,18 +9,18 @@ Jiří Fejlek
 <br/> In this project, we will demonstrate application of using linear
 regression and some of its extensions (we will eventually move to models
 for panel data and the final model will be a mixed effects model). Our
-objective will be to build a model that should aid us to identify
-predictors that seem to have a significant effect on life expectancy
-based on this dataset. We will also explore whether the obtained model
-would be useful for predictions about life expectancy, although this
-will not be its primary purpose. We will split this presentation into
-three parts: data preparation & exploration, creating a model for effect
-estimation, and model predictions & discussion. <br/>
+objective will be to build a model for life expectancy using health,
+immunization, and economic and demographic data about 179 countries. We
+will explore whether the obtained model would be useful for predictions
+about life expectancy. We also wish to identify predictors that seem to
+have the greatest effect on life expectancy. We will split this
+presentation into three parts: data preparation & exploration, creating
+a model , and model predictions & discussion. <br/>
 
 ## Life Expectancy (WHO) dataset
 
-Let us start with the description of our data set. Our data are taken
-from
+<br/> Let us start with the description of our data set. Our data are
+taken from
 <https://www.kaggle.com/datasets/lashagoch/life-expectancy-who-updated>.
 Data contains life expectancy, health, immunization, and economic and
 demographic information about 179 countries from 2000 to 2015 <br/>
@@ -58,8 +58,8 @@ demographic information about 179 countries from 2000 to 2015 <br/>
   Trade Organization)
 - **Life_expectancy** - Average life expectancy
 
-As stated on the Kaggle page, information about Population, GDP, and
-Life Expectancy were taken from World Bank Data. Information about
+<br/> As stated on the Kaggle page, information about Population, GDP,
+and Life Expectancy were taken from World Bank Data. Information about
 vaccinations for Measles, Hepatitis B, Polio, and Diphtheria, alcohol
 consumption, BMI, HIV incidents, mortality rates, and thinness were
 collected from World Health Organization public datasets. Information
@@ -69,8 +69,8 @@ and were imputed with either closest three-year average or average of
 the Region. Unfortunately, these missing values are not denoted, thus,
 we will not be able to test other imputation methods.
 
-<br/> We start with loading in the data, and displaying the first few
-rows to check that it loaded correctly. <br/>
+We start with loading in the data, and displaying the first few rows to
+check that it loaded correctly. <br/>
 
 ``` r
 library(readr)
@@ -312,15 +312,11 @@ pheatmap(cor(life_expectancy[,c(4,5,7:13,16,17,18,21,22)]),display_numbers = TRU
 
 <img src="First_circle_linear_regression_1_files/figure-GFM/unnamed-chunk-25-1.png" width="200%" style="display: block; margin: auto;" />
 
-<br/>
-
-As can be seen from the heatmap, some predictors are significantly
+<br/> As can be seen from the heatmap, some predictors are significantly
 correlated. Let us test whether such predictors can indeed be modelled
 via the remaining predictors. We use a variance inflation factor (VIF)
 that considers the linear regression of every predictor against all
-other predictors.
-
-<br/>
+other predictors. <br/>
 
 ``` r
 library(car)
@@ -357,17 +353,9 @@ summary(lm(Infant_deaths~Under_five_deaths,data = life_expectancy))$r.squared
 
     ## [1] 0.9715086
 
-<br/> This fact will make estimating the corresponding regression
-coefficients in any model based on this data set extremely difficult
-because the data contains very little information about the effect of
-changing **Infant_deaths** while holding **Under_five_deaths** constant
-and vice versa.
-
-When faced with a group of collinear predictors, it is recommended to
-summarize the predictors instead of arbitrarily choosing one. In our
-case, we use principal component analysis (PCA).
-
-<br/>
+<br/> When faced with a group of collinear predictors, it is recommended
+to summarize the predictors instead of arbitrarily choosing one. In our
+case, we use principal component analysis (PCA). <br/>
 
 ``` r
 # PCA
@@ -428,7 +416,7 @@ redun(~.- Life_expectancy - Infant_deaths - Under_five_deaths - Year - Country  
     ##     Polio + Diphtheria + Incidents_HIV + Thinness_ten_nineteen_years + 
     ##     Thinness_five_nine_years + Schooling + Economy_status + Population_log + 
     ##     GDP_log + Inf5_m
-    ## <environment: 0x000002119f410660>
+    ## <environment: 0x0000021e014aa238>
     ## 
     ## n: 2864  p: 15   nk: 4 
     ## 
@@ -458,3 +446,7 @@ redun(~.- Life_expectancy - Infant_deaths - Under_five_deaths - Year - Country  
     ##                       0.902 
     ## 
     ## No redundant variables
+
+<br/> The redundancy analysis concludes Part One of our demonstration.
+In the next part, we will focus on creating a life expectancy model.
+<br/>

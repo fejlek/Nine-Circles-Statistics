@@ -10,24 +10,18 @@ Jiří Fejlek
 some of its extensions, we seek to evaluate the **Life expectancy**
 model (we created in Part Two) based on the data containing health,
 immunization, and economic and demographic information about 179
-countries from 2000 to 2015. Namely, we will look at its significant
-predictors and evaluate its predictive performance. <br/>
+countries from 2000 to 2015. Namely, we will look at its predictive
+performance and we will also discuss the predictors that seem to have
+the greatest effect on predictions. <br/>
 
 ## Evaluation of predictive performance (via cross-validation)
 
 <br/> Let us discuss the correlated random effects model (CRE) we
-constructed in Part Two in terms of predictive performance. We created
-this model primarily to estimate the effect of our predictors on life
-expectancy. Still, it is worth a look at how these apparently
-significant effects in the model would be useful in the actual
-prediction of life expectancy (if our model predicts life expectancy
-reasonably well, we can have greater confidence in our identification of
-signification variables and estimation of their effect).
-
-As a reminder, our model is (we will use *lmer* for the fit instead of
-*plm*, because we plan to compare models using a likelihood ratio test
-in a bit and *plm* does not compute likelihood function since it uses
-estimates based on generalized least squares). <br/>
+constructed in Part Two in terms of predictive performance. As a
+reminder, our model is (we will use *lmer* for the fit instead of *plm*,
+because we plan to compare models using a likelihood ratio test in a bit
+and *plm* does not compute likelihood function since it uses estimates
+based on generalized least squares). <br/>
 
 ``` r
 library(lme4)
@@ -158,7 +152,7 @@ could try to model the dependency in time directly by including
 numerical predictor **Year** in some form (life expectancy seems to
 steadily increase in time and our fixed effects estimates corresponded
 to that, which is a far cry from estimates of individual effects). Let
-us try that (we will model **Year** using a restricted cubic spline)
+us try that (we will model **Year** using a restricted cubic spline).
 <br/>
 
 ``` r
@@ -783,7 +777,7 @@ is still a lot of unobserved heterogeneity modeled by individual
 effects, and thus, to get more accurate predictions, we would have to
 consider additional predictors in the model. <br/>
 
-## Significant effects in the life expectancy model
+## Effects of predictors in the life expectancy model
 
 <br/> Let us return to the model we used for effect estimation. <br/>
 
@@ -795,13 +789,18 @@ life_expectancy <- life_expectancy_cent
 cre_model <- lmer(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m  + Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + Inf5_m_cent + factor(Year) + (1 | Country), life_expectancy)
 ```
 
-<br/> We will use cluster-robust standard errors (CR2) and Satterthwaite
-DOF correction to identify significant predictors. <br/>
+<br/> We will determine which predictors appeared to be significant in
+the model based on cluster-robust standard errors (CR2) and
+Satterthwaite DOF correction. We will also recompute confidence
+intervals based on these errors. Let us also remind ourselves of the
+ranges of values for the continuous variables. <br/>
 
 ``` r
 library(clubSandwich)
 options(width = 1000)
-coef_test(cre_model, vcov = "CR2", cluster = life_expectancy$Country)[1:23,]
+
+coef_stats <- coef_test(cre_model, vcov = "CR2", cluster = life_expectancy$Country)[1:23,]
+coef_stats
 ```
 
     ## Alternative hypothesis: two-sided 
@@ -830,15 +829,70 @@ coef_test(cre_model, vcov = "CR2", cluster = life_expectancy$Country)[1:23,]
     ##         Schooling -2.30e-02 0.11752          0 -0.19610       66.66      0.84513     
     ##            Inf5_m -2.70e+00 0.30261          0 -8.91381       35.44      < 0.001  ***
 
-<br/> We see that most of the predictors are not significant. Let us
-start with the time-invariant predictors that we were able to estimate
-thanks to the CRE model. The significant predictors are **Economy** and
-some **Region**-specific factors. As far as **Economy** is concerned, it
-seems that economically developed countries tend to have higher life
-expectancy than developing countries, even after adjusting for other
-covariates. We can investigate this more formally post hoc using
-*lsmeans* (lsmeans computes estimated marginal means for a given factor,
-see
+``` r
+conf_int <- cbind(fixef(cre_model)[1:23] - coef_stats$SE*qt(0.975,coef_stats$df_Satt),fixef(cre_model)[1:23] + coef_stats$SE*qt(0.975,coef_stats$df_Satt))
+colnames(conf_int) <- c('2.5 %','97.5 %')
+conf_int
+```
+
+    ##                         2.5 %       97.5 %
+    ## (Intercept)      46.387583751 66.744617060
+    ## EconomyDeveloped  2.616563847  6.636000135
+    ## RegionAsia       -0.117700221  2.969022982
+    ## RegionCAm         0.686834662  3.955979599
+    ## RegionEU         -3.145213314  1.520878392
+    ## RegionMidE       -1.616408543  2.025428100
+    ## RegionNAm        -5.148086642  5.396807020
+    ## RegionOce        -3.362797486  1.990347310
+    ## RegionNotEU      -0.991935825  3.268152273
+    ## RegionSAm         0.376744323  3.739504142
+    ## Alcohol          -0.123232662  0.103408899
+    ## Hepatitis_B      -0.007264218  0.009140078
+    ## Measles          -0.017575275  0.004991439
+    ## BMI              -1.530774539 -0.420669814
+    ## Polio            -0.014984663  0.017160789
+    ## Diphtheria       -0.004665023  0.030613943
+    ## HIV              -1.204608137 -0.478536109
+    ## GDP_log          -0.329472381  1.239977779
+    ## Pop_log          -1.328905481  1.855856759
+    ## Thin_10_19       -0.029316444  0.029402719
+    ## Thin_5_9         -0.032028810  0.033582982
+    ## Schooling        -0.257634833  0.211544356
+    ## Inf5_m           -3.311423816 -2.083322253
+
+``` r
+summary(life_expectancy[,c(5:11,14:16,19,20,21)])
+```
+
+    ##     Alcohol        Hepatitis_B       Measles           BMI            Polio        Diphtheria         HIV            Thin_10_19        Thin_5_9      Schooling          Inf5_m           Pop_log           GDP_log      
+    ##  Min.   : 0.000   Min.   :12.00   Min.   :10.00   Min.   :19.80   Min.   : 8.0   Min.   :16.00   Min.   : 0.0100   Min.   : 0.100   Min.   : 0.1   Min.   : 1.100   Min.   :-1.3782   Min.   :0.07696   Min.   : 4.997  
+    ##  1st Qu.: 1.200   1st Qu.:78.00   1st Qu.:64.00   1st Qu.:23.20   1st Qu.:81.0   1st Qu.:81.00   1st Qu.: 0.0800   1st Qu.: 1.600   1st Qu.: 1.6   1st Qu.: 5.100   1st Qu.:-1.0980   1st Qu.:1.13059   1st Qu.: 7.255  
+    ##  Median : 4.020   Median :89.00   Median :83.00   Median :25.50   Median :93.0   Median :93.00   Median : 0.1500   Median : 3.300   Median : 3.4   Median : 7.800   Median :-0.5904   Median :2.18042   Median : 8.347  
+    ##  Mean   : 4.821   Mean   :84.29   Mean   :77.34   Mean   :25.03   Mean   :86.5   Mean   :86.27   Mean   : 0.8943   Mean   : 4.866   Mean   : 4.9   Mean   : 7.632   Mean   : 0.0000   Mean   :2.26750   Mean   : 8.399  
+    ##  3rd Qu.: 7.777   3rd Qu.:96.00   3rd Qu.:93.00   3rd Qu.:26.40   3rd Qu.:97.0   3rd Qu.:97.00   3rd Qu.: 0.4600   3rd Qu.: 7.200   3rd Qu.: 7.3   3rd Qu.:10.300   3rd Qu.: 0.8325   3rd Qu.:3.20630   3rd Qu.: 9.438  
+    ##  Max.   :17.870   Max.   :99.00   Max.   :99.00   Max.   :32.10   Max.   :99.0   Max.   :99.00   Max.   :21.6800   Max.   :27.700   Max.   :28.6   Max.   :14.100   Max.   : 5.6532   Max.   :7.23046   Max.   :11.630
+
+<br/> First, we will compute the confidence intervals for the
+predictions, varying one predictor while keeping the other fixed (other
+fixed effects are chosen as Turkey 2015) using a simple parametric
+bootstrap (we assume that the individual random effects are fixed).
+<br/>
+
+<img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-23-1.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-23-2.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-23-3.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-23-4.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-23-5.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-23-6.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-23-7.png" style="display: block; margin: auto;" />
+
+<br/> We see that many predictors seem to have little absolute effect:
+**Alcohol**, **Hepatitis_B**, **Measles**, **Polio**, **Diphtheria**,
+**Pop_log**, **Thin_10_19 **, **Thin_5_9**, and **Schooling**. Let us
+have a closer look at the rest.
+
+Let us start with the time-invariant predictors that we were able to
+estimate thanks to the CRE model: **Economy** and **Region**-specific
+factors. As far as **Economy** is concerned, it is a highly significant
+predictor in the model. It seems that economically developed countries
+tend to have higher life expectancy than developing countries, even
+after adjusting for other covariates in the model. We can investigate
+this more formally post hoc using *lsmeans* (lsmeans computes estimated
+marginal means for a given factor, see
 <https://cran.r-project.org/web/packages/emmeans/vignettes/basics.html>
 for more details). <br/>
 
@@ -858,11 +912,10 @@ for more details). <br/>
     ## Results are averaged over the levels of: Region, Year 
     ## Degrees-of-freedom method: kenward-roger
 
-<img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-23-1.png" style="display: block; margin: auto;" />
+<img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-24-1.png" style="display: block; margin: auto;" />
 
-<br/> Next, we focus on the **Region**-specific factors. First, we can
-test formally whether the factor **Region** is significant in the model.
-<br/>
+<br/> Next, we focus on the **Region**-specific factors. We can test
+formally that this factor **Region** is significant in the model. <br/>
 
 ``` r
 Wald_test(cre_model, constraints = constrain_zero(c("RegionAsia","RegionCAm","RegionEU","RegionMidE","RegionNAm","RegionOce","RegionNotEU","RegionSAm")), vcov = "CR2", cluster = life_expectancy$Country)
@@ -871,8 +924,8 @@ Wald_test(cre_model, constraints = constrain_zero(c("RegionAsia","RegionCAm","Re
     ##  test Fstat df_num df_denom  p_val sig
     ##   HTZ  2.95      8     32.4 0.0134   *
 
-<br/> Indeed, it is. However, the differences between the estimated
-marginal means for regions seem much less significant. <br/>
+<br/> However, the differences between the estimated marginal means for
+regions seem overall pretty close. <br/>
 
     ## $lsmeans
     ##  Region lsmean    SE  df lower.CL upper.CL
@@ -933,45 +986,46 @@ marginal means for regions seem much less significant. <br/>
     ## Degrees-of-freedom method: kenward-roger 
     ## P value adjustment: tukey method for comparing a family of 9 estimates
 
-<img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-25-1.png" style="display: block; margin: auto;" />
+<img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-26-1.png" style="display: block; margin: auto;" />
 
-<br/> If I were to guess why the factors for **Central**, **South
-America**, and **Asia** appeared (for **Asia** almost) significant in
-the CRE model, I would suspect that there is a noticeable difference
-between developing countries of South/Central America and Asia and the
-developing countries in Africa many of them which are considered least
-developed countries (using the UN terminology) and the region-specific
-factors serve as a kind of proxy for this fact.
+<br/> So overall, the differences between regions after adjusting for
+other covariates are not that noticeable.
 
-Let us move to the time-varying predictors in our model, the only
-significant ones appear to be **Inf5_m**, **BMI**, and **HIV**. Let us
-try to make some sense of this results.
-
-The first significant predictor is **Inf5_m**, i.e., infant
-mortality/deaths of children under five years old per 1000 population.
-This effect is expected since the incidence of such early deaths
+Let us move to the time-varying predictors in our model. We start with
+**Inf5_m**, i.e., infant mortality/deaths of children under five years
+old per 1000 population. This effect appears strongly significant in the
+model. This is expected since the incidence of such early deaths
 necessarily drives the life expectancy down. We could observe this
 effect quite clearly from the data (the red curve is a LOESS fit of the
 data: span = 0.5, degree = 2) <br/>
 
-<img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-26-1.png" style="display: block; margin: auto;" />
-
-<br/> Another significant predictor is the number of **HIV** incidents,
-and it is the only disease that proved to be significant in our model.
-The significance of this effect is again to be expected. For example,
-the UNAIDS report *THE URGENCY OF NOW AIDS AT A CROSSROADS* shows that
-from successes in the treatment of HIV, life expectancy in Africa
-increased from 56 to 61 between 2010 and 2024. Again, if we visualize
-the data, the effect of **HIV** is also quite noticeable. <br/>
-
 <img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-27-1.png" style="display: block; margin: auto;" />
 
-<br/> The last significant predictor is the average **BMI** of the adult
-population. This one is a bit trickier to interpret. If we simply
-visualize the data, we could argue that **Life_expectancy** actually
-increases slightly with **BMI**. <br/>
+<br/> Another predictor worth mentioning is **GDP_log**. Now, this
+predictor is not significant (using a commonly used p-value cut-off
+0.05) in the model. The confidence interval for the estimated effect is
+a bit too large. However, its point estimate is positive, as one would
+expect; more economically developed countries tend to have higher life
+expectancy. <br/>
 
 <img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-28-1.png" style="display: block; margin: auto;" />
+
+<br/> Another highly significant predictor in the model is the number of
+**HIV** incidents. The importance of this effect is again to be
+expected. For example, the UNAIDS report *THE URGENCY OF NOW AIDS AT A
+CROSSROADS* shows that from successes in the treatment of HIV, life
+expectancy in Africa increased from 56 to 61 between 2010 and 2024.
+Again, if we visualize the data, the effect of **HIV** is also quite
+noticeable. <br/>
+
+<img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-29-1.png" style="display: block; margin: auto;" />
+
+<br/> The last predictor we need to mention is the average **BMI** of
+the adult population. This one is a bit trickier to interpret. If we
+simply visualize the data, we could argue that **Life_expectancy**
+actually increases slightly with **BMI**. <br/>
+
+<img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-30-1.png" style="display: block; margin: auto;" />
 
 <br/> However, more economically developed countries tend to have higher
 average **BMI**. Actually, if we plot **BMI** vs **Life_expectancy** for
@@ -979,7 +1033,7 @@ developed countries, this negative effect for large average **BMI** is
 hinted at (that low **BMI** and high **Life_expectancy** country is
 Japan) <br/>
 
-<img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-29-1.png" style="display: block; margin: auto;" />
+<img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-31-1.png" style="display: block; margin: auto;" />
 
 <br/> We could suspect a nonlinear dependence in **BMI**, although
 interestingly enough, fitting a more complex nonlinear (via restricted
@@ -1000,7 +1054,7 @@ pred <- predict(fixed_effect_model_nonlin ,obs,type = 'response')
 plot(obs$BMI,pred,xlab = 'BMI', ylab = 'Life expectancy (Turkey)')
 ```
 
-<img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-30-1.png" style="display: block; margin: auto;" />
+<img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-32-1.png" style="display: block; margin: auto;" />
 
 <br/> Having identified BMI as a negative factor in a life expectancy
 model is not without some basis. BMI is associated with an increased

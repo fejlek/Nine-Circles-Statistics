@@ -41,7 +41,7 @@ life_expectancy <- life_expectancy %>% add_column(GDP_log)
 ```
 
 <br/>
-In Part Two of this demonstration of using linear regression, we seek to model **Life expectancy** using data that contains  health, immunization, and economic and demographic information about 179 countries from 2000 to 2015. We are mostly interested in determining which predictors from our dataset have a *significant* effect on life expectancy.
+In Part Two of this demonstration of using linear regression, we seek to model **Life expectancy** using data that contains  health, immunization, and economic and demographic information about 179 countries from 2000 to 2015. 
 
 In this demonstration, we will start with a simple linear regression model, but we will eventually move to models for panel data in the latter half of this text. Thus, we will give a brief introduction to random and fixed effects models for panel data and even to a lesser-known *correlated random effects* models. 
 <br/>
@@ -231,7 +231,6 @@ We observe that the cluster-robust standard errors are significantly larger and 
 <br/>
 This linear model we constructed is in the context of panel data models called *pooled* because it stacks the data for all individuals and time instants together. This model is consistent provided there is no unobserved heterogeneity in the data that is *correlated* with the predictors in the model (i.e., there is no omitted variable bias). We can alleviate some of this potential bias by considering so-called *fixed effects*.
 
-
 We first consider time fixed effects, i.e., effects corresponding to unobservables that change in time but are independent of individual countries. From a technical standpoint, we can simply include factor variables corresponding to the variable **Year** to the model. Again, we compute cluster-robust standard errors for the coefficients. 
 <br/>
 
@@ -381,7 +380,7 @@ qqline(ranef(corr_random_effect_model_plm))
 We see that random effects are approximately normally distributed as assumed. Residuals are symmetric, although the tails are a bit heavier than a normal distribution would have. We suspect that there might be some heteroscedasticity (developing vs. developed countries). We also might have some overly influential observations/outliers. 
 
 Unfortunately, *plm* package does not have support for computing influence diagnostics. Hence, we will refit our correlated random effects model using a package *lme4* that can be used to fit general linear mixed-effects models. We should mention here, that while both *plm* and *lme4* will fit the same model, their methods are different: *plm* uses generalized least squares approaches (following an "econometrics' tradition") whereas *lme4* uses restricted maximum likelihood estimation (REML). Thus, these two functions may not always produce the same results, see https://cran.r-project.org/web/packages/plm/vignettes/A_plmPackage.html for a bit more details. However, our model is fairly simple and our data "nice" enough, and thus, we observe that optimization of restricted maximum likelihood converged to the same solution as the one provided by *plm*.
-
+<br/>
 
 ```{r, fig.align = 'center'}
 library(lme4)
@@ -426,7 +425,7 @@ round(coeff_delete,4)[1:23,]
 <br/>
 We see that our estimates  did not change much, thus, there is no reason to delete some observations from the data.
 
-The last thing that remains is finding the significant predictors. We already discussed that random effects account for the correlation of observations within the same clusters, thus we could take the standard errors as is. However, with random effect models, things are a bit murky, because it is in general non-trivial to determine correct degrees of freedom, see https://bbolker.github.io/mixedmodels-misc/glmmFAQ.html#why-doesnt-lme4-display-denominator-degrees-of-freedomp-values-what-other-options-do-i-have that discusses several alternatives to use. Let us explore them.
+The last thing that remains is computing confidence intervals for the effect estimates. We already discussed that random effects account for the correlation of observations within the same clusters, thus we could take the standard errors as is. However, with random effect models, things are a bit murky, because it is in general non-trivial to determine correct degrees of freedom, see https://bbolker.github.io/mixedmodels-misc/glmmFAQ.html#why-doesnt-lme4-display-denominator-degrees-of-freedomp-values-what-other-options-do-i-have that discusses several alternatives to use. Let us explore them.
 
 Let us start with the standard confidence intervals (i.e, standard error multiplied by *qnorm(0.975)*, thus ignoring degrees of freedom). The p-values that *plm* provide are based on this approximation. We will use *confint* on *lmer_model*, because it provides more options.
 <br/>
@@ -500,7 +499,7 @@ boot_ci[1:23,]
 <br/>
 We see that the nonparametric bootstrap mostly corresponds to the confidence intervals based on the robust standard errors with the DOF correction. The parametric bootstrap and the other two methods provided slightly narrower confidence intervals. However, the first three methods rely on the fact that our model correctly specified (mainly residual errors are i.i.d. normally distributed). Meanwhile, the nonparametric bootstrap and cluster robust errors are robust to the heteroskedasticity and within cluster correlation. Hence, we prefer the results of the nonparametric bootstrap / robust standard errors (especially since the QQ-plot of the residuals showed noticeable deviation from normality and residuals vs. predictors indicated heteroskedasticity).
 
-We should note here that there are other more sophisticated bootstrap techniques (wild bootstrap that we show in Part Three and asymptotic refinement method that improve the asymptotic properties of bootstraps) that perform even more reliably than robust standard errors/ pairs cluster bootstrap, especially in cases when the usual asymptotic assumptions do not hold (a low number of clusters, unbalanced clusters), see  *A. C. Cameron and D. L. Miller. A practitioner’s guide to cluster-robust inference. Journal of human resources 50.2 (2015): 317-372* for more details.  But our data is "nice" in that regard, thus we can end our computation here.
+We should note here that there are other more sophisticated bootstrap techniques that perform even more reliably than robust standard errors/ pairs cluster bootstrap, especially in cases when the usual asymptotic assumptions do not hold (a low number of clusters, unbalanced clusters), see  *A. C. Cameron and D. L. Miller. A practitioner’s guide to cluster-robust inference. Journal of human resources 50.2 (2015): 317-372* for more details. But our data is "nice" in that regard, thus we can end our computation here.
 
-With the final model obtained and the evaluation of the confidence intervals complete, we end Part Two. In the last part of this project, we will discuss our resulting model. We will look at its predictive performance, and we will discuss the effect of the significant predictors.
+With the final model obtained and the evaluation of the confidence intervals complete, we end Part Two. In the last part of this project, we will discuss our resulting model. We will look at its predictive performance, and we will discuss the predictors that appeared the most important for life expectancy prediction in the model.
 <br/>

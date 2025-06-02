@@ -9,9 +9,7 @@ Jiří Fejlek
 <br/> In Part Two of this demonstration of using linear regression, we
 seek to model **Life expectancy** using data that contains health,
 immunization, and economic and demographic information about 179
-countries from 2000 to 2015. We are mostly interested in determining
-which predictors from our dataset have a *significant* effect on life
-expectancy.
+countries from 2000 to 2015.
 
 In this demonstration, we will start with a simple linear regression
 model, but we will eventually move to models for panel data in the
@@ -925,7 +923,7 @@ produce the same results, see
 for a bit more details. However, our model is fairly simple and our data
 “nice” enough, and thus, we observe that optimization of restricted
 maximum likelihood converged to the same solution as the one provided by
-*plm*.
+*plm*. <br/>
 
 ``` r
 library(lme4)
@@ -1054,12 +1052,12 @@ round(coeff_delete,4)[1:23,]
 <br/> We see that our estimates did not change much, thus, there is no
 reason to delete some observations from the data.
 
-The last thing that remains is finding the significant predictors. We
-already discussed that random effects account for the correlation of
-observations within the same clusters, thus we could take the standard
-errors as is. However, with random effect models, things are a bit
-murky, because it is in general non-trivial to determine correct degrees
-of freedom, see
+The last thing that remains is computing confidence intervals for the
+effect estimates. We already discussed that random effects account for
+the correlation of observations within the same clusters, thus we could
+take the standard errors as is. However, with random effect models,
+things are a bit murky, because it is in general non-trivial to
+determine correct degrees of freedom, see
 <https://bbolker.github.io/mixedmodels-misc/glmmFAQ.html#why-doesnt-lme4-display-denominator-degrees-of-freedomp-values-what-other-options-do-i-have>
 that discusses several alternatives to use. Let us explore them.
 
@@ -1277,10 +1275,8 @@ QQ-plot of the residuals showed noticeable deviation from normality and
 residuals vs. predictors indicated heteroskedasticity).
 
 We should note here that there are other more sophisticated bootstrap
-techniques (wild bootstrap that we show in Part Three and asymptotic
-refinement method that improve the asymptotic properties of bootstraps)
-that perform even more reliably than robust standard errors/ pairs
-cluster bootstrap, especially in cases when the usual asymptotic
+techniques that perform even more reliably than robust standard errors/
+pairs cluster bootstrap, especially in cases when the usual asymptotic
 assumptions do not hold (a low number of clusters, unbalanced clusters),
 see *A. C. Cameron and D. L. Miller. A practitioner’s guide to
 cluster-robust inference. Journal of human resources 50.2 (2015):
@@ -1290,5 +1286,5 @@ we can end our computation here.
 With the final model obtained and the evaluation of the confidence
 intervals complete, we end Part Two. In the last part of this project,
 we will discuss our resulting model. We will look at its predictive
-performance, and we will discuss the effect of the significant
-predictors. <br/>
+performance, and we will discuss the predictors that appeared the most
+important for life expectancy prediction in the model. <br/>
