@@ -100,11 +100,11 @@ abline(0,1, col="red", lwd = 2)
 ```
 
 <br/>
-It seem that the model fits the data pretty well. Let us evaluate, how good this model would be for the predictions of life expectancy (even though this is not its primary purpose which was effect estimation/hypothesis testing).  
+It seem that the model fits the data pretty well. Let us evaluate, how good this model would be for the predictions of life expectancy.  
 
 Unlike fixed effects models, we have some options. Remember that the fixed effects model uses a factor for each individual. Hence, we can only make a reasonable prediction for the individuals in the model. With random effects, we can actually make a prediction about new individuals since the random effects model directly models the distribution of individual effects (i.i.d. normally distributed with mean zero). Thus, for an unknown individual, the random effect effectively becomes just another error term. 
 
-Concerning the effects for individual years, we use the fixed effects. Hence, we cannot make a prediction, for example, for the year 2016. To make such predictions, we have to change the model by either replacing time-fixed effects with time-random effects or, probably even better; we could try to model the dependency in time directly by including numerical predictor **Year** in some form (life expectancy seems to steadily increase in time and our fixed effects estimates corresponded to that, which is a far cry from estimates of individual effects). Let us try that (we will model **Year** using a restricted cubic spline).
+Concerning the effects for individual years, we use the fixed effects. Hence, we cannot make a prediction, for example, for the year 2016. To make such predictions, we have to change the model by either replacing fixed time effects with random time effects or, probably even better; we could try to model the dependency in time directly by including numerical predictor **Year** in some form (life expectancy seems to steadily increase in time and our fixed effects estimates corresponded to that, which is a far cry from estimates of individual effects). Let us try that (we will model **Year** using a restricted cubic spline).
 <br/>
 
 ```{r}
@@ -507,7 +507,7 @@ To summarize the results concerning the predictive performance of our model, we 
 ## Effects of predictors in the life expectancy model
 
 <br/>
-Let us return to the model we used for effect estimation. 
+Let us return to our original model with fixed time effects. 
 <br/>
 
 ```{r}
@@ -738,7 +738,7 @@ ggplot(aes(x=Inf5_m_seq, y=fit, ymin=lwr, ymax=upr), data=Inf5_m_CI) + geom_poin
 ```
 
 <br/>
-We see that many predictors seem to have little absolute effect: **Alcohol**, **Hepatitis_B**, **Measles**, **Polio**, **Diphtheria**, **Pop_log**, **Thin_10_19 **, **Thin_5_9**, and **Schooling**.
+We see that many predictors seem to have little absolute effect: **Alcohol**, **Hepatitis_B**, **Measles**, **Polio**, **Diphtheria**, **Pop_log**, **Thin_10_19**, **Thin_5_9**, and **Schooling**.
 Let us have a closer look at the rest. 
 
 Let us start with the time-invariant predictors that we were able to estimate thanks to the CRE model: **Economy** and **Region**-specific factors. As far as **Economy** is concerned, it is a highly significant predictor in the model. It seems that economically developed countries tend to have higher life expectancy than developing countries, even after adjusting for other covariates in the model. We can investigate this more formally post hoc using *lsmeans* (lsmeans computes estimated marginal means for a given factor, see https://cran.r-project.org/web/packages/emmeans/vignettes/basics.html for more details).

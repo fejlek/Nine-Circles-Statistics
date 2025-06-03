@@ -1,0 +1,516 @@
+---
+title: "The Second Circle: Logistic Regression, Part One"
+author: "Jiří Fejlek"
+date: "2025-06-02"
+output:
+  md_document:
+    variant: GFM
+code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+```
+
+<br/>
+In this project, we will examine modeling binary response data using logistic regression. As we will see in a moment, the dataset we will use in this demonstration contains a significant portion of missing values. Thus, we will also demonstrate the usage of both single and multiple imputation methods. Our primary objective will be to develop a model that predicts the likelihood of developing coronary heart disease. We will also be interested in which predictors seem to have the greatest effect on the predictions.
+
+We will split this presentation into three parts. In the first part, we will describe the data preparation and exploration and then fit the model with missing data using both a complete case approach. In the second part, we will show both single and multiple imputation approaches, and in the final part, we will evaluate the final model and discuss the results.
+<br/>
+
+## Cardiovascular study on residents of the town of Framingham, Massachusetts
+
+<br/>
+In this project, we will use the dataset obtained from <https://www.kaggle.com/datasets/dileep070/heart-disease-prediction-using-logistic-regression/data> based on Framingham Heart Study <https://www.framinghamheartstudy.org>. 
+
+The Framingham Heart Study is a long-term, ongoing cardiovascular cohort study of residents in the city of Framingham, Massachusetts, which began in 1948 to identify factors that contribute to cardiovascular diseases, such as the effects of high blood pressure and smoking. It was actually this study that helped discover these now commonly known associations. 
+
+The data contains the following information about 4,238 individuals. Each individual was examined and then followed for 10 years for the outcome of developing coronary heart disease.
+<br/>
+
+* **Sex** 
+* **Age** - Age (at the time of examination)
+* **Education** - Four levels: no high school, high school, college, and college graduate
+* **Current Smoker** - Whether or not the subject was a  smoker (at the time of examination)
+* **Cigs Per Day** - The number of cigarettes smoked on average in one day
+* **BP Meds** - Whether or not the subject was on blood pressure medication 
+* **Prevalent Stroke** - Whether or not the subject had previously had a stroke
+* **Prevalent Hyp** - Whether or not the subject was hypertensive
+* **Diabetes** - Whether or not the subject had diabetes
+* **Tot Chol** -  total cholesterol level
+* **Sys BP** - Systolic blood pressure 
+* **Dia BP** -  Diastolic blood pressure
+* **BMI** - Body Mass Index
+* **Glucose** - glucose level 
+* **TenYearCHD** -  Whether or not a coronary heart disease occurred in 10 years after examination
+
+<br/>
+First, let's load the dataset.
+<br/>
+
+```{r, message=FALSE}
+library(readr)
+framingham <- read_csv('C:/Users/elini/Desktop/nine circles/framingham.csv')
+head(framingham)
+```
+
+## Initial Data Exploration
+
+<br/>
+As always, we start with a data exploration. Let us check the size of the dataset.
+
+```{r}
+dim(framingham)
+```
+
+<br/>
+We have 4238 observations, one response we wish to model/predict (**TenYearCHD**), and 15 candidates for predictors. Let's check whether any dates are missing.
+<br/>
+
+
+```{r}
+any(duplicated(framingham))
+any(is.na(framingham))
+```
+
+<br/>
+Some values are missing; let us check how many observations have some missing values and the pattern of missing data.
+<br/>
+
+```{r, fig.align = 'center', echo=FALSE}
+library(mice)
+dim(framingham[rowSums(is.na(framingham)) > 0,])
+md.pattern(framingham, rotate.names = TRUE)
+```
+
+<br/>
+We see no obvious pattern for missing data. The fraction of rows with some missing values is 582/4238 ~ 0.14. This is a significantly greater value than 3%, which is a rule of thumb value for which it should not matter that much how the observation with missing values is treated. Hence, we may need to employ a multiple imputation:  data may not be missing completely at random (MCAR), and if so, then case deletion or single imputation may cause a significant bias (see *Stef Van Buuren. Flexible imputation of missing data. CRC press, 2012*).
+
+Before we perform any imputation, we have to analyze predictors. Improper predictors could easily ruin the subsequent imputation process. We first rename the columns a little and convert the variables to proper types.
+<br/>
+
+```{r}
+library(tibble)
+library(dplyr)
+
+framingham <- framingham %>% rename(Sex = male )  %>% rename(Age = age ) %>% rename(Smoker = currentSmoker ) %>% rename(Stroke = prevalentStroke) %>% rename(Hyp = prevalentHyp ) %>% rename(Diab = diabetes ) %>% rename(TCHD = TenYearCHD  ) %>% rename(SysP = sysBP) %>% rename(DiaP = diaBP) %>%
+rename(Hrate = heartRate )  %>% rename(Cig = cigsPerDay  ) %>% rename(Chol = totChol ) %>% rename(Meds = BPMeds )  %>% rename(Edu = education  ) %>% rename(Gluc = glucose )
+```
+
+<br/>
+
+```{r}
+framingham$Sex <- factor(framingham$Sex)
+levels(framingham$Sex) <- c('Female','Male')
+framingham$Edu  <- factor(framingham$Edu, ordered = TRUE)
+framingham$Smoker <- factor(framingham$Smoker)
+framingham$Meds <- factor(framingham$Meds)
+framingham$Stroke <- factor(framingham$Stroke)
+framingham$Hyp <- factor(framingham$Hyp)
+framingham$Diab <- factor(framingham$Diab)
+framingham$TCHD <- factor(framingham$TCHD)
+```
+
+<br/>
+Next, we check the values of the predictors and their distributions.
+<br/>
+
+```{r}
+summary(framingham$Age)
+summary(framingham$Cig)
+summary(framingham$Chol)
+summary(framingham$SysP)
+summary(framingham$DiaP)
+summary(framingham$BMI)
+summary(framingham$Hrate)
+summary(framingham$Gluc)
+```
+
+```{r fig.align = 'center', echo=FALSE}
+plot(framingham$Sex)
+hist(framingham$Age,xlab = 'Age')
+plot(framingham$Edu,xlab = 'Education')
+plot(framingham$Smoker,xlab = 'Smoker')
+hist(framingham$Cig,xlab = 'Cigs per day')
+plot(framingham$Meds,xlab = 'BP Medication')
+plot(framingham$Stroke,xlab = 'Stroke')
+plot(framingham$Hyp,xlab = 'Hypertension')
+plot(framingham$Diab, xlab = 'Diabetes')
+hist(framingham$Chol, xlab = 'Cholesterol')
+hist(framingham$SysP, xlab = 'Systolic pressure')
+hist(framingham$DiaP, xlab = 'Diastolic pressure')
+hist(framingham$BMI, xlab = 'BMI')
+hist(framingham$Gluc, xlab = 'Glucose')
+hist(framingham$Hrate, xlab = 'Heart rate')
+```
+
+<br/>
+Overall, the values and their distributions seem reasonable. Some minima and maxima are pretty extreme, but none of these seem impossible to occur. Several factors, namely **BP Meds**, **Diabetes**, and especially  **Prevalent Stroke**, have low number of cases    
+<br/>
+
+```{r, echo=FALSE}
+dim(framingham[which(framingham$Stroke == 1),])[1]
+dim(framingham[which(framingham$Diab == 1),])[1]
+dim(framingham[which(framingham$Meds == 1),])[1]
+```
+
+<br/>
+which could hurt the accuracy of their estimates. Still, these predictors seem too important to be just ignored.
+
+Let us conclude this initial data exploration with redundancy analysis (on complete cases).
+<br/>
+
+```{r}
+library(Hmisc)
+redun(~.- TCHD ,data = framingham[rowSums(is.na(framingham)) == 0,],nk = 4, r2 = 0.95)
+```
+
+<br/>
+No variables seem overly redundant. However, we will remove **Current Smoker** and keep just **Cigs Per Day** since no smoker reports that he/she smokes zero cigarettes per day on average.  
+<br/>
+
+```{r}
+which(framingham$Smoker == 1 & framingham$Cig == 0)
+```
+
+<br/>
+Thus, we opt to quantify the effect of smoking in our model using a more informative numerical predictor **Cigs Per Day.** Otherwise, we will consider all predictors for modeling.
+<br/>
+
+## Complete case analysis
+
+<br/>
+Before we proceed to model with the imputation of missing values, we will perform *complete case analysis* (listwise deletion) for future comparison with other approaches. We should remember that complete case analysis is valid under the missing completely at random (MCAR) condition (the probability of being missing is the same for all cases), i.e., complete case analysis under MCAR produces unbiased estimates. If this is not the case (missingness depends on the data or it depends on some unobserved variables), then these estimates may be severely biased. Another disadvantage of complete case analysis is that it is potentially wasteful. On the other hand, complete case analysis is very simple to perform.
+<br/>
+
+```{r}
+framingham_complete <- framingham[rowSums(is.na(framingham)) == 0,]
+```
+
+<br/>
+Before we select our mode, let us check our effective sample size.
+<br/>
+
+```{r}
+dim(framingham_complete)
+summary(framingham_complete$TCHD)
+```
+
+<br/>
+The effective sample size for binary response is the minimum of the two values; in our case, it is 557 (even though we technically have 3656 observations). Thus, our data reasonably support approximately 557/10 ~ 56 to 557/20 ~ 28 parameters.
+
+Since we have only 14 predictors, we can include some nonlinearities and interactions in the model. We will consider restricted cubic splines with 4 knots for all numerical predictors. We will also consider linear interactions of age and sex with risk factors (i.e., the full model has 52 parameters).
+<br/>
+
+```{r}
+library(rms)
+
+# full model
+full_model <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + rcs(Cig,4) + Meds + Stroke + Hyp + Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4) + Age:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc) + Sex:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc), family = binomial, framingham_complete)
+```
+
+<br/>
+If we were only interested in testing a hypothesis whether a given variable (e.g., **Cigs per day**) has a significant effect on the probability of developing **TCHD**, we can use a likelihood ratio test based on the full model.  
+<br/>
+
+```{r}
+model_no_cig <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + Meds + Stroke + Hyp + Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4) + Age:(Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc) + Sex:(Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc), family = binomial, framingham_complete)
+anova(model_no_cig,full_model)
+```
+
+<br/>
+Let us list these tests for all predictors in the model. We also include adjusted p-values for multiple comparisons if we were to use these values to "discover" significant predictors to reduce the chance of false discoveries. The price of this adjustment is losing the statistical power,i.e., we are more likely to not detect predictors in the model that have an effect on the response. Bonferroni and Bonferroni-Holm (Bonferroni-Holm is uniformly more powerful than Bonferroni. Thus, there is often little reason to use Bonferroni) corrections control for family-wise error (probability of making one or more false discoveries). Benjamini–Yekutieli procedure controls for false discovery rate, i.e., the expected proportion of false discoveries, and thus, it is less stringent and sacrifices less power.
+<br/>
+
+```{r, echo=FALSE}
+# Sex
+model_no_sex <- glm(TCHD  ~ rcs(Age,4) + Edu + rcs(Cig,4) + Meds + Stroke + Hyp + Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4) + Age:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc), family = binomial, framingham_complete)
+a1 <- anova(model_no_sex,full_model)
+
+# Age
+model_no_age <- glm(TCHD  ~ Sex + Edu + rcs(Cig,4) + Meds + Stroke + Hyp + Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4)  + Sex:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc), family = binomial, framingham_complete)
+a2 <- anova(model_no_age,full_model)
+
+# Edu
+model_no_edu <- glm(TCHD  ~ Sex + rcs(Age,4) + rcs(Cig,4) + Meds + Stroke + Hyp + Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4) + Age:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc) + Sex:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc), family = binomial, framingham_complete)
+a3 <- anova(model_no_edu,full_model)
+
+# Cig
+model_no_cig <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + Meds + Stroke + Hyp + Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4) + Age:(Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc) + Sex:(Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc), family = binomial, framingham_complete)
+a4 <- anova(model_no_cig,full_model)
+
+# Meds
+model_no_meds <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + rcs(Cig,4) + Stroke + Hyp + Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4) + Age:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc) + Sex:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc), family = binomial, framingham_complete)
+a5 <- anova(model_no_meds,full_model)
+
+# Stroke
+model_no_stroke <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + rcs(Cig,4) + Meds  + Hyp + Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4) + Age:(Cig  + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc) + Sex:(Cig  + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc), family = binomial, framingham_complete)
+a6 <- anova(model_no_stroke,full_model)
+
+# Hyp
+model_no_hyp <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + rcs(Cig,4) + Meds + Stroke + Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4) + Age:(Cig + Stroke  + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc) + Sex:(Cig + Stroke  + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc), family = binomial, framingham_complete)
+a7 <- anova(model_no_hyp,full_model)
+
+# Diab
+model_no_diab <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + rcs(Cig,4) + Meds + Stroke + Hyp + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4) + Age:(Cig + Stroke + Hyp  + Chol + SysP + DiaP + BMI + Hrate + Gluc) + Sex:(Cig + Stroke + Hyp  + Chol + SysP + DiaP + BMI + Hrate + Gluc), family = binomial, framingham_complete)
+a8 <- anova(model_no_diab,full_model)
+
+# Chol
+model_no_chol <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + rcs(Cig,4) + Meds + Stroke + Hyp + Diab  + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4) + Age:(Cig + Stroke + Hyp + Diab + SysP + DiaP + BMI + Hrate + Gluc) + Sex:(Cig + Stroke + Hyp + Diab  + SysP + DiaP + BMI + Hrate + Gluc), family = binomial, framingham_complete)
+a9 <- anova(model_no_chol,full_model)
+
+# Sysp
+model_no_sysp <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + rcs(Cig,4) + Meds + Stroke + Hyp + Diab + rcs(Chol,4)  + rcs(DiaP,4) + rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4) + Age:(Cig + Stroke + Hyp + Diab + Chol  + DiaP + BMI + Hrate + Gluc) + Sex:(Cig + Stroke + Hyp + Diab + Chol  + DiaP + BMI + Hrate + Gluc), family = binomial, framingham_complete)
+a10 <- anova(model_no_sysp,full_model)
+
+# DiaP
+model_no_diap <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + rcs(Cig,4) + Meds + Stroke + Hyp + Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4) + Age:(Cig + Stroke + Hyp + Diab + Chol + SysP  + BMI + Hrate + Gluc) + Sex:(Cig + Stroke + Hyp + Diab + Chol + SysP + BMI + Hrate + Gluc), family = binomial, framingham_complete)
+a11 <- anova(model_no_diap,full_model)
+
+# BMI
+model_no_bmi <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + rcs(Cig,4) + Meds + Stroke + Hyp + Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(Hrate,4) + rcs(Gluc,4) + Age:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP  + Hrate + Gluc) + Sex:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + Hrate + Gluc), family = binomial, framingham_complete)
+a12 <- anova(model_no_bmi,full_model)
+
+# Hrate
+model_no_hrate <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + rcs(Cig,4) + Meds + Stroke + Hyp + Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + rcs(Gluc,4) + Age:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI  + Gluc) + Sex:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI  + Gluc), family = binomial, framingham_complete)
+a13 <- anova(model_no_hrate,full_model)
+
+# Gluc
+model_no_gluc <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + rcs(Cig,4) + Meds + Stroke + Hyp + Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + rcs(Hrate,4) + Age:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate) + Sex:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate), family = binomial, framingham_complete)
+a14 <- anova(model_no_gluc,full_model)
+```
+
+```{r}
+c1 <- c('Sex','Age','Edu','Cig','Meds','Stroke','Hyp','Diab','Chol','Sysp','DiaP','BMI','Hrate','Gluc')
+c2 <-c(a1$`Pr(>Chi)`[2],a2$`Pr(>Chi)`[2],a3$`Pr(>Chi)`[2],a4$`Pr(>Chi)`[2],a5$`Pr(>Chi)`[2],a6$`Pr(>Chi)`[2],a7$`Pr(>Chi)`[2],a8$`Pr(>Chi)`[2],a9$`Pr(>Chi)`[2],a10$`Pr(>Chi)`[2],a11$`Pr(>Chi)`[2],a12$`Pr(>Chi)`[2],a13$`Pr(>Chi)`[2],a14$`Pr(>Chi)`[2])
+c3 <- p.adjust(c2,'bonferroni')
+c4 <- p.adjust(c2,'holm')
+c5 <- p.adjust(c2,'BY')
+
+res <- as.data.frame(cbind(c1,round(c2,digits = 5),round(c3,digits = 5),round(c4,digits = 5),round(c5,digits = 5)))
+colnames(res) <- c('Variable','Pr(>Chi)','Bonf. adj.','Bonf.-H. adj.','Benj.–Yek. adj.')
+res
+```
+
+<br/>
+We see that, regardless of the adjustment method, we consider **Sex**, **Age**, **Cigs Per Day**, and **Sys BP** to be significant risk factors.
+
+Let us examine the predicted marginal effects (along with their confidence intervals) based on our model. We will obtain the plots using *sjPlot* package (https://strengejacke.github.io/sjPlot/articles/plot_marginal_effects.html). These plots are a bit more involved since the interactions with Age and Sex are present in the model. We should keep in mind that by default, continuous variables are set to their mean, while factors are set to their reference level in these plots.
+<br/>
+
+```{r}
+library(sjPlot)
+
+# Effect of Age for each Sex
+plot_model(full_model, type = "pred", terms = c('Age','Sex'))
+
+# Effect of Cig for each Sex (Age fixed)
+plot_model(full_model, type = "pred", terms = c('Cig','Sex')) 
+# Effect of Cig for each Sex (Age = 40,55,70)
+plot_model(full_model, type = "pred", terms = c('Cig','Sex','Age [40,55,70]'))  
+
+# Effect of Edu for each Sex (Age fixed)
+plot_model(full_model, type = "pred", terms = c('Edu','Sex')) 
+# Effect of Edu for each Sex (Age = 40,55,70)
+plot_model(full_model, type = "pred", terms = c('Edu','Sex','Age [40,55,70]')) 
+
+# Effect of Meds for each Sex and Age
+plot_model(full_model, type = "pred", terms = c('Age','Sex','Meds'),title  = 'Predicted probabilities of TCHD for Meds')
+
+# Effect of Stroke for each Sex and Age
+plot_model(full_model, type = "pred", terms = c('Age','Sex','Stroke'),title  = 'Predicted probabilities of TCHD for Stroke')
+
+# Effect of Hyp for each Sex and Age
+plot_model(full_model, type = "pred", terms = c('Age','Sex','Hyp'),title  = 'Predicted probabilities of TCHD for Hyp')
+
+# Effect of Diab for each Sex and Age
+plot_model(full_model, type = "pred", terms = c('Age','Sex','Diab'),title  = 'Predicted probabilities of TCHD for Diab')
+
+# Effect of Chol for each Sex and Age (Age fixed)
+plot_model(full_model, type = "pred", terms = c('Chol','Sex'))
+# Effect of Chol for each Sex and Age (Age = 40,55,70)
+plot_model(full_model, type = "pred", terms = c('Chol','Sex','Age [40,55,70]'))
+
+# Effect of SysP for each Sex and Age (Age fixed)
+plot_model(full_model, type = "pred", terms = c('SysP','Sex'))
+# Effect of SysP for each Sex and Age (Age = 40,55,70)
+plot_model(full_model, type = "pred", terms = c('SysP','Sex','Age [40,55,70]'))
+
+# Effect of DiaP for each Sex and Age (Age fixed)
+plot_model(full_model, type = "pred", terms = c('DiaP','Sex'))
+# Effect of DiaP for each Sex and Age (Age = 40,55,70)
+plot_model(full_model, type = "pred", terms = c('DiaP','Sex','Age [40,55,70]'))
+
+
+# Effect of BMI for each Sex and Age (Age fixed)
+plot_model(full_model, type = "pred", terms = c('BMI','Sex'))
+# Effect of BMI for each Sex and Age (Age = 40,55,70)
+plot_model(full_model, type = "pred", terms = c('BMI','Sex','Age [40,55,70]'))
+
+# Effect of Hrate for each Sex and Age (Age fixed)
+plot_model(full_model, type = "pred", terms = c('Hrate','Sex'))
+# Effect of Hrate for each Sex and Age (Age = 40,55,70)
+plot_model(full_model, type = "pred", terms = c('Hrate','Sex','Age [40,55,70]'))
+
+
+# Effect of Gluc for each Sex and Age (Age fixed)
+plot_model(full_model, type = "pred", terms = c('Gluc','Sex'))
+# Effect of Gluc for each Sex and Age (Age = 40,55,70)
+plot_model(full_model, type = "pred", terms = c('Gluc','Sex','Age [40,55,70]'))
+```
+
+
+<br/>
+Looking at the plots, we can notice that **Sex**,**Age**, **Cig**, **Chol**,  **SysP**,  **DiaP**, and **Gluc**  (predictors that were somewhat "significant") seem to have a noticeable effect on the probability of TCHD. Interestingly enough, **DiaP** is the only numerical predictor that seems to have a strong nonlinear effect. Factors **Stroke** and **Diab** seem to have an effect, but the uncertainty of predictions is too high (probably because of the low number of cases, as we discussed earlier). Variables **Edu**, **Meds**, **Hyp**, **BMI**, **Hrate** seem to have from the plots very little effect.
+
+We can check that **DiaP** indeed has a significant nonlinear part, and we will also test all nonlinear terms in general. 
+<br/>
+
+```{r}
+model_diap_linear <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + rcs(Cig,4) + Meds + Stroke + Hyp + Diab + rcs(Chol,4) + rcs(SysP,4) + DiaP + rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4) + Age:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc) + Sex:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc), family = binomial, framingham_complete)
+anova(model_diap_linear,full_model)
+
+
+model_no_nonlinear <- glm(TCHD  ~ Sex + Age + Edu  + Cig + Meds + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc + Age:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc) + Sex:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc), family = binomial, framingham_complete)
+anova(model_no_nonlinear,full_model)
+```
+
+<br/>
+Variable **DiaP** indeed appears to have a significant nonlinear component, and the overall test is also significant.
+
+Concerning the interactions in the model, none of them seemed that significant from the plots. Let us perform the corresponding likelihood ratio test.
+<br/>
+
+```{r}
+model_no_interactions <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + rcs(Cig,4) + Meds + Stroke + Hyp + Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4), family = binomial, framingham_complete)
+anova(model_no_interactions,full_model)
+```
+
+<br/>
+The test seems noticeably nonsignificant. Thus, we can consider removing all interactions from our **TCHD** prediction model. Let us test whether we would include interactions in the cross-validation that would repeat in our modeling process (we will choose a p-value cut-off of 0.2).
+<br/>
+
+```{r}
+library(caret)
+
+## Number of repetitions and folds
+rep <- 100
+folds <- 10
+
+dev_matrix <- matrix(0,folds,rep)
+set.seed(123) # for reproducibility
+
+for(j in 1:rep){
+  
+  d <- createFolds(seq(1,3656,1), k = 10)
+  
+  for(i in 1:folds){
+
+    index <- unlist(d[i])
+    train_set <- framingham_complete[-index,]
+    
+    full_model_new <- glm(TCHD  ~ 
+                            Sex + rcs(Age,4) + Edu + rcs(Cig,4) + Meds + Stroke + Hyp + 
+                            Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + 
+                            rcs(Hrate,4) + rcs(Gluc,4) + Age:(Cig + Stroke + Hyp + Diab + 
+                            Chol + SysP + DiaP + BMI + Hrate + Gluc) + Sex:(Cig + Stroke + Hyp + 
+                            Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc), family = binomial, train_set)
+    
+    model_no_interactions_new <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + rcs(Cig,4) + Meds + 
+                                       Stroke + Hyp + Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + 
+                                       rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4), family = binomial, train_set)
+
+    dev_matrix[i,j] <-  anova(model_no_interactions_new,full_model_new)$Deviance[2]
+  }
+}
+
+mean(dev_matrix > qchisq(0.80,20))
+
+```
+
+<br/>
+We observe that almost no cross-validation samples would retain interactions in the model. We can repeat the same test for nonlinear terms.
+<br/>
+
+```{r}
+## Number of repetitions and folds
+rep <- 100
+folds <- 10
+
+dev_matrix <- matrix(0,folds,rep)
+set.seed(123) # for reproducibility
+
+for(j in 1:rep){
+  
+  d <- createFolds(seq(1,3656,1), k = 10)
+  
+  for(i in 1:folds){
+
+    index <- unlist(d[i])
+    train_set <- framingham_complete[-index,]
+    
+    full_model_new <- glm(TCHD  ~ 
+                            Sex + rcs(Age,4) + Edu + rcs(Cig,4) + Meds + Stroke + Hyp + 
+                            Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + 
+                            rcs(Hrate,4) + rcs(Gluc,4) + Age:(Cig + Stroke + Hyp + Diab + 
+                            Chol + SysP + DiaP + BMI + Hrate + Gluc) + Sex:(Cig + Stroke + Hyp + 
+                            Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc), family = binomial, train_set)
+    
+    model_no_nonlinear_new <- glm(TCHD  ~ 
+                                    Sex + Age + Edu  + Cig + Meds + Stroke + Hyp + Diab + Chol + SysP + 
+                                    DiaP + BMI + Hrate + Gluc + Age:(Cig + Stroke + Hyp + Diab + Chol + 
+                                    SysP + DiaP + BMI + Hrate + Gluc) + Sex:(Cig + Stroke + Hyp + Diab + 
+                                    Chol + SysP + DiaP + BMI + Hrate + Gluc), 
+                                    family = binomial, train_set)
+    
+    anova(model_no_nonlinear,train_set)
+    dev_matrix[i,j] <-  anova(model_no_nonlinear_new,full_model_new)$Deviance[2]
+    
+  }
+}
+
+mean(dev_matrix > qchisq(0.80,15))
+```
+
+<br/>
+We observe that almost all cross-validation samples would keep nonlinear terms in the model. 
+
+To conclude Part One of this demonstration, let us have a look at the model diagnostics. Logistic regression of a binary response does not have distributional assumptions (we directly model the probability of an event $\mathrm{ln} \frac{p}{1-p} = X\beta$); hence, bias in our estimates will be connected to model misspecifications, such as omitted variable bias. An interesting fact about logistic regression is that omitted variable bias is caused by both missing predictors correlated by $X$ (as in linear regression) but also by uncorrelated omitted variables (unlike linear regression, see *C. Mood. Logistic regression: Why we cannot do what we think we can do, and what we can do about it. European sociological review 26.1 (2010): 67-82.* for more details). However, this second source of bias is always downwards (i.e., other effects will tend to look smaller than they actually are).
+
+Having discussed distribution assumptions, let us examine influence observations using Cook's distance next. 
+<br/>
+
+```{r, fig.align = 'center', echo=FALSE}
+par(mfrow = c(1, 1))
+plot(cooks.distance(full_model),ylab = "Cook's distance")
+```
+
+<br/>
+Some observations may be overly influential. Hence, let us test whether deleting them significantly changes the estimates.
+<br/>
+
+```{r}
+full_model_red1 <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + rcs(Cig,4) + Meds + Stroke + Hyp + Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4) + Age:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc) + Sex:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc), family = binomial, framingham_complete[cooks.distance(full_model) < 0.02,])
+
+full_model_red2 <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + rcs(Cig,4) + Meds + Stroke + Hyp + Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4) + Age:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc) + Sex:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc), family = binomial, framingham_complete[cooks.distance(full_model) < 0.01,])
+
+full_model_red3 <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + rcs(Cig,4) + Meds + Stroke + Hyp + Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4) + Age:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc) + Sex:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc), family = binomial, framingham_complete[cooks.distance(full_model) < 0.005,])
+
+
+coeff_delete <- cbind(coefficients(full_model),coefficients(full_model_red1),coefficients(full_model_red2),coefficients(full_model_red3))
+
+colnames(coeff_delete) <- c('All','CD<0.02','CD<0.01','CD<0.005')
+
+# Confidence interval (based on likelihood profiling)
+ci <- confint(full_model)
+
+cbind(round(coeff_delete,4),round(ci,4))
+```
+
+
+<br/>
+We see that the estimates remained within the confidence intervals for the coefficients; thus, there seems to be no reason to delete any observations. The last step is to validate the model by evaluating its predictive performance. However, before we proceed, we take a step back and recall that we initially built the model using only the full cases, thereby completely ignoring the incomplete data.
+
+Thus, in Part Two of this demonstration, we will repeat the entire modeling process using both complete and incomplete observations via single and multiple imputation methods, and we will compare our results with those from the complete case analysis.
+<br/>
+
