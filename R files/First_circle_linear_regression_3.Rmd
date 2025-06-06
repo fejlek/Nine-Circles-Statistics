@@ -360,7 +360,7 @@ We see that the results of all four bootstraps are fairly similar in this partic
 ## Predictions for individual countries (prediction intervals)
 
 <br/>
-Prediction intervals are interval estimates for a new observations. Provided that the model is correctly specified, the computation of the prediction interval is straightforward via the parametric bootstrap. 
+Prediction intervals are interval estimates for a new observations. Provided that the model is correctly specified, the computation of the prediction interval is straightforward via the parametric bootstrap (we simply add the individual random effect and the idiosyncratic error to the prediction). 
 <br/>
 
 ```{r}
@@ -384,7 +384,7 @@ pred_france_pb[i,] <- predict(model_new, le_france, re.form=~0) + rnorm(1,0,coun
 ```
 
 <br/>
-Alternatively, we can also use residual cluster bootstrap to account for non-normal distribution and inter-cluster correlation.
+Alternatively, we can also use residual cluster bootstrap to account for non-normal distribution and inter-cluster correlation of idiosyncratic errors.
 <br/>
 
 ```{r}
@@ -415,7 +415,7 @@ pred_france_spb[i,] <- predict(model_new, le_france, re.form=~0) + rnorm(1,0,cou
 ```
 
 <br/>
-However, the residual cluster bootstrap does not help with heteroskedasticity. Provided that the variance of individual errors changes with the value of predictors, our prediction interval could be severely underestimated or overestimated (residual cluster bootstrap, in essence, pools these errors together, creating an "averaged" estimate of the individual error). And to remedy that, we would need a heteroskedasticity model. This is unlike confidence intervals, which we could compute in a way that was robust to heteroskedasticity.
+However, the residual cluster bootstrap does not help with heteroskedasticity. Provided that the variance of idiosyncratic errors changes with the value of predictors, our prediction interval could be severely underestimated or overestimated (residual cluster bootstrap, in essence, pools these errors together, creating an "averaged" estimate of the idiosyncratic error). And to remedy that, we would need a heteroskedasticity model. This is unlike confidence intervals, which we could compute in a way that was robust to heteroskedasticity.
 
 For example, we can notice that there seems to be heteroskedasticity wrt. the **Economy** factor developing/developed.
 <br/>
@@ -426,7 +426,7 @@ plot(le_nofrance$Economy,residuals(model_nofrance), xlab="Economy", ylab="Residu
 ```
 
 <br/>
-We can fit a new model that models this heteroskedasticity by assuming a different individual error variance per stratum developed and developing. We need to use a different package, *nlme*, which allows us to fit a mixed effects model with variance structure functions (see https://stat.ethz.ch/R-manual/R-devel/library/nlme/html/varClasses.html for the available options).
+We can fit a new model that models this heteroskedasticity by assuming a different idiosyncratic error variance per stratum developed and developing. We need to use a different package, *nlme*, which allows us to fit a mixed effects model with variance structure functions (see https://stat.ethz.ch/R-manual/R-devel/library/nlme/html/varClasses.html for the available options).
 <br/>
 
 ```{r}
@@ -437,7 +437,7 @@ summary(model_economy)
 ```
 
 <br/>
-We see that, indeed, the estimated standard deviation of individual errors is lower for developed countries. Thus, we can use this model instead to construct the prediction interval for France. We will use a wild bootstrap to generate new datasets and a residual bootstrap to simulate new observations for France. 
+We see that, indeed, the estimated standard deviation of idiosyncratic errors is lower for developed countries. Thus, we can use this model instead to construct the prediction interval for France. We will use a wild bootstrap to generate new datasets and a residual bootstrap to simulate new observations for France. 
 <br/>
 
 ```{r}

@@ -111,19 +111,19 @@ summary(lmer_model)
     ## factor(Year)2014  3.110e+00  1.602e-01  19.416
     ## factor(Year)2015  3.297e+00  1.673e-01  19.708
 
-<br/> (we will use *lmer* for the fit instead of *plm*,
-because we plan to compare models using a likelihood ratio test in a bit
-and *plm* does not compute likelihood function since it uses estimates
-based on generalized least squares).
+<br/> We used *lmer* for the fit instead of *plm*, because we plan to
+compare models using a likelihood ratio test in a bit and *plm* does not
+compute likelihood function since it uses estimates based on generalized
+least squares.
 
-Let us start with an obligatory actual vs. predicted plot. We
-should note that prediction for a known individual is computed (using
-function *predict*) as $X\hat{\beta} + \hat{\tau} + \hat{\mu}$, where
-$X$ are our “main” predictors, $\hat{\beta}$ is the estimate of the
-coefficients for the “main” predictors, $\hat{\tau}$ are the estimates
-of the fixed time effects in the model, and $\hat{\mu}$ is the estimate
-of the individual random effect from the model (this estimate is known
-as *BLUP*, the best linear unbiased predictor). <br/>
+Let us start with an obligatory actual vs. predicted plot. We should
+note that prediction for a known individual is computed (using function
+*predict*) as $X\hat{\beta} + \hat{\tau} + \hat{\mu}$, where $X$ are our
+“main” predictors, $\hat{\beta}$ is the estimate of the coefficients for
+the “main” predictors, $\hat{\tau}$ are the estimates of the fixed time
+effects in the model, and $\hat{\mu}$ is the estimate of the individual
+random effect from the model (this estimate is known as *BLUP*, the best
+linear unbiased predictor). <br/>
 
 ``` r
 plot(life_expectancy_pred$Life_expectancy,predict(cre_model),xlab = 'Life expectancy',ylab = 'Predicted Life expectancy')
@@ -494,7 +494,8 @@ confidence intervals for any single observation, let us investigate
 <br/> Prediction intervals are interval estimates for a new
 observations. Provided that the model is correctly specified, the
 computation of the prediction interval is straightforward via the
-parametric bootstrap. <br/>
+parametric bootstrap (we simply add the individual random effect and the
+idiosyncratic error to the prediction). <br/>
 
 ``` r
 ## Parametric bootstrap
@@ -517,7 +518,8 @@ pred_france_pb[i,] <- predict(model_new, le_france, re.form=~0) + rnorm(1,0,coun
 ```
 
 <br/> Alternatively, we can also use residual cluster bootstrap to
-account for non-normal distribution and inter-cluster correlation. <br/>
+account for non-normal distribution and inter-cluster correlation of
+idiosyncratic errors. <br/>
 
 ``` r
 ## Residual cluster bootstrap
@@ -547,11 +549,11 @@ pred_france_spb[i,] <- predict(model_new, le_france, re.form=~0) + rnorm(1,0,cou
 ```
 
 <br/> However, the residual cluster bootstrap does not help with
-heteroskedasticity. Provided that the variance of individual errors
+heteroskedasticity. Provided that the variance of idiosyncratic errors
 changes with the value of predictors, our prediction interval could be
 severely underestimated or overestimated (residual cluster bootstrap, in
 essence, pools these errors together, creating an “averaged” estimate of
-the individual error). And to remedy that, we would need a
+the idiosyncratic error). And to remedy that, we would need a
 heteroskedasticity model. This is unlike confidence intervals, which we
 could compute in a way that was robust to heteroskedasticity.
 
@@ -561,9 +563,9 @@ wrt. the **Economy** factor developing/developed. <br/>
 <img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-17-1.png" style="display: block; margin: auto;" />
 
 <br/> We can fit a new model that models this heteroskedasticity by
-assuming a different individual error variance per stratum developed and
-developing. We need to use a different package, *nlme*, which allows us
-to fit a mixed effects model with variance structure functions (see
+assuming a different idiosyncratic error variance per stratum developed
+and developing. We need to use a different package, *nlme*, which allows
+us to fit a mixed effects model with variance structure functions (see
 <https://stat.ethz.ch/R-manual/R-devel/library/nlme/html/varClasses.html>
 for the available options). <br/>
 
@@ -680,7 +682,7 @@ summary(model_economy)
     ## Number of Groups: 178
 
 <br/> We see that, indeed, the estimated standard deviation of
-individual errors is lower for developed countries. Thus, we can use
+idiosyncratic errors is lower for developed countries. Thus, we can use
 this model instead to construct the prediction interval for France. We
 will use a wild bootstrap to generate new datasets and a residual
 bootstrap to simulate new observations for France. <br/>

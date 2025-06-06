@@ -77,7 +77,7 @@ any(is.na(framingham))
 Some values are missing; let us check how many observations have some missing values and the pattern of missing data.
 <br/>
 
-```{r, fig.align = 'center', echo=FALSE}
+```{r, fig.align = 'center'}
 library(mice)
 dim(framingham[rowSums(is.na(framingham)) > 0,])
 md.pattern(framingham, rotate.names = TRUE)
@@ -475,7 +475,7 @@ mean(dev_matrix > qchisq(0.80,15))
 <br/>
 We observe that almost all cross-validation samples would keep nonlinear terms in the model. 
 
-To conclude Part One of this demonstration, let us have a look at the model diagnostics. Logistic regression of a binary response does not have distributional assumptions (we directly model the probability of an event $\mathrm{ln} \frac{p}{1-p} = X\beta$); hence, bias in our estimates will be connected to model misspecifications, such as omitted variable bias. An interesting fact about logistic regression is that omitted variable bias is caused by both missing predictors correlated by $X$ (as in linear regression) but also by uncorrelated omitted variables (unlike linear regression, see *C. Mood. Logistic regression: Why we cannot do what we think we can do, and what we can do about it. European sociological review 26.1 (2010): 67-82.* for more details). However, this second source of bias is always downwards (i.e., other effects will tend to look smaller than they actually are).
+To conclude Part One of this demonstration, let us have a look at the model diagnostics. Logistic regression of a binary response does not have distributional assumptions (we directly model the probability of an event $\mathrm{ln} \frac{p}{1-p} = X\beta$); hence, bias in our estimates will be connected to model misspecifications, such as omitted variable bias. An interesting fact about logistic regression is that omitted variable bias is caused by both missing predictors correlated with $X$ (as in linear regression) but also by uncorrelated omitted variables (unlike linear regression, see *C. Mood. Logistic regression: Why we cannot do what we think we can do, and what we can do about it. European sociological review 26.1 (2010): 67-82.* for more details). However, this second source of bias is always downwards (i.e., other effects will tend to look smaller than they actually are).
 
 Having discussed distribution assumptions, let us examine influence observations using Cook's distance next. 
 <br/>

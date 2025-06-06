@@ -111,7 +111,16 @@ any(is.na(framingham))
 <br/> Some values are missing; let us check how many observations have
 some missing values and the pattern of missing data. <br/>
 
+``` r
+library(mice)
+dim(framingham[rowSums(is.na(framingham)) > 0,])
+```
+
     ## [1] 582  16
+
+``` r
+md.pattern(framingham, rotate.names = TRUE)
+```
 
 <img src="Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-4-1.png" style="display: block; margin: auto;" />
 
@@ -281,7 +290,7 @@ redun(~.- TCHD ,data = framingham[rowSums(is.na(framingham)) == 0,],nk = 4, r2 =
     ## 
     ## ~Sex + Age + Edu + Smoker + Cig + Meds + Stroke + Hyp + Diab + 
     ##     Chol + SysP + DiaP + BMI + Hrate + Gluc
-    ## <environment: 0x00000134e2d66118>
+    ## <environment: 0x0000024605e61e08>
     ## 
     ## n: 3656  p: 15   nk: 4 
     ## 
@@ -791,13 +800,13 @@ have distributional assumptions (we directly model the probability of an
 event $\mathrm{ln} \frac{p}{1-p} = X\beta$); hence, bias in our
 estimates will be connected to model misspecifications, such as omitted
 variable bias. An interesting fact about logistic regression is that
-omitted variable bias is caused by both missing predictors correlated by
-$X$ (as in linear regression) but also by uncorrelated omitted variables
-(unlike linear regression, see *C. Mood. Logistic regression: Why we
-cannot do what we think we can do, and what we can do about it. European
-sociological review 26.1 (2010): 67-82.* for more details). However,
-this second source of bias is always downwards (i.e., other effects will
-tend to look smaller than they actually are).
+omitted variable bias is caused by both missing predictors correlated
+with $X$ (as in linear regression) but also by uncorrelated omitted
+variables (unlike linear regression, see *C. Mood. Logistic regression:
+Why we cannot do what we think we can do, and what we can do about it.
+European sociological review 26.1 (2010): 67-82.* for more details).
+However, this second source of bias is always downwards (i.e., other
+effects will tend to look smaller than they actually are).
 
 Having discussed distribution assumptions, let us examine influence
 observations using Cook’s distance next. <br/>
