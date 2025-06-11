@@ -84,7 +84,7 @@ md.pattern(framingham, rotate.names = TRUE)
 ```
 
 <br/>
-We see no obvious pattern for missing data. The fraction of rows with some missing values is 582/4238 ~ 0.14. This is a significantly greater value than 3%, which is a rule of thumb value for which it should not matter that much how the observation with missing values is treated. Hence, we may need to employ a multiple imputation:  data may not be missing completely at random (MCAR), and if so, then case deletion or single imputation may cause a significant bias (see *Stef Van Buuren. Flexible imputation of missing data. CRC press, 2012*).
+We see no obvious pattern for missing data. The fraction of rows with some missing values is 582/4238 ~ 0.14. This is a significantly greater value than 3%, which is a rule of thumb value for which it should not matter that much how the observation with missing values is treated. Hence, we may need to employ a multiple imputation:  data may not be missing completely at random (MCAR), and if so, then case deletion or single imputation may cause a significant bias (see *Stef Van Buuren. Flexible imputation of missing data. CRC press, 2018*).
 
 Before we perform any imputation, we have to analyze predictors. Improper predictors could easily ruin the subsequent imputation process. We first rename the columns a little and convert the variables to proper types.
 <br/>
@@ -180,7 +180,7 @@ Thus, we opt to quantify the effect of smoking in our model using a more informa
 ## Complete case analysis
 
 <br/>
-Before we proceed to model with the imputation of missing values, we will perform *complete case analysis* (listwise deletion) for future comparison with other approaches. We should remember that complete case analysis is valid under the missing completely at random (MCAR) condition (the probability of being missing is the same for all cases), i.e., complete case analysis under MCAR produces unbiased estimates. If this is not the case (missingness depends on the data or it depends on some unobserved variables), then these estimates may be severely biased. Another disadvantage of complete case analysis is that it is potentially wasteful. On the other hand, complete case analysis is very simple to perform.
+Before we proceed to model with the imputation of missing values, we will perform *complete case analysis* (listwise deletion) for future comparison with other approaches. We should remember that complete case analysis is valid under the missing completely at random (MCAR) condition (the probability of being missing is the same for all cases), i.e., complete case analysis under MCAR produces unbiased regression estimates. If this is not the case (missingness depends on the data or it depends on some unobserved variables), then these estimates may be severely biased. Another disadvantage of complete case analysis is that it is potentially wasteful (standard errors and significance levels are often larger relative to all available data). On the other hand, complete case analysis is very simple to perform.
 <br/>
 
 ```{r}

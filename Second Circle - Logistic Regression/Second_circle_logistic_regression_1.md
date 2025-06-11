@@ -290,7 +290,7 @@ redun(~.- TCHD ,data = framingham[rowSums(is.na(framingham)) == 0,],nk = 4, r2 =
     ## 
     ## ~Sex + Age + Edu + Smoker + Cig + Meds + Stroke + Hyp + Diab + 
     ##     Chol + SysP + DiaP + BMI + Hrate + Gluc
-    ## <environment: 0x0000024605e61e08>
+    ## <environment: 0x000001c3ebe55190>
     ## 
     ## n: 3656  p: 15   nk: 4 
     ## 
@@ -331,12 +331,13 @@ we will perform *complete case analysis* (listwise deletion) for future
 comparison with other approaches. We should remember that complete case
 analysis is valid under the missing completely at random (MCAR)
 condition (the probability of being missing is the same for all cases),
-i.e., complete case analysis under MCAR produces unbiased estimates. If
-this is not the case (missingness depends on the data or it depends on
-some unobserved variables), then these estimates may be severely biased.
-Another disadvantage of complete case analysis is that it is potentially
-wasteful. On the other hand, complete case analysis is very simple to
-perform. <br/>
+i.e., complete case analysis under MCAR produces unbiased regression
+estimates. If this is not the case (missingness depends on the data or
+it depends on some unobserved variables), then these estimates may be
+severely biased. Another disadvantage of complete case analysis is that
+it is potentially wasteful (standard errors and significance levels are
+often larger relative to all available data). On the other hand,
+complete case analysis is very simple to perform. <br/>
 
 ``` r
 framingham_complete <- framingham[rowSums(is.na(framingham)) == 0,]

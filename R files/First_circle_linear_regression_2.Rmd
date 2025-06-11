@@ -64,7 +64,9 @@ Initially, we will also not consider **Country** and **Year** as our predictors 
 
 Such data for a given individual, in our case, for a given country, are usually significantly correlated. Consequently, it is quite incorrect to consider a model that sees these data as 2864 *independent* observations, since it would lead to overly optimistic estimates of effects (e.g, too narrow confidence intervals). In addition, including **Country** and **Year** in our model in some way allows us to reduce the omitted variable bias of our estimates (thus, panel data allows us to hopefully get more accurate estimates of the predictors' effects), as we see later. 
 
-Still, we will proceed to use a simple linear regression model as our starting point (mostly for illustrative purposes and to upheld the title of this project), and make the necessary corrections in the model later. Based on the data exploration in Part One, we will use the logarithm transformation of predictors **Population_mln** and  **GDP_per_capita**, and use the predictor **Inf5_m**, that combines the predictors **Infant_deaths** and **Under_five_deaths**Overall, we get the following predictors
+Still, we will proceed to use a simple linear regression model as our starting point (mostly for illustrative purposes and to upheld the title of this project), and make the necessary corrections in the model later. Based on the data exploration in Part One, we will use the logarithm transformation of predictors **Population_mln** and  **GDP_per_capita**, and use the predictor **Inf5_m**, that combines the predictors **Infant_deaths** and **Under_five_deaths**.
+
+Overall, we get the following predictors
 <br/>
 
 * **Inf5_m** - Linear combination of **Infant_deaths** and **Under_five_deaths** (see Part One)

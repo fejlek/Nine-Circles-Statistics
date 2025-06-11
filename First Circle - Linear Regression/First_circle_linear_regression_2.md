@@ -75,8 +75,9 @@ of this project), and make the necessary corrections in the model later.
 Based on the data exploration in Part One, we will use the logarithm
 transformation of predictors **Population_mln** and **GDP_per_capita**,
 and use the predictor **Inf5_m**, that combines the predictors
-**Infant_deaths** and **Under_five_deaths**Overall, we get the following
-predictors <br/>
+**Infant_deaths** and **Under_five_deaths**.
+
+Overall, we get the following predictors <br/>
 
 - **Inf5_m** - Linear combination of **Infant_deaths** and
   **Under_five_deaths** (see Part One)

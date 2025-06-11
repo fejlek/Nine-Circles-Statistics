@@ -1,0 +1,1164 @@
+---
+title: "The Second Circle: Logistic Regression, Part Two"
+author: "Jiří Fejlek"
+date: "2025-06-11"
+output:
+  md_document:
+    variant: GFM
+code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+```
+
+```{r, message=FALSE, echo=FALSE}
+library(readr)
+library(tibble)
+library(dplyr)
+library(rms)
+
+framingham <- read_csv('C:/Users/elini/Desktop/nine circles/framingham.csv')
+
+framingham <- framingham %>% rename(Sex = male )  %>% rename(Age = age ) %>% rename(Smoker = currentSmoker ) %>% rename(Stroke = prevalentStroke) %>% rename(Hyp = prevalentHyp ) %>% rename(Diab = diabetes ) %>% rename(TCHD = TenYearCHD  ) %>% rename(SysP = sysBP) %>% rename(DiaP = diaBP) %>%
+rename(Hrate = heartRate )  %>% rename(Cig = cigsPerDay  ) %>% rename(Chol = totChol ) %>% rename(Meds = BPMeds )  %>% rename(Edu = education  ) %>% rename(Gluc = glucose )
+
+framingham$Sex <- factor(framingham$Sex)
+levels(framingham$Sex) <- c('Female','Male')
+framingham$Edu  <- factor(framingham$Edu, ordered = TRUE)
+framingham$Smoker <- factor(framingham$Smoker)
+framingham$Meds <- factor(framingham$Meds)
+framingham$Stroke <- factor(framingham$Stroke)
+framingham$Hyp <- factor(framingham$Hyp)
+framingham$Diab <- factor(framingham$Diab)
+framingham$TCHD <- factor(framingham$TCHD)
+
+framingham_complete <- framingham[rowSums(is.na(framingham)) == 0,]
+
+full_model <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + rcs(Cig,4) + Meds + Stroke + Hyp + Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4) + Age:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc) + Sex:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc), family = binomial, framingham_complete)
+```
+
+<br/>
+In Part Two of this project, we will demonstrate the use of imputation methods on the Framingham Heart Study dataset (mean, multivariate, and multiple imputation) and compare them with the complete case analysis performed in Part One.
+
+We start with the simplest imputation method: mean imputation.
+<br/>
+
+## Mean Imputation
+
+<br/>
+Mean imputation offers a quick fix for missing data by replacing them with their mean. However, it disturbs the relationships between variables (biasing regression estimates), and standard errors will be biased downwards. Only the estimates of variable means will be unbiased and only under the missing completely at random (MCAR) condition (*Stef Van Buuren. Flexible imputation of missing data. CRC press, 2018*). Overall, the mean imputation is not the preferred method of imputation.
+
+Still, let us perform it. Let us start with categorical variables. The most prevalent level of **Meds** is zero, and of **Edu** is 1.
+<br/>
+
+```{r, echo=FALSE}
+plot(framingham$Meds,xlab = 'Meds')
+plot(framingham$Edu,xlab = 'Edu')
+```
+
+<br/>
+Thus, these are the imputed values for these variables
+<br/>
+
+```{r}
+framingham_mean_imp <- framingham
+framingham_mean_imp[is.na(framingham$Meds),]$Meds <- framingham_mean_imp[3,]$Meds # level 0
+framingham_mean_imp[is.na(framingham$Edu),]$Edu <- framingham_mean_imp[3,]$Edu # level 1
+```
+
+<br/>
+We impute **Hrate**, **BMI**, and **Chol** using their population mean values.
+<br/>
+
+```{r}
+framingham_mean_imp[is.na(framingham$Hrate),]$Hrate <- mean(framingham$Hrate,na.rm = TRUE)
+framingham_mean_imp[is.na(framingham$BMI),]$BMI <- mean(framingham$BMI,na.rm = TRUE)
+framingham_mean_imp[is.na(framingham$Chol),]$Chol <- mean(framingham$Chol,na.rm = TRUE)
+```
+
+<br/>
+For **Cigs**, we can do a bit better. A nonsmoker would smoke zero cigarettes per day. However, there is no nonsmoker with **Cigs** missing.
+<br/>
+
+```{r}
+framingham[is.na(framingham$Cig) & framingham$Smoker  == 0,]
+```
+
+<br/>
+Thus, we impute **Cigs** with the mean for smokers
+<br/>
+
+```{r}
+framingham_mean_imp[is.na(framingham$Cig),]$Cig <- mean(framingham$Cig[framingham$Smoker  == 1],na.rm = TRUE)
+```
+
+<br/>
+Lastly, we impute **Gluc** using **Diab** (diabetes) status, which is not missing in the dataset. Note that the distributions of **Gluc** vary significantly for people with and without diabetes.
+<br/>
+
+```{r}
+par(mfrow = c(1, 2))
+hist(framingham$Gluc[framingham$Diab == 0],xlab = 'Gluc for Diab = 0', main=NULL)
+hist(framingham$Gluc[framingham$Diab == 1],xlab = 'Gluc for Diab = 1', main=NULL)
+```
+
+<br/>
+Thus, we split the imputation of **Gluc** based on **Diab**.
+<br/>
+
+```{r}
+framingham_mean_imp[is.na(framingham$Gluc) & framingham$Diab == 0,]$Gluc <- mean(framingham$Gluc[framingham$Diab == 0],na.rm = TRUE)
+framingham_mean_imp[is.na(framingham$Gluc) & framingham$Diab == 1,]$Gluc <- mean(framingham$Gluc[framingham$Diab == 1],na.rm = TRUE)
+```
+
+<br/>
+The mean imputation is complete; let us fit the full model (the same one as in the complete case analysis) and compare the results with those from the complete case analysis.
+<br/>
+
+```{r}
+full_model_mean_imp <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + rcs(Cig,4) + Meds + Stroke + Hyp + Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4) + Age:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc) + Sex:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc), family = binomial, framingham_mean_imp)
+
+options(width = 1000)
+coeffs <- cbind(round(coefficients(full_model),4),round(coefficients(full_model_mean_imp),4))
+colnames(coeffs) <- c('Complete Case','Mean Imp.')
+coeffs
+```
+
+<br/>
+We see that the estimates are not that different. Let's take a look at confidence intervals.
+<br/>
+
+```{r, echo=FALSE}
+ci <- cbind(confint(full_model),confint(full_model_mean_imp))
+colnames(ci) <- c('2.5 % (Complete Case)', '97.5 % (Complete Case)', '2.5 % (Mean Imp.)', '97.5 % (Mean Imp.)')
+round(ci,4)
+```
+
+<br/>
+Again, not a massive difference. Let's test the significance of the predictors (which would be of the most interest, provided that hypothesis testing was our main goal).
+<br/>
+
+```{r, echo=FALSE}
+# Sex
+model_no_sex <- glm(TCHD  ~ rcs(Age,4) + Edu + rcs(Cig,4) + Meds + Stroke + Hyp + Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4) + Age:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc), family = binomial, framingham_complete)
+a1 <- anova(model_no_sex,full_model)
+
+# Age
+model_no_age <- glm(TCHD  ~ Sex + Edu + rcs(Cig,4) + Meds + Stroke + Hyp + Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4)  + Sex:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc), family = binomial, framingham_complete)
+a2 <- anova(model_no_age,full_model)
+
+# Edu
+model_no_edu <- glm(TCHD  ~ Sex + rcs(Age,4) + rcs(Cig,4) + Meds + Stroke + Hyp + Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4) + Age:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc) + Sex:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc), family = binomial, framingham_complete)
+a3 <- anova(model_no_edu,full_model)
+
+# Cig
+model_no_cig <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + Meds + Stroke + Hyp + Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4) + Age:(Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc) + Sex:(Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc), family = binomial, framingham_complete)
+a4 <- anova(model_no_cig,full_model)
+
+# Meds
+model_no_meds <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + rcs(Cig,4) + Stroke + Hyp + Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4) + Age:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc) + Sex:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc), family = binomial, framingham_complete)
+a5 <- anova(model_no_meds,full_model)
+
+# Stroke
+model_no_stroke <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + rcs(Cig,4) + Meds  + Hyp + Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4) + Age:(Cig  + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc) + Sex:(Cig  + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc), family = binomial, framingham_complete)
+a6 <- anova(model_no_stroke,full_model)
+
+# Hyp
+model_no_hyp <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + rcs(Cig,4) + Meds + Stroke + Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4) + Age:(Cig + Stroke  + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc) + Sex:(Cig + Stroke  + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc), family = binomial, framingham_complete)
+a7 <- anova(model_no_hyp,full_model)
+
+# Diab
+model_no_diab <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + rcs(Cig,4) + Meds + Stroke + Hyp + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4) + Age:(Cig + Stroke + Hyp  + Chol + SysP + DiaP + BMI + Hrate + Gluc) + Sex:(Cig + Stroke + Hyp  + Chol + SysP + DiaP + BMI + Hrate + Gluc), family = binomial, framingham_complete)
+a8 <- anova(model_no_diab,full_model)
+
+# Chol
+model_no_chol <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + rcs(Cig,4) + Meds + Stroke + Hyp + Diab  + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4) + Age:(Cig + Stroke + Hyp + Diab + SysP + DiaP + BMI + Hrate + Gluc) + Sex:(Cig + Stroke + Hyp + Diab  + SysP + DiaP + BMI + Hrate + Gluc), family = binomial, framingham_complete)
+a9 <- anova(model_no_chol,full_model)
+
+# Sysp
+model_no_sysp <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + rcs(Cig,4) + Meds + Stroke + Hyp + Diab + rcs(Chol,4)  + rcs(DiaP,4) + rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4) + Age:(Cig + Stroke + Hyp + Diab + Chol  + DiaP + BMI + Hrate + Gluc) + Sex:(Cig + Stroke + Hyp + Diab + Chol  + DiaP + BMI + Hrate + Gluc), family = binomial, framingham_complete)
+a10 <- anova(model_no_sysp,full_model)
+
+# DiaP
+model_no_diap <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + rcs(Cig,4) + Meds + Stroke + Hyp + Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4) + Age:(Cig + Stroke + Hyp + Diab + Chol + SysP  + BMI + Hrate + Gluc) + Sex:(Cig + Stroke + Hyp + Diab + Chol + SysP + BMI + Hrate + Gluc), family = binomial, framingham_complete)
+a11 <- anova(model_no_diap,full_model)
+
+# BMI
+model_no_bmi <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + rcs(Cig,4) + Meds + Stroke + Hyp + Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(Hrate,4) + rcs(Gluc,4) + Age:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP  + Hrate + Gluc) + Sex:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + Hrate + Gluc), family = binomial, framingham_complete)
+a12 <- anova(model_no_bmi,full_model)
+
+# Hrate
+model_no_hrate <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + rcs(Cig,4) + Meds + Stroke + Hyp + Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + rcs(Gluc,4) + Age:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI  + Gluc) + Sex:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI  + Gluc), family = binomial, framingham_complete)
+a13 <- anova(model_no_hrate,full_model)
+
+# Gluc
+model_no_gluc <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + rcs(Cig,4) + Meds + Stroke + Hyp + Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + rcs(Hrate,4) + Age:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate) + Sex:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate), family = binomial, framingham_complete)
+a14 <- anova(model_no_gluc,full_model)
+
+
+c1 <- c('Sex','Age','Edu','Cig','Meds','Stroke','Hyp','Diab','Chol','Sysp','DiaP','BMI','Hrate','Gluc')
+c2 <-c(a1$`Pr(>Chi)`[2],a2$`Pr(>Chi)`[2],a3$`Pr(>Chi)`[2],a4$`Pr(>Chi)`[2],a5$`Pr(>Chi)`[2],a6$`Pr(>Chi)`[2],a7$`Pr(>Chi)`[2],a8$`Pr(>Chi)`[2],a9$`Pr(>Chi)`[2],a10$`Pr(>Chi)`[2],a11$`Pr(>Chi)`[2],a12$`Pr(>Chi)`[2],a13$`Pr(>Chi)`[2],a14$`Pr(>Chi)`[2])
+
+res1 <- as.data.frame(cbind(c1,round(c2,digits = 5)))
+colnames(res1) <- c('Variable','Complete Case')
+
+# Sex
+model_no_sex <- glm(TCHD  ~ rcs(Age,4) + Edu + rcs(Cig,4) + Meds + Stroke + Hyp + Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4) + Age:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc), family = binomial, framingham_mean_imp)
+a1 <- anova(model_no_sex,full_model_mean_imp)
+
+# Age
+model_no_age <- glm(TCHD  ~ Sex + Edu + rcs(Cig,4) + Meds + Stroke + Hyp + Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4)  + Sex:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc), family = binomial, framingham_mean_imp)
+a2 <- anova(model_no_age,full_model_mean_imp)
+
+# Edu
+model_no_edu <- glm(TCHD  ~ Sex + rcs(Age,4) + rcs(Cig,4) + Meds + Stroke + Hyp + Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4) + Age:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc) + Sex:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc), family = binomial, framingham_mean_imp)
+a3 <- anova(model_no_edu,full_model_mean_imp)
+
+# Cig
+model_no_cig <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + Meds + Stroke + Hyp + Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4) + Age:(Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc) + Sex:(Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc), family = binomial, framingham_mean_imp)
+a4 <- anova(model_no_cig,full_model_mean_imp)
+
+# Meds
+model_no_meds <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + rcs(Cig,4) + Stroke + Hyp + Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4) + Age:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc) + Sex:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc), family = binomial, framingham_mean_imp)
+a5 <- anova(model_no_meds,full_model_mean_imp)
+
+# Stroke
+model_no_stroke <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + rcs(Cig,4) + Meds  + Hyp + Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4) + Age:(Cig  + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc) + Sex:(Cig  + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc), family = binomial, framingham_mean_imp)
+a6 <- anova(model_no_stroke,full_model_mean_imp)
+
+# Hyp
+model_no_hyp <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + rcs(Cig,4) + Meds + Stroke + Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4) + Age:(Cig + Stroke  + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc) + Sex:(Cig + Stroke  + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc), family = binomial, framingham_mean_imp)
+a7 <- anova(model_no_hyp,full_model_mean_imp)
+
+# Diab
+model_no_diab <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + rcs(Cig,4) + Meds + Stroke + Hyp + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4) + Age:(Cig + Stroke + Hyp  + Chol + SysP + DiaP + BMI + Hrate + Gluc) + Sex:(Cig + Stroke + Hyp  + Chol + SysP + DiaP + BMI + Hrate + Gluc), family = binomial, framingham_mean_imp)
+a8 <- anova(model_no_diab,full_model_mean_imp)
+
+# Chol
+model_no_chol <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + rcs(Cig,4) + Meds + Stroke + Hyp + Diab  + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4) + Age:(Cig + Stroke + Hyp + Diab + SysP + DiaP + BMI + Hrate + Gluc) + Sex:(Cig + Stroke + Hyp + Diab  + SysP + DiaP + BMI + Hrate + Gluc), family = binomial, framingham_mean_imp)
+a9 <- anova(model_no_chol,full_model_mean_imp)
+
+# Sysp
+model_no_sysp <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + rcs(Cig,4) + Meds + Stroke + Hyp + Diab + rcs(Chol,4)  + rcs(DiaP,4) + rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4) + Age:(Cig + Stroke + Hyp + Diab + Chol  + DiaP + BMI + Hrate + Gluc) + Sex:(Cig + Stroke + Hyp + Diab + Chol  + DiaP + BMI + Hrate + Gluc), family = binomial, framingham_mean_imp)
+a10 <- anova(model_no_sysp,full_model_mean_imp)
+
+# DiaP
+model_no_diap <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + rcs(Cig,4) + Meds + Stroke + Hyp + Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4) + Age:(Cig + Stroke + Hyp + Diab + Chol + SysP  + BMI + Hrate + Gluc) + Sex:(Cig + Stroke + Hyp + Diab + Chol + SysP + BMI + Hrate + Gluc), family = binomial, framingham_mean_imp)
+a11 <- anova(model_no_diap,full_model_mean_imp)
+
+# BMI
+model_no_bmi <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + rcs(Cig,4) + Meds + Stroke + Hyp + Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(Hrate,4) + rcs(Gluc,4) + Age:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP  + Hrate + Gluc) + Sex:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + Hrate + Gluc), family = binomial, framingham_mean_imp)
+a12 <- anova(model_no_bmi,full_model_mean_imp)
+
+# Hrate
+model_no_hrate <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + rcs(Cig,4) + Meds + Stroke + Hyp + Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + rcs(Gluc,4) + Age:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI  + Gluc) + Sex:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI  + Gluc), family = binomial, framingham_mean_imp)
+a13 <- anova(model_no_hrate,full_model_mean_imp)
+
+# Gluc
+model_no_gluc <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + rcs(Cig,4) + Meds + Stroke + Hyp + Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + rcs(Hrate,4) + Age:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate) + Sex:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate), family = binomial, framingham_mean_imp)
+a14 <- anova(model_no_gluc,full_model_mean_imp)
+
+c <-c(a1$`Pr(>Chi)`[2],a2$`Pr(>Chi)`[2],a3$`Pr(>Chi)`[2],a4$`Pr(>Chi)`[2],a5$`Pr(>Chi)`[2],a6$`Pr(>Chi)`[2],a7$`Pr(>Chi)`[2],a8$`Pr(>Chi)`[2],a9$`Pr(>Chi)`[2],a10$`Pr(>Chi)`[2],a11$`Pr(>Chi)`[2],a12$`Pr(>Chi)`[2],a13$`Pr(>Chi)`[2],a14$`Pr(>Chi)`[2])
+res2 <- as.data.frame(round(c,digits = 5))
+colnames(res2) <- 'Mean Imp.'
+
+res <- cbind(res1,res2)
+res
+```
+
+<br/>
+The p-values changed a bit. The biggest difference is **Stroke**. We see that previous stroke is a major risk factor for developing **TCHD** in the future; however, we had too few observations with **Stroke**. The imputation helped in that regard.
+
+Next, we can compare our overall tests about the significance of nonlinear terms and interactions.
+<br/>
+
+```{r}
+model_no_nonlinear_mean_imp <- glm(TCHD  ~ Sex + Age + Edu  + Cig + Meds + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc + Age:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc) + Sex:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc), family = binomial, framingham_mean_imp)
+
+model_no_interactions_mean_imp <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + rcs(Cig,4) + Meds + Stroke + Hyp + Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4), family = binomial, framingham_mean_imp)
+
+
+anova(model_no_nonlinear_mean_imp,full_model_mean_imp)
+anova(model_no_interactions_mean_imp,full_model_mean_imp)
+```
+
+<br/>
+Again, we got the same result as in the complete case analysis. Next, we plot the significant predictors (we will plot for interactions for simplicity's sake). A denotes plots for the complete case analysis, and B denotes plots for mean imputation.
+<br/>
+
+```{r, echo=FALSE}
+library(sjPlot)
+p1 <- plot_model(full_model, type = "pred", terms = c('Age','Sex'))
+p2 <- plot_model(full_model_mean_imp, type = "pred", terms = c('Age','Sex'))
+plot_grid(list(p1,p2))
+
+
+p1 <- plot_model(full_model, type = "pred", terms = c('Cig','Sex')) 
+p2 <- plot_model(full_model_mean_imp, type = "pred", terms = c('Cig','Sex')) 
+plot_grid(list(p1,p2))
+
+
+p1 <- plot_model(full_model, type = "pred", terms = c('Age','Sex','Stroke'),title  = 'Predicted probabilities of TCHD for Stroke')
+p2 <- plot_model(full_model_mean_imp, type = "pred", terms = c('Age','Sex','Stroke'),title  = 'Predicted probabilities of TCHD for Stroke')
+plot_grid(list(p1,p2))
+
+p1 <-  plot_model(full_model, type = "pred", terms = c('Age','Sex','Hyp'),title  = 'Predicted probabilities of TCHD for Hyp')
+p2 <- plot_model(full_model_mean_imp, type = "pred", terms = c('Age','Sex','Hyp'),title  = 'Predicted probabilities of TCHD for Hyp')
+plot_grid(list(p1,p2))
+
+p1 <- plot_model(full_model, type = "pred", terms = c('Chol','Sex'))
+p2 <- plot_model(full_model_mean_imp, type = "pred", terms = c('Chol','Sex'))
+plot_grid(list(p1,p2))
+
+
+p1 <- plot_model(full_model, type = "pred", terms = c('SysP','Sex'))
+p2 <- plot_model(full_model_mean_imp, type = "pred", terms = c('SysP','Sex'))
+plot_grid(list(p1,p2))
+
+p1 <- plot_model(full_model, type = "pred", terms = c('DiaP','Sex'))
+p2 <- plot_model(full_model_mean_imp, type = "pred", terms = c('DiaP','Sex'))
+plot_grid(list(p1,p2))
+
+
+p1 <- plot_model(full_model, type = "pred", terms = c('Gluc','Sex'))
+p2 <- plot_model(full_model_mean_imp, type = "pred", terms = c('Gluc','Sex'))
+plot_grid(list(p1,p2))
+```
+
+<br/>
+Overall, our results would not have changed much. 
+
+We performed our inference based on the imputed data without accounting for the fact that these data were imputed from the original dataset. To obtain inferences that take imputation into consideration, we could use a bootstrap. For example, to obtain confidence intervals for parameters, we can use the following pairs bootstrap (we will use percentile-based confidence intervals for simplicity's sake).
+<br/>
+
+```{r}
+set.seed(123) # for reproducibility
+nb <- 2500
+coefmat <- matrix(NA,nb,length(coefficients(full_model_mean_imp)))
+colnames(coefmat) <- rownames(as.data.frame(coefficients(full_model_mean_imp)))
+
+for(i in 1:nb){
+
+  framingham_new <-  framingham[sample(nrow(framingham) , rep=TRUE),]
+  framingham_mean_imp_new <- framingham_new
+  
+  framingham_mean_imp_new[is.na(framingham_new$Meds),]$Meds <- framingham_mean_imp[3,]$Meds # level 0
+  framingham_mean_imp_new[is.na(framingham_new$Edu),]$Edu <- framingham_mean_imp[3,]$Edu # level 1
+  
+  framingham_mean_imp_new[is.na(framingham_new$Hrate),]$Hrate <- mean(framingham_new$Hrate,na.rm = TRUE)
+  framingham_mean_imp_new[is.na(framingham_new$BMI),]$BMI <- mean(framingham_new$BMI,na.rm = TRUE)
+  framingham_mean_imp_new[is.na(framingham_new$Chol),]$Chol <- mean(framingham_new$Chol,na.rm = TRUE)
+  
+  framingham_mean_imp_new[is.na(framingham_new$Gluc) & framingham_new$Diab == 0,]$Gluc <- mean(framingham_new$Gluc[framingham_new$Diab == 0],na.rm = TRUE)
+  framingham_mean_imp_new[is.na(framingham_new$Gluc) & framingham_new$Diab == 1,]$Gluc <- mean(framingham_new$Gluc[framingham_new$Diab == 1],na.rm = TRUE)
+  
+  framingham_mean_imp_new[is.na(framingham_new$Cig),]$Cig <- 
+    mean(framingham_new$Cig[framingham_new$Smoker  == 1],na.rm = TRUE)
+
+  full_model_mean_imp_new <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + rcs(Cig,4) + Meds + Stroke + Hyp + Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4) + Age:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc) + Sex:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc), family = binomial, framingham_mean_imp_new)
+  
+  
+  coefmat[i,colnames(t(as.data.frame(full_model_mean_imp_new$coefficients)))] <- t(as.data.frame(full_model_mean_imp_new$coefficients))
+}
+
+boot_ci <- t(apply(coefmat,2,function(x) quantile(x[!is.na(x)],c(0.025,0.975))))
+
+options(width = 1000)
+ci <- cbind(confint(full_model_mean_imp),boot_ci)
+colnames(ci) <- c('2.5 % (profiling)','97.5 % (profiling)','2.5 % (bootstrap)','97.5 % (bootstrap)')
+ci
+```
+
+<br/>
+We see that bootstrap confidence intervals are quite similar to those based on likelihood profiling. We should note that the bootstrap does not fix the main issue of the mean imputation (our estimates could be severely biased in general). Bootstrap confidence intervals for predictions would be obtained in a similar manner. 
+
+Concerning hypothesis testing, we can use the bootstrap Wald test. First, we compute the Wald test statistic for the original sample: $W =\frac{\hat{\theta}^T \hat{\theta}}{\mathrm{Cov}\; \hat{\theta}}$. Then, we compute for each bootstrap sample the Wald test statistic $W^* =\frac{(\theta^* - \hat{\theta})^T(\theta^* - \hat{\theta})}{\mathrm{Cov}\; \theta^*}$, where $\theta^*$ is the estimate for the bootstrap sample. The p-value for the test is then $\frac{\# W^* > W}{\# W^*}$. The idea behind the test is that under alternative, the Wald test statistic $W$ between $\hat{\theta}$  and the null $\theta_0 = 0$ should be much larger than the Wald test statistic $W^*$ between $\hat{\theta}$ and $\theta^*$, see *P. Hall, and S. R. Wilson. Two guidelines for bootstrap hypothesis testing. Biometrics (1991): 757-762*  for more details.
+
+We demonstrate the bootstrap Wald test for **Sex**, **Education**, and interactions terms.
+<br/>
+
+```{r}
+set.seed(123) # for reproducibility
+nb <- 2500
+wald1 <- numeric(nb)  # sex
+wald2 <- numeric(nb)  # education
+wald3 <- numeric(nb)  # interactions
+
+for(i in 1:nb){
+  
+  framingham_new <-  framingham[sample(nrow(framingham) , rep=TRUE),]
+  framingham_mean_imp_new <- framingham_new
+  
+  framingham_mean_imp_new[is.na(framingham_new$Meds),]$Meds <- framingham_mean_imp[3,]$Meds # level 0
+  framingham_mean_imp_new[is.na(framingham_new$Edu),]$Edu <- framingham_mean_imp[3,]$Edu # level 1
+  
+  framingham_mean_imp_new[is.na(framingham_new$Hrate),]$Hrate <- mean(framingham_new$Hrate,na.rm = TRUE)
+  framingham_mean_imp_new[is.na(framingham_new$BMI),]$BMI <- mean(framingham_new$BMI,na.rm = TRUE)
+  framingham_mean_imp_new[is.na(framingham_new$Chol),]$Chol <- mean(framingham_new$Chol,na.rm = TRUE)
+  
+  framingham_mean_imp_new[is.na(framingham_new$Gluc) & framingham_new$Diab == 0,]$Gluc <- mean(framingham_new$Gluc[framingham_new$Diab == 0],na.rm = TRUE)
+  framingham_mean_imp_new[is.na(framingham_new$Gluc) & framingham_new$Diab == 1,]$Gluc <- mean(framingham_new$Gluc[framingham_new$Diab == 1],na.rm = TRUE)
+  
+  framingham_mean_imp_new[is.na(framingham_new$Cig),]$Cig <- 
+    mean(framingham_new$Cig[framingham_new$Smoker  == 1],na.rm = TRUE)
+
+  full_model_mean_imp_new <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + rcs(Cig,4) + Meds + Stroke + Hyp + Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4) + Age:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc) + Sex:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc), family = binomial, framingham_mean_imp_new)
+  
+# trycatch to skip numerical problems with inversions for some samples  
+V <- vcov(full_model_mean_imp_new)[c(2,43:52),c(2,43:52)]
+wald1[i] <- tryCatch((coefficients(full_model_mean_imp_new)[c(2,43:52)]-coefficients(full_model_mean_imp)[c(2,43:52)]) %*% solve(V) %*% (coefficients(full_model_mean_imp_new)[c(2,43:52)]-coefficients(full_model_mean_imp)[c(2,43:52)]), error = function(e) {NaN})
+
+V <- vcov(full_model_mean_imp_new)[c(6:8),c(6:8)]
+wald2[i] <- tryCatch((coefficients(full_model_mean_imp_new)[c(6:8)]-coefficients(full_model_mean_imp)[c(6:8)]) %*% solve(V) %*% (coefficients(full_model_mean_imp_new)[c(6:8)]-coefficients(full_model_mean_imp)[c(6:8)]), error = function(e) {NaN})
+
+V <- vcov(full_model_mean_imp_new)[c(33:52),c(33:52)]
+wald3[i] <- tryCatch((coefficients(full_model_mean_imp_new)[c(33:52)]-coefficients(full_model_mean_imp)[c(33:52)]) %*% solve(V) %*% (coefficients(full_model_mean_imp_new)[c(33:52)]-coefficients(full_model_mean_imp)[c(33:52)]), error = function(e) {NaN})
+}
+
+# Sex
+V <- vcov(full_model_mean_imp)[c(2,43:52),c(2,43:52)]
+wald <- coefficients(full_model_mean_imp)[c(2,43:52)] %*% solve(V) %*% coefficients(full_model_mean_imp)[c(2,43:52)]          
+mean(wald1 > as.numeric(wald),na.rm = TRUE) # p-value
+
+# Education
+V <- vcov(full_model_mean_imp)[c(6:8),c(6:8)]
+wald <- coefficients(full_model_mean_imp)[c(6:8)] %*% solve(V) %*% coefficients(full_model_mean_imp)[c(6:8)]
+mean(wald2 > as.numeric(wald),na.rm = TRUE)
+
+# Interactions
+V <- vcov(full_model_mean_imp)[c(33:52),c(33:52)]
+wald <- coefficients(full_model_mean_imp)[c(33:52)] %*% solve(V) %*% coefficients(full_model_mean_imp)[c(33:52)]
+mean(wald3 > as.numeric(wald),na.rm = TRUE)
+```
+
+<br/>
+We again obtained very similar results to the likelihood ratio test we performed earlier.
+<br/>
+
+
+## Multivariate single imputation
+
+<br/>
+The main disadvantage of the mean imputation is that it disrupts relations between variables. Thus, we can try to model these relationships and base the imputation on these models instead. A major complication with that approach is that, in general, values for multiple variables can be missing for a single observation. This complicates the imputation since we may need one missing value to impute the second one and vice versa.
+
+One solution to this issue is the so-called fully conditional specification (FCS), also known as a chained equation. The idea is to initialize the imputation with randomly imputed values. Then, the variables are imputed one at a time (using the rest of the data). Once all variables are imputed, the process is iteratively repeated, creating a Markov random process. It is assumed that this process will have a unique stationary distribution (which often seems to be the case for real-world data), i.e., the distribution of our imputed values will not depend on the initial selection of the imputed values if enough iterations are taken, see *Stef Van Buuren. Flexible imputation of missing data. CRC press, 2018* for more details.
+
+In R, this algorithm is implemented in the *mice* package. Let's use it to create an imputation model for our dataset. First, let us recall the pattern of missing data.
+<br/>
+
+```{r, fig.align = 'center'}
+library(mice)
+options(width = 1000)
+
+dim(framingham[rowSums(is.na(framingham)) > 0,])
+
+par(mfrow = c(1, 1))
+md.pattern(framingham, rotate.names = TRUE)
+```
+
+<br/>
+Unfortunately, the missing pattern is not monotone (the variables cannot be ordered such that if variable $Y_j$ is missing, then all variables $Y_k$ with $k >j$ are also missing). Therefore, we must employ the chained equation approach to impute the missing data. First, let's do a quick analysis of the variables based on influx and outflux (*Stef Van Buuren. Flexible imputation of missing data. CRC press, 2018*)
+<br/>
+
+```{r}
+flux(framingham)
+fluxplot(framingham)
+```
+
+<br/>
+Influx measures how much the variable is missing in cases when other variables are not missing. Outflux measures how much a variable is observed when other variables are missing. In general, variables near the diagonal in the influx-outflux pattern are preferred.
+
+We see that **Gluc** has a relatively small outflux; it is often missing when other variables are missing. Thus, if we were not interested in this variable and considered it not so important in the model, we could remove it since **Gluc** may not help that much in imputing other variables. Still, we consider all variables important in the model, and thus, we keep it.
+
+Next, we need to specify all the predictors in the model. We will follow the following principle: the considered imputation model should be *at least as general* as our response model. 
+
+First, we create a model matrix using completely observed variables, including **Smoker** (this variable helps us to impute **Cig** at least) and the outcome variable **TCHD** (including the response in the imputation model is quite important: we assume that our predictors are connected to the response and thus, the response is probably a strong variable for predicting missing values). We also include all observed interactions (we use in the full **TCHD** model) and all observed nonlinear terms. 
+<br/>
+
+```{r}
+framingham_ext <- model.matrix(lm(log(Age) ~ TCHD + Sex + rcs(Age,4) + Smoker + Stroke + Hyp + Diab + rcs(SysP,4) + rcs(DiaP,4) + Age:Stroke + Age:Hyp + Age:Diab + Age:SysP + Age:DiaP + Sex:Stroke + Sex:Hyp + Sex:Diab + Sex:SysP + Sex:DiaP, data = framingham))
+```
+
+<br/>
+Next, we will add variables with missing data.
+<br/>
+
+```{r}
+framingham_ext <- cbind(framingham_ext[,-c(1,17)],framingham$Hrate,framingham$BMI,framingham$Cig,framingham$Chol,framingham$Meds,framingham$Edu,framingham$Gluc)
+
+colnames(framingham_ext) <- c('TCHD','Sex','Age1','Age2','Age3','Smoker','Stroke','Hyp','Diab','SysP1','SysP2','SysP3','DiaP1','DiaP2','DiaP3','AgeStroke','AgeHyp','AgeDiab','AgeSysP','AgeDiaP','SexStroke','SexHyp','SexDiab','SexSysP','SexDiaP','Hrate1','BMI1','Cig1','Chol1','Meds','Edu','Gluc1')
+
+framingham_ext <- as_tibble(framingham_ext)
+```
+
+<br/>
+Next, we need to add variables computed from the variables with missing values (remaining nonlinearities and interactions from our full **TCHD** model)
+<br/>
+
+```{r}
+Hrate_rcs <- rcs(framingham_ext$Hrate1,4)
+BMI_rcs <- rcs(framingham_ext$BMI1,4)
+Cig_rcs <- rcs(framingham_ext$Cig1,4)
+Chol_rcs <- rcs(framingham_ext$Chol1,4)
+Gluc_rcs <- rcs(framingham_ext$Gluc1,4)
+
+framingham_ext <- framingham_ext %>% add_column(Hrate2 = as.numeric(Hrate_rcs[,2])) %>% add_column(Hrate3 = as.numeric(Hrate_rcs[,3])) %>% add_column(BMI2 = as.numeric(BMI_rcs[,2])) %>% add_column(BMI3 = as.numeric(BMI_rcs[,3])) %>% add_column(Cig2 = as.numeric(Cig_rcs[,2])) %>% add_column(Chol2 = as.numeric(Chol_rcs[,2])) %>% add_column(Chol3 = as.numeric(Chol_rcs[,3])) %>% add_column(Gluc2 = as.numeric(Gluc_rcs[,2])) %>% add_column(Gluc3 = as.numeric(Gluc_rcs[,3]))
+
+framingham_ext <- framingham_ext %>% 
+  add_column(AgeHrate = framingham_ext$Age1*framingham_ext$Hrate1) %>% 
+  add_column(AgeBMI = framingham_ext$Age1*framingham_ext$BMI1) %>% 
+  add_column(AgeCig = framingham_ext$Age1*framingham_ext$Cig1) %>% 
+  add_column(AgeChol = framingham_ext$Age1*framingham_ext$Chol1) %>% 
+  add_column(AgeGluc = framingham_ext$Age1*framingham_ext$Gluc1) %>% 
+  add_column(SexHrate = framingham_ext$Sex*framingham_ext$Hrate1) %>% 
+  add_column(SexBMI = framingham_ext$Sex*framingham_ext$BMI1) %>% 
+  add_column(SexCig = framingham_ext$Sex*framingham_ext$Cig1) %>% 
+  add_column(SexChol = framingham_ext$Sex*framingham_ext$Chol1) %>% 
+  add_column(SexGluc = framingham_ext$Sex*framingham_ext$Gluc1)
+
+
+framingham_ext$TCHD <- factor(framingham_ext$TCHD)
+framingham_ext$Sex <- factor(framingham_ext$Sex)
+framingham_ext$Smoker <- factor(framingham_ext$Smoker)
+framingham_ext$Stroke <- factor(framingham_ext$Stroke)
+framingham_ext$Hyp <- factor(framingham_ext$Hyp)
+framingham_ext$Diab <- factor(framingham_ext$Diab)
+framingham_ext$SexStroke <- factor(framingham_ext$SexStroke)
+framingham_ext$SexHyp <- factor(framingham_ext$SexHyp)
+framingham_ext$SexDiab <- factor(framingham_ext$SexDiab)
+framingham_ext$Meds <- factor(framingham_ext$Meds)
+framingham_ext$Edu  <- factor(framingham_ext$Edu, ordered = TRUE)
+```
+
+<br/>
+Our model matrix is complete. The next step is to determine which methods should be used for imputing each variable. There are many options (see *Stef Van Buuren. Flexible imputation of missing data. CRC press, 2018*); we will use the default ones: predictive mean matching for continuous variables, logistic regression for binary factor variables, and ordered logit model for ordinal variables. 
+<br/>
+
+```{r}
+ini <- mice(framingham_ext, m = 1, maxit = 0)
+meth <-ini$method
+meth
+```
+<br/>
+Now, some missing variables are direct functions of other missing variables (nonlinear terms and interactions). Thus, instead of imputing them, we will treat them as *derived variables*, i.e., we will directly state how to compute them using the other variables.
+<br/>
+
+```{r}
+meth["Hrate2"] <- "~rcspline.eval(Hrate1,knots = attributes(Hrate_rcs)$parms,inclx = TRUE)[,2]"
+meth["Hrate3"] <- "~rcspline.eval(Hrate1,knots = attributes(Hrate_rcs)$parms,inclx = TRUE)[,3]"
+meth["BMI2"] <- "~rcspline.eval(BMI1,knots = attributes(BMI_rcs)$parms,inclx = TRUE)[,2]"
+meth["BMI3"] <- "~rcspline.eval(BMI1,knots = attributes(BMI_rcs)$parms,inclx = TRUE)[,3]"
+meth["Cig2"] <- "~rcspline.eval(Cig1,knots = attributes(Cig_rcs)$parms,inclx = TRUE)[,2]"
+meth["Chol2"] <- "~rcspline.eval(Chol1,knots = attributes(Chol_rcs)$parms,inclx = TRUE)[,2]"
+meth["Chol3"] <- "~rcspline.eval(Chol1,knots = attributes(Chol_rcs)$parms,inclx = TRUE)[,3]"
+meth["Gluc2"] <- "~rcspline.eval(Gluc1,knots = attributes(Gluc_rcs)$parms,inclx = TRUE)[,2]"
+meth["Gluc3"] <- "~rcspline.eval(Gluc1,knots = attributes(Gluc_rcs)$parms,inclx = TRUE)[,3]"
+
+meth["AgeHrate"] <- "~I(Age1*Hrate1)"
+meth["AgeBMI"] <- "~I(Age1*BMI1)"
+meth["AgeCig"] <- "~I(Age1*Cig1)"
+meth["AgeChol"] <- "~I(Age1*Chol1)"
+meth["AgeGluc"] <- "~I(Age1*Gluc1)"
+
+
+meth["SexHrate"] <- "~I((as.numeric(Sex)-1)*Hrate1)"
+meth["SexBMI"] <- "~I((as.numeric(Sex)-1)*BMI1)"
+meth["SexCig"] <- "~I((as.numeric(Sex)-1)*Cig1)"
+meth["SexChol"] <- "~I((as.numeric(Sex)-1)*Chol1)"
+meth["SexGluc"] <- "~I((as.numeric(Sex)-1)*Gluc1)"
+```
+
+<br/>
+As the final step, we need to determine which variables should actually be used in the imputation models for each variable. We will use the function *quickpred*, which selects variables that are correlated with a given variable with a correlation coefficient greater than specified values. We also discuss using the derived variables for the imputation of variables from which these are directly derived. Not doing so would introduce imputation *loops* into our imputation, which could result in an imputation process that would not have a stationary distribution. 
+<br/>
+
+```{r}
+pred <- quickpred(framingham_ext,mincor = 0.10)
+
+pred["Hrate1",c("Hrate2","Hrate3","AgeHrate","SexHrate")] <- 0
+pred["BMI1",c("BMI2","BMI3","AgeBMI","SexBMI")] <- 0
+pred["Cig1",c("Cig2","AgeCig","SexCig")] <- 0
+pred["Chol1",c("Chol2","Chol3","AgeChol","SexChol")] <- 0
+pred["Gluc1",c("Gluc2","Gluc3","AgeGluc","SexGluc")] <- 0
+
+table(rowSums(pred))
+mean(rowSums(pred)[rowSums(pred)>0])
+```
+
+<br/>
+The recommended number of predictor variables in an imputation model is between 15 and 25, according to *Stef Van Buuren. Flexible imputation of missing data. CRC press, 2018*. We observe that our imputation models generally meet this recommendation.
+
+Having specified all imputation models, we can finally perform the imputation. We will perform 10 iterations of the FCS imputation. 
+<br/>
+
+```{r, warning=FALSE}
+imp <- mice(framingham_ext, pred = pred,meth = meth, m = 1, maxit = 10, seed = 123)
+```
+
+<br/>
+An important step is now to diagnose the imputation. First, we need to check the progress of the imputation process. Function *plot(imp)* plots means and standard deviations for each imputed variable. These values should change randomly from one iteration to the next, i.e.,  there should be no apparent trend. Otherwise, the imputation process did not converge to a stationary distribution. Notice that **Hrate** was missing just one value.
+<br/>
+
+```{r, fig.align = 'center'}
+plot(imp)
+```
+
+<br/>
+We see no obvious trends. However, this issue can be challenging to assess for a short series. Thus, let us repeat the plot for a much larger amount of iterations to be sure. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE, results='hide'}
+imp2 <- mice(framingham_ext, pred = pred,meth = meth, m = 1, maxit = 100, seed = 123)
+```
+
+```{r, fig.align = 'center'}
+plot(imp2)
+```
+
+<br/>
+Again, we see no obvious trends. Thus, we will continue to analyze the imputation *imp*. Next, we should compare the distributions of the imputed data with those of the observed data.
+<br/>
+
+```{r, fig.align = 'center'}
+densityplot(imp,~ BMI1)
+densityplot(imp,~ Cig1)
+densityplot(imp,~ Chol1)
+densityplot(imp,~ Meds)
+densityplot(imp,~ Edu)
+densityplot(imp,~ Gluc1)
+```
+
+<br/>
+The only variable that is clearly different is **Cig**. This is because we compare the overall distribution of **Cig** for both nonsmokers and smokers, using imputed values that are specific to smokers only. If we compare only smokers, the distribution of the imputed data appears to be fine.
+<br/>
+
+```{r, fig.align = 'center'}
+densityplot(imp,~ Cig1)
+hist(framingham$Cig[framingham$Smoker == 1],20,xlab = 'Cig for Smokers',main = NULL)
+```
+
+<br/>
+Overall, the imputation seems reasonable. Thus, we will proceed with the analysis of our **TCHD**  model based on the imputed dataset. Let's fit the model.
+<br/>
+
+```{r}
+complete_data <- complete(imp,1)
+complete_data_fit <- complete_data[,c("TCHD","Sex","Age1","Smoker","Stroke","Hyp","Diab","SysP1","DiaP1","Hrate1","BMI1","Cig1","Chol1","Meds","Edu","Gluc1")]
+colnames(complete_data_fit) <-c("TCHD","Sex","Age","Smoker","Stroke","Hyp","Diab","SysP","DiaP","Hrate","BMI","Cig","Chol","Meds","Edu","Gluc")
+
+full_model_mvar_imp <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + rcs(Cig,4) + Meds + Stroke + Hyp + Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4) + Age:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc) + Sex:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc), family = binomial, complete_data_fit)
+
+options(width = 1000)
+
+coeffs <- cbind(round(coefficients(full_model),4),round(coefficients(full_model_mvar_imp),4))
+colnames(coeffs) <- c('Complete Case','Multv. Imp.')
+coeffs
+
+ci <- cbind(confint(full_model),confint(full_model_mvar_imp))
+colnames(ci) <- c('2.5 % (Complete Case)', '97.5 % (Complete Case)', '2.5 % (Multv. Imp.)', '97.5 % (Multv. Imp.)')
+round(ci,4)
+```
+
+<br/>
+Again, the difference between full case analysis and imputation (here, multivariate) is not that big. Let's check whether the results of significance tests changed in a meaningful way.
+<br/>
+
+```{r, echo=FALSE}
+# Sex
+model_no_sex <- glm(TCHD  ~ rcs(Age,4) + Edu + rcs(Cig,4) + Meds + Stroke + Hyp + Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4) + Age:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc), family = binomial, complete_data_fit)
+a1 <- anova(model_no_sex,full_model_mvar_imp)
+
+# Age
+model_no_age <- glm(TCHD  ~ Sex + Edu + rcs(Cig,4) + Meds + Stroke + Hyp + Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4)  + Sex:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc), family = binomial, complete_data_fit)
+a2 <- anova(model_no_age,full_model_mvar_imp)
+
+# Edu
+model_no_edu <- glm(TCHD  ~ Sex + rcs(Age,4) + rcs(Cig,4) + Meds + Stroke + Hyp + Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4) + Age:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc) + Sex:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc), family = binomial, complete_data_fit)
+a3 <- anova(model_no_edu,full_model_mvar_imp)
+
+# Cig
+model_no_cig <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + Meds + Stroke + Hyp + Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4) + Age:(Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc) + Sex:(Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc), family = binomial, complete_data_fit)
+a4 <- anova(model_no_cig,full_model_mvar_imp)
+
+# Meds
+model_no_meds <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + rcs(Cig,4) + Stroke + Hyp + Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4) + Age:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc) + Sex:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc), family = binomial, complete_data_fit)
+a5 <- anova(model_no_meds,full_model_mvar_imp)
+
+# Stroke
+model_no_stroke <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + rcs(Cig,4) + Meds  + Hyp + Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4) + Age:(Cig  + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc) + Sex:(Cig  + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc), family = binomial, complete_data_fit)
+a6 <- anova(model_no_stroke,full_model_mvar_imp)
+
+# Hyp
+model_no_hyp <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + rcs(Cig,4) + Meds + Stroke + Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4) + Age:(Cig + Stroke  + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc) + Sex:(Cig + Stroke  + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc), family = binomial, complete_data_fit)
+a7 <- anova(model_no_hyp,full_model_mvar_imp)
+
+# Diab
+model_no_diab <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + rcs(Cig,4) + Meds + Stroke + Hyp + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4) + Age:(Cig + Stroke + Hyp  + Chol + SysP + DiaP + BMI + Hrate + Gluc) + Sex:(Cig + Stroke + Hyp  + Chol + SysP + DiaP + BMI + Hrate + Gluc), family = binomial, complete_data_fit)
+a8 <- anova(model_no_diab,full_model_mvar_imp)
+
+# Chol
+model_no_chol <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + rcs(Cig,4) + Meds + Stroke + Hyp + Diab  + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4) + Age:(Cig + Stroke + Hyp + Diab + SysP + DiaP + BMI + Hrate + Gluc) + Sex:(Cig + Stroke + Hyp + Diab  + SysP + DiaP + BMI + Hrate + Gluc), family = binomial, complete_data_fit)
+a9 <- anova(model_no_chol,full_model_mvar_imp)
+
+# Sysp
+model_no_sysp <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + rcs(Cig,4) + Meds + Stroke + Hyp + Diab + rcs(Chol,4)  + rcs(DiaP,4) + rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4) + Age:(Cig + Stroke + Hyp + Diab + Chol  + DiaP + BMI + Hrate + Gluc) + Sex:(Cig + Stroke + Hyp + Diab + Chol  + DiaP + BMI + Hrate + Gluc), family = binomial, complete_data_fit)
+a10 <- anova(model_no_sysp,full_model_mvar_imp)
+
+# DiaP
+model_no_diap <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + rcs(Cig,4) + Meds + Stroke + Hyp + Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4) + Age:(Cig + Stroke + Hyp + Diab + Chol + SysP  + BMI + Hrate + Gluc) + Sex:(Cig + Stroke + Hyp + Diab + Chol + SysP + BMI + Hrate + Gluc), family = binomial, complete_data_fit)
+a11 <- anova(model_no_diap,full_model_mvar_imp)
+
+# BMI
+model_no_bmi <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + rcs(Cig,4) + Meds + Stroke + Hyp + Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(Hrate,4) + rcs(Gluc,4) + Age:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP  + Hrate + Gluc) + Sex:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + Hrate + Gluc), family = binomial, complete_data_fit)
+a12 <- anova(model_no_bmi,full_model_mvar_imp)
+
+# Hrate
+model_no_hrate <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + rcs(Cig,4) + Meds + Stroke + Hyp + Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + rcs(Gluc,4) + Age:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI  + Gluc) + Sex:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI  + Gluc), family = binomial, complete_data_fit)
+a13 <- anova(model_no_hrate,full_model_mvar_imp)
+
+# Gluc
+model_no_gluc <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + rcs(Cig,4) + Meds + Stroke + Hyp + Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + rcs(Hrate,4) + Age:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate) + Sex:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate), family = binomial, complete_data_fit)
+a14 <- anova(model_no_gluc,full_model_mvar_imp)
+
+c <-c(a1$`Pr(>Chi)`[2],a2$`Pr(>Chi)`[2],a3$`Pr(>Chi)`[2],a4$`Pr(>Chi)`[2],a5$`Pr(>Chi)`[2],a6$`Pr(>Chi)`[2],a7$`Pr(>Chi)`[2],a8$`Pr(>Chi)`[2],a9$`Pr(>Chi)`[2],a10$`Pr(>Chi)`[2],a11$`Pr(>Chi)`[2],a12$`Pr(>Chi)`[2],a13$`Pr(>Chi)`[2],a14$`Pr(>Chi)`[2])
+res2 <- as.data.frame(round(c,digits = 5))
+colnames(res2) <- 'Multv. Imp.'
+
+cbind(res1,res2)
+```
+
+<br/>
+Testing nonlinearities and interactions is next.
+<br/>
+
+```{r}
+model_no_nonlinear_mean_imp <- glm(TCHD  ~ Sex + Age + Edu  + Cig + Meds + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc + Age:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc) + Sex:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc), family = binomial, complete_data_fit)
+
+model_no_interactions_mean_imp <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + rcs(Cig,4) + Meds + Stroke + Hyp + Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4), family = binomial, complete_data_fit)
+
+
+anova(model_no_nonlinear_mean_imp,full_model_mvar_imp)
+anova(model_no_interactions_mean_imp,full_model_mvar_imp)
+```
+
+<br/>
+As expected, the same result. We will conclude the comparisons with plots of the predicted probabilities of *TCHD*.
+<br/>
+
+```{r}
+library(sjPlot)
+p1 <- plot_model(full_model, type = "pred", terms = c('Age','Sex'))
+p2 <- plot_model(full_model_mvar_imp, type = "pred", terms = c('Age','Sex'))
+plot_grid(list(p1,p2))
+
+
+p1 <- plot_model(full_model, type = "pred", terms = c('Cig','Sex')) 
+p2 <- plot_model(full_model_mvar_imp, type = "pred", terms = c('Cig','Sex')) 
+plot_grid(list(p1,p2))
+
+
+p1 <- plot_model(full_model, type = "pred", terms = c('Age','Sex','Stroke'),title  = 'Predicted probabilities of TCHD for Stroke')
+p2 <- plot_model(full_model_mvar_imp, type = "pred", terms = c('Age','Sex','Stroke'),title  = 'Predicted probabilities of TCHD for Stroke')
+plot_grid(list(p1,p2))
+
+p1 <-  plot_model(full_model, type = "pred", terms = c('Age','Sex','Hyp'),title  = 'Predicted probabilities of TCHD for Hyp')
+p2 <- plot_model(full_model_mvar_imp, type = "pred", terms = c('Age','Sex','Hyp'),title  = 'Predicted probabilities of TCHD for Hyp')
+plot_grid(list(p1,p2))
+
+p1 <- plot_model(full_model, type = "pred", terms = c('Chol','Sex'))
+p2 <- plot_model(full_model_mvar_imp, type = "pred", terms = c('Chol','Sex'))
+plot_grid(list(p1,p2))
+
+
+p1 <- plot_model(full_model, type = "pred", terms = c('SysP','Sex'))
+p2 <- plot_model(full_model_mvar_imp, type = "pred", terms = c('SysP','Sex'))
+plot_grid(list(p1,p2))
+
+p1 <- plot_model(full_model, type = "pred", terms = c('DiaP','Sex'))
+p2 <- plot_model(full_model_mvar_imp, type = "pred", terms = c('DiaP','Sex'))
+plot_grid(list(p1,p2))
+
+
+p1 <- plot_model(full_model, type = "pred", terms = c('Gluc','Sex'))
+p2 <- plot_model(full_model_mvar_imp, type = "pred", terms = c('Gluc','Sex'))
+plot_grid(list(p1,p2))
+```
+
+<br/>
+Overall, the results of the multivariate single imputation are similar to those of the complete case analysis. Again, we can bootstrap our analysis to account for the imputation. We will demonstrate the percentile-based pairs bootstrapped confidence intervals for single multivariate imputation.
+<br/>
+
+```{r, message=FALSE, warning=FALSE, results='hide'}
+set.seed(123) # for reproducibility
+nb <- 2500
+coefmat <- matrix(NA,nb,length(coefficients(full_model_mvar_imp)))
+colnames(coefmat) <- rownames(as.data.frame(coefficients(full_model_mvar_imp)))
+
+for(i in 1:nb){
+
+  framingham_new <-  framingham[sample(nrow(framingham) , rep=TRUE),]
+  
+  framingham_ext_new <- model.matrix(lm(log(Age) ~ TCHD + Sex + rcs(Age,4) + Smoker + Stroke + Hyp + Diab + rcs(SysP,4) + rcs(DiaP,4) + Age:Stroke + Age:Hyp + Age:Diab + Age:SysP + Age:DiaP + Sex:Stroke + Sex:Hyp + Sex:Diab + Sex:SysP + Sex:DiaP, data = framingham_new))
+  
+  framingham_ext_new <- cbind(framingham_ext_new[,-c(1,17)],framingham_new$Hrate,framingham_new$BMI,framingham_new$Cig,framingham_new$Chol,framingham_new$Meds,framingham_new$Edu,framingham_new$Gluc)
+  
+  colnames(framingham_ext_new) <- c('TCHD','Sex','Age1','Age2','Age3','Smoker','Stroke','Hyp','Diab','SysP1','SysP2','SysP3','DiaP1','DiaP2','DiaP3','AgeStroke','AgeHyp','AgeDiab','AgeSysP','AgeDiaP','SexStroke','SexHyp','SexDiab','SexSysP','SexDiaP','Hrate1','BMI1','Cig1','Chol1','Meds','Edu','Gluc1')
+  
+  framingham_ext_new <- as_tibble(framingham_ext_new)
+  
+  Hrate_rcs <- rcs(framingham_ext_new$Hrate1,4)
+  BMI_rcs <- rcs(framingham_ext_new$BMI1,4)
+  Cig_rcs <- rcs(framingham_ext_new$Cig1,4)
+  Chol_rcs <- rcs(framingham_ext_new$Chol1,4)
+  Gluc_rcs <- rcs(framingham_ext_new$Gluc1,4)
+  
+  framingham_ext_new <- framingham_ext_new %>% add_column(Hrate2 = as.numeric(Hrate_rcs[,2])) %>% add_column(Hrate3 = as.numeric(Hrate_rcs[,3])) %>% add_column(BMI2 = as.numeric(BMI_rcs[,2])) %>% add_column(BMI3 = as.numeric(BMI_rcs[,3])) %>% add_column(Cig2 = as.numeric(Cig_rcs[,2])) %>% add_column(Chol2 = as.numeric(Chol_rcs[,2])) %>% add_column(Chol3 = as.numeric(Chol_rcs[,3])) %>% add_column(Gluc2 = as.numeric(Gluc_rcs[,2])) %>% add_column(Gluc3 = as.numeric(Gluc_rcs[,3]))
+  
+  framingham_ext_new <- framingham_ext_new %>% 
+  add_column(AgeHrate = framingham_ext_new$Age1*framingham_ext_new$Hrate1) %>% 
+  add_column(AgeBMI = framingham_ext_new$Age1*framingham_ext_new$BMI1) %>% 
+  add_column(AgeCig = framingham_ext_new$Age1*framingham_ext_new$Cig1) %>% 
+  add_column(AgeChol = framingham_ext_new$Age1*framingham_ext_new$Chol1) %>% 
+  add_column(AgeGluc = framingham_ext_new$Age1*framingham_ext_new$Gluc1) %>% 
+  add_column(SexHrate = framingham_ext_new$Sex*framingham_ext_new$Hrate1) %>% 
+  add_column(SexBMI = framingham_ext_new$Sex*framingham_ext_new$BMI1) %>% 
+  add_column(SexCig = framingham_ext_new$Sex*framingham_ext_new$Cig1) %>% 
+  add_column(SexChol = framingham_ext_new$Sex*framingham_ext_new$Chol1) %>% 
+  add_column(SexGluc = framingham_ext_new$Sex*framingham_ext_new$Gluc1)
+  
+  framingham_ext_new$TCHD <- factor(framingham_ext_new$TCHD)
+  framingham_ext_new$Sex <- factor(framingham_ext_new$Sex)
+  framingham_ext_new$Smoker <- factor(framingham_ext_new$Smoker)
+  framingham_ext_new$Stroke <- factor(framingham_ext_new$Stroke)
+  framingham_ext_new$Hyp <- factor(framingham_ext_new$Hyp)
+  framingham_ext_new$Diab <- factor(framingham_ext_new$Diab)
+  framingham_ext_new$SexStroke <- factor(framingham_ext_new$SexStroke)
+  framingham_ext_new$SexHyp <- factor(framingham_ext_new$SexHyp)
+  framingham_ext_new$SexDiab <- factor(framingham_ext_new$SexDiab)
+  framingham_ext_new$Meds <- factor(framingham_ext_new$Meds)
+  framingham_ext_new$Edu  <- factor(framingham_ext_new$Edu, ordered = TRUE)
+  
+  ini_new <- mice(framingham_ext_new, m = 1, maxit = 0)
+  meth_new <-ini_new$method
+  
+  meth_new["Hrate2"] <- "~rcspline.eval(Hrate1,knots = attributes(Hrate_rcs)$parms,inclx = TRUE)[,2]"
+  meth_new["Hrate3"] <- "~rcspline.eval(Hrate1,knots = attributes(Hrate_rcs)$parms,inclx = TRUE)[,3]"
+  meth_new["BMI2"] <- "~rcspline.eval(BMI1,knots = attributes(BMI_rcs)$parms,inclx = TRUE)[,2]"
+  meth_new["BMI3"] <- "~rcspline.eval(BMI1,knots = attributes(BMI_rcs)$parms,inclx = TRUE)[,3]"
+  meth_new["Cig2"] <- "~rcspline.eval(Cig1,knots = attributes(Cig_rcs)$parms,inclx = TRUE)[,2]"
+  meth_new["Chol2"] <- "~rcspline.eval(Chol1,knots = attributes(Chol_rcs)$parms,inclx = TRUE)[,2]"
+  meth_new["Chol3"] <- "~rcspline.eval(Chol1,knots = attributes(Chol_rcs)$parms,inclx = TRUE)[,3]"
+  meth_new["Gluc2"] <- "~rcspline.eval(Gluc1,knots = attributes(Gluc_rcs)$parms,inclx = TRUE)[,2]"
+  meth_new["Gluc3"] <- "~rcspline.eval(Gluc1,knots = attributes(Gluc_rcs)$parms,inclx = TRUE)[,3]"
+  
+  meth_new["AgeHrate"] <- "~I(Age1*Hrate1)"
+  meth_new["AgeBMI"] <- "~I(Age1*BMI1)"
+  meth_new["AgeCig"] <- "~I(Age1*Cig1)"
+  meth_new["AgeChol"] <- "~I(Age1*Chol1)"
+  meth_new["AgeGluc"] <- "~I(Age1*Gluc1)"
+  
+  meth_new["SexHrate"] <- "~I((as.numeric(Sex)-1)*Hrate1)"
+  meth_new["SexBMI"] <- "~I((as.numeric(Sex)-1)*BMI1)"
+  meth_new["SexCig"] <- "~I((as.numeric(Sex)-1)*Cig1)"
+  meth_new["SexChol"] <- "~I((as.numeric(Sex)-1)*Chol1)"
+  meth_new["SexGluc"] <- "~I((as.numeric(Sex)-1)*Gluc1)"
+  
+  pred_new <- quickpred(framingham_ext_new,mincor = 0.10)
+  pred_new["Hrate1",c("Hrate2","Hrate3","AgeHrate","SexHrate")] <- 0
+  pred_new["BMI1",c("BMI2","BMI3","AgeBMI","SexBMI")] <- 0
+  pred_new["Cig1",c("Cig2","AgeCig","SexCig")] <- 0
+  pred_new["Chol1",c("Chol2","Chol3","AgeChol","SexChol")] <- 0
+  pred_new["Gluc1",c("Gluc2","Gluc3","AgeGluc","SexGluc")] <- 0
+  
+  imp_new <- mice(framingham_ext_new, pred = pred_new,meth = meth_new, m = 1, maxit = 10)
+  
+  complete_data_new <- complete(imp_new,1)
+  
+  complete_data_fit_new <- complete_data_new[,c("TCHD","Sex","Age1","Smoker","Stroke","Hyp","Diab","SysP1","DiaP1","Hrate1","BMI1","Cig1","Chol1","Meds","Edu","Gluc1")]
+  colnames(complete_data_fit_new) <-c("TCHD","Sex","Age","Smoker","Stroke","Hyp","Diab","SysP","DiaP","Hrate","BMI","Cig","Chol","Meds","Edu","Gluc")
+  
+  full_model_mvar_imp_new <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + rcs(Cig,4) + Meds + Stroke + Hyp + Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4) + Age:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc) + Sex:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc), family = binomial, complete_data_fit_new)
+  
+  
+  coefmat[i,colnames(t(as.data.frame(full_model_mvar_imp_new$coefficients)))] <- t(as.data.frame(full_model_mvar_imp_new$coefficients))
+}
+```
+
+```{r}
+options(width = 1000)
+
+boot_ci <- t(apply(coefmat,2,function(x) quantile(x[!is.na(x)],c(0.025,0.975))))
+
+ci <- cbind(confint(full_model_mvar_imp),boot_ci)
+colnames(ci) <- c('2.5 % (profiling)','97.5 % (profiling)','2.5 % (bootstrap)','97.5 % (bootstrap)')
+ci
+```
+
+<br/>
+We should note that chained equation-based imputation provides unbiased regression estimates under missing at random (MAR) conditions (i.e., missingness depends on the observed data), provided that the imputation models are correctly specified and the chained equations converge to a unique stationary distribution. There is also a so-called congeniality condition, which is essentially about the compatibility of the imputation model with the models used for later analysis (this is the reason why we follow the principle that the imputation model should be as at least as general as the so-called *substantive* model), see *J S. Murray. Multiple imputation: a review of practical and theoretical findings. (2018): 142-159.* for more details. With single imputation, standard errors estimated from the fits also tend to be smaller than they should be.
+
+The bootstrap, followed by single imputation, actually performs quite well and can even be somewhat robust to uncongeniality and misspecification, according to simulations, see *J. Brand, S. van Buuren, S. le Cessie, and W. van den Hout. Combining multiple imputation and bootstrap in the analysis of cost-effectiveness trial data. Statistics in Medicine 38.2 (2019): 210-220* and *J. W. Bartlett and R. A. Hughes. Bootstrap inference for multiple imputation under uncongeniality and misspecification. Statistical methods in medical research 29.12 (2020): 3533-3546*. 
+
+Another approach to addressing the issue of underestimating the overall variance in the data is *multiple imputation*, which involves generating multiple imputed data sets. Then, we can use so-called Rubin's rules to pool the results and obtain valid parameter estimates with correct standard errors (provided that all the assumptions are met).
+<br/>
+
+## Multiple imputation
+
+<br/>
+We already prepared everything to perform multiple imputation. We just generate multiple imputed datasets using the imputation model we prepared.
+<br/>
+
+```{r, message=FALSE, warning=FALSE, results='hide'}
+mimp <- mice(framingham_ext, pred = pred,meth = meth, m = 10, maxit = 10, seed = 123)
+```
+
+<br/>
+Again, we can check the convergence of the chained equations.
+<br/>
+
+```{r}
+plot(mimp)
+```
+
+<br/>
+We see that individual single imputations mixed well. We can also check the distributions of the imputed values.
+<br/>
+
+```{r, fig.align = 'center'}
+densityplot(mimp,~ BMI1)
+densityplot(mimp,~ Cig1)
+densityplot(mimp,~ Chol1)
+densityplot(mimp,~ Meds)
+densityplot(mimp,~ Edu)
+densityplot(mimp,~ Gluc1)
+```
+
+<br/>
+Again, these values seem reasonable. Let us fit the model using the imputed datasets; in our case, we obtain 10 models.
+<br/>
+
+```{r}
+model_full_mimp <- with(mimp, glm(TCHD ~ Sex + Age1 + Age2 + Age3 + Stroke + Hyp + Diab + SysP1 + SysP2 + SysP3 + DiaP1 + DiaP2 + DiaP3 + AgeStroke + AgeHyp + AgeDiab + AgeSysP + AgeDiaP + SexStroke + SexHyp + SexDiab + SexSysP + SexDiaP + Hrate1 + BMI1 + Cig1 + Chol1 + Meds + Edu + Gluc1 + Hrate2 + Hrate3 + BMI2 + BMI3 + Cig2 + Chol2 + Chol3 + Gluc2 + Gluc3 + AgeHrate + AgeBMI + AgeCig + AgeChol + AgeGluc + SexHrate + SexBMI + SexCig + SexChol + SexGluc,family = binomial))
+```
+
+<br/>
+Function *pool* pools these models together (using Rubin's rules) and provides parameter estimates. The key values are *estimate* (pooled estimate), *t* (its total variance), and *df* (degrees of freedom for hypotheses testing); see https://www.rdocumentation.org/packages/mice/versions/3.17.0/topics/pool for the detailed explanation.
+<br/>
+
+
+```{r}
+options(width = 1000)
+pool(model_full_mimp)
+```
+
+<br/>
+Mice also supports pooled hypothesis testing, such as the Wald test. For example, we can test the significance of **sex** as follows.
+<br/>
+
+```{r}
+model_no_sex_mimp <- with(mimp, glm(TCHD ~ Age1 + Age2 + Age3 + Stroke + Hyp + Diab + SysP1 + SysP2 + SysP3 + DiaP1 + DiaP2 + DiaP3 + AgeStroke + AgeHyp + AgeDiab + AgeSysP + AgeDiaP  + Hrate1 + BMI1 + Cig1 + Chol1 + Meds + Edu + Gluc1 + Hrate2 + Hrate3 + BMI2 + BMI3 + Cig2 + Chol2 + Chol3 + Gluc2 + Gluc3 + AgeHrate + AgeBMI + AgeCig + AgeChol + AgeGluc,family = binomial))
+
+
+summary(D1(model_full_mimp, model_no_sex_mimp))
+```
+
+<br/>
+Let's evaluate the significance of all predictors.
+<br/>
+
+```{r, echo=FALSE}
+# Sex
+model_no_sex_mimp <- with(mimp, glm(TCHD ~ Age1 + Age2 + Age3 + Stroke + Hyp + Diab + SysP1 + SysP2 + SysP3 + DiaP1 + DiaP2 + DiaP3 + AgeStroke + AgeHyp + AgeDiab + AgeSysP + AgeDiaP + Hrate1 + BMI1 + Cig1 + Chol1 + Meds + Edu + Gluc1 + Hrate2 + Hrate3 + BMI2 + BMI3 + Cig2 + Chol2 + Chol3 + Gluc2 + Gluc3 + AgeHrate + AgeBMI + AgeCig + AgeChol + AgeGluc,family = binomial))
+
+a1 <- summary(D1(model_full_mimp, model_no_sex_mimp))
+
+# Age
+model_no_age_mimp <- with(mimp, glm(TCHD ~ Sex + Stroke + Hyp + Diab + SysP1 + SysP2 + SysP3 + DiaP1 + DiaP2 + DiaP3 + SexStroke + SexHyp + SexDiab + SexSysP + SexDiaP + Hrate1 + BMI1 + Cig1 + Chol1 + Meds + Edu + Gluc1 + Hrate2 + Hrate3 + BMI2 + BMI3 + Cig2 + Chol2 + Chol3 + Gluc2 + Gluc3 + SexHrate + SexBMI + SexCig + SexChol + SexGluc,family = binomial))
+a2 <- summary(D1(model_full_mimp, model_no_age_mimp))
+
+# Edu
+model_no_edu_mimp <- with(mimp, glm(TCHD ~ Sex + Age1 + Age2 + Age3 + Stroke + Hyp + Diab + SysP1 + SysP2 + SysP3 + DiaP1 + DiaP2 + DiaP3 + AgeStroke + AgeHyp + AgeDiab + AgeSysP + AgeDiaP + SexStroke + SexHyp + SexDiab + SexSysP + SexDiaP + Hrate1 + BMI1 + Cig1 + Chol1 + Meds + Gluc1 + Hrate2 + Hrate3 + BMI2 + BMI3 + Cig2 + Chol2 + Chol3 + Gluc2 + Gluc3 + AgeHrate + AgeBMI + AgeCig + AgeChol + AgeGluc + SexHrate + SexBMI + SexCig + SexChol + SexGluc,family = binomial))
+a3 <- summary(D1(model_full_mimp, model_no_edu_mimp))
+
+# Cig
+model_no_cig_mimp <- with(mimp, glm(TCHD ~ Sex + Age1 + Age2 + Age3 + Stroke + Hyp + Diab + SysP1 + SysP2 + SysP3 + DiaP1 + DiaP2 + DiaP3 + AgeStroke + AgeHyp + AgeDiab + AgeSysP + AgeDiaP + SexStroke + SexHyp + SexDiab + SexSysP + SexDiaP + Hrate1 + BMI1  + Chol1 + Meds + Edu + Gluc1 + Hrate2 + Hrate3 + BMI2 + BMI3 + Chol2 + Chol3 + Gluc2 + Gluc3 + AgeHrate + AgeBMI + AgeChol + AgeGluc + SexHrate + SexBMI + SexChol + SexGluc,family = binomial))
+a4 <- summary(D1(model_full_mimp, model_no_cig_mimp))
+
+# Meds
+model_no_meds_mimp <- with(mimp, glm(TCHD ~ Sex + Age1 + Age2 + Age3 + Stroke + Hyp + Diab + SysP1 + SysP2 + SysP3 + DiaP1 + DiaP2 + DiaP3 + AgeStroke + AgeHyp + AgeDiab + AgeSysP + AgeDiaP + SexStroke + SexHyp + SexDiab + SexSysP + SexDiaP + Hrate1 + BMI1 + Cig1 + Chol1 + Edu + Gluc1 + Hrate2 + Hrate3 + BMI2 + BMI3 + Cig2 + Chol2 + Chol3 + Gluc2 + Gluc3 + AgeHrate + AgeBMI + AgeCig + AgeChol + AgeGluc + SexHrate + SexBMI + SexCig + SexChol + SexGluc,family = binomial))
+
+a5 <- summary(D1(model_full_mimp, model_no_meds_mimp))
+
+# Stroke
+model_no_stroke_mimp <- with(mimp, glm(TCHD ~ Sex + Age1 + Age2 + Age3 + Hyp + Diab + SysP1 + SysP2 + SysP3 + DiaP1 + DiaP2 + DiaP3 + AgeHyp + AgeDiab + AgeSysP + AgeDiaP + SexHyp + SexDiab + SexSysP + SexDiaP + Hrate1 + BMI1 + Cig1 + Chol1 + Meds + Edu + Gluc1 + Hrate2 + Hrate3 + BMI2 + BMI3 + Cig2 + Chol2 + Chol3 + Gluc2 + Gluc3 + AgeHrate + AgeBMI + AgeCig + AgeChol + AgeGluc + SexHrate + SexBMI + SexCig + SexChol + SexGluc,family = binomial))
+a6 <- summary(D1(model_full_mimp, model_no_stroke_mimp))
+
+# Hyp
+model_no_hyp_mimp <- with(mimp, glm(TCHD ~ Sex + Age1 + Age2 + Age3 + Stroke + Diab + SysP1 + SysP2 + SysP3 + DiaP1 + DiaP2 + DiaP3 + AgeStroke + AgeDiab + AgeSysP + AgeDiaP + SexStroke + SexDiab + SexSysP + SexDiaP + Hrate1 + BMI1 + Cig1 + Chol1 + Meds + Edu + Gluc1 + Hrate2 + Hrate3 + BMI2 + BMI3 + Cig2 + Chol2 + Chol3 + Gluc2 + Gluc3 + AgeHrate + AgeBMI + AgeCig + AgeChol + AgeGluc + SexHrate + SexBMI + SexCig + SexChol + SexGluc,family = binomial))
+a7 <- summary(D1(model_full_mimp, model_no_hyp_mimp))
+
+# Diab
+model_no_diab_mimp <- with(mimp, glm(TCHD ~ Sex + Age1 + Age2 + Age3 + Stroke + Hyp + SysP1 + SysP2 + SysP3 + DiaP1 + DiaP2 + DiaP3 + AgeStroke + AgeHyp + AgeSysP + AgeDiaP + SexStroke + SexHyp + SexSysP + SexDiaP + Hrate1 + BMI1 + Cig1 + Chol1 + Meds + Edu + Gluc1 + Hrate2 + Hrate3 + BMI2 + BMI3 + Cig2 + Chol2 + Chol3 + Gluc2 + Gluc3 + AgeHrate + AgeBMI + AgeCig + AgeChol + AgeGluc + SexHrate + SexBMI + SexCig + SexChol + SexGluc,family = binomial))
+a8 <- summary(D1(model_full_mimp, model_no_diab_mimp))
+
+# Chol
+model_no_chol_mimp <- with(mimp, glm(TCHD ~ Sex + Age1 + Age2 + Age3 + Stroke + Hyp + Diab + SysP1 + SysP2 + SysP3 + DiaP1 + DiaP2 + DiaP3 + AgeStroke + AgeHyp + AgeDiab + AgeSysP + AgeDiaP + SexStroke + SexHyp + SexDiab + SexSysP + SexDiaP + Hrate1 + BMI1 + Cig1 + Meds + Edu + Gluc1 + Hrate2 + Hrate3 + BMI2 + BMI3 + Cig2 + Gluc2 + Gluc3 + AgeHrate + AgeBMI + AgeCig  + AgeGluc + SexHrate + SexBMI + SexCig + SexGluc,family = binomial))
+a9 <- summary(D1(model_full_mimp, model_no_chol_mimp))
+
+# Sysp
+model_no_sysp_mimp <- with(mimp, glm(TCHD ~ Sex + Age1 + Age2 + Age3 + Stroke + Hyp + Diab + DiaP1 + DiaP2 + DiaP3 + AgeStroke + AgeHyp + AgeDiab + AgeDiaP + SexStroke + SexHyp + SexDiab + SexDiaP + Hrate1 + BMI1 + Cig1 + Chol1 + Meds + Edu + Gluc1 + Hrate2 + Hrate3 + BMI2 + BMI3 + Cig2 + Chol2 + Chol3 + Gluc2 + Gluc3 + AgeHrate + AgeBMI + AgeCig + AgeChol + AgeGluc + SexHrate + SexBMI + SexCig + SexChol + SexGluc,family = binomial))
+a10 <- summary(D1(model_full_mimp, model_no_sysp_mimp))
+
+# DiaP
+model_no_diap_mimp <- with(mimp, glm(TCHD ~ Sex + Age1 + Age2 + Age3 + Stroke + Hyp + Diab + SysP1 + SysP2 + SysP3 + AgeStroke + AgeHyp + AgeDiab + AgeSysP  + SexStroke + SexHyp + SexDiab + SexSysP + Hrate1 + BMI1 + Cig1 + Chol1 + Meds + Edu + Gluc1 + Hrate2 + Hrate3 + BMI2 + BMI3 + Cig2 + Chol2 + Chol3 + Gluc2 + Gluc3 + AgeHrate + AgeBMI + AgeCig + AgeChol + AgeGluc + SexHrate + SexBMI + SexCig + SexChol + SexGluc,family = binomial))
+a11 <- summary(D1(model_full_mimp, model_no_diap_mimp))
+
+# BMI
+model_no_bmi_mimp <- with(mimp, glm(TCHD ~ Sex + Age1 + Age2 + Age3 + Stroke + Hyp + Diab + SysP1 + SysP2 + SysP3 + DiaP1 + DiaP2 + DiaP3 + AgeStroke + AgeHyp + AgeDiab + AgeSysP + AgeDiaP + SexStroke + SexHyp + SexDiab + SexSysP + SexDiaP + Hrate1 + Cig1 + Chol1 + Meds + Edu + Gluc1 + Hrate2 + Hrate3 + Cig2 + Chol2 + Chol3 + Gluc2 + Gluc3 + AgeHrate + AgeCig + AgeChol + AgeGluc + SexHrate + SexCig + SexChol + SexGluc,family = binomial))
+a12 <- summary(D1(model_full_mimp, model_no_bmi_mimp))
+
+# Hrate
+model_no_hrate_mimp <- with(mimp, glm(TCHD ~ Sex + Age1 + Age2 + Age3 + Stroke + Hyp + Diab + SysP1 + SysP2 + SysP3 + DiaP1 + DiaP2 + DiaP3 + AgeStroke + AgeHyp + AgeDiab + AgeSysP + AgeDiaP + SexStroke + SexHyp + SexDiab + SexSysP + SexDiaP  + BMI1 + Cig1 + Chol1 + Meds + Edu + Gluc1 + BMI2 + BMI3 + Cig2 + Chol2 + Chol3 + Gluc2 + Gluc3 + AgeBMI + AgeCig + AgeChol + AgeGluc + SexBMI + SexCig + SexChol + SexGluc,family = binomial))
+a13 <- summary(D1(model_full_mimp, model_no_hrate_mimp))
+
+# Gluc
+model_no_gluc_mimp <- with(mimp, glm(TCHD ~ Sex + Age1 + Age2 + Age3 + Stroke + Hyp + Diab + SysP1 + SysP2 + SysP3 + DiaP1 + DiaP2 + DiaP3 + AgeStroke + AgeHyp + AgeDiab + AgeSysP + AgeDiaP + SexStroke + SexHyp + SexDiab + SexSysP + SexDiaP + Hrate1 + BMI1 + Cig1 + Chol1 + Meds + Edu + Hrate2 + Hrate3 + BMI2 + BMI3 + Cig2 + Chol2 + Chol3 + AgeHrate + AgeBMI + AgeCig + AgeChol + SexHrate + SexBMI + SexCig + SexChol,family = binomial))
+a14 <- summary(D1(model_full_mimp, model_no_gluc_mimp))
+
+
+c2 <-c(a1$comparisons$p.value,a2$comparisons$p.value,a3$comparisons$p.value,a4$comparisons$p.value,a5$comparisons$p.value,a6$comparisons$p.value,a7$comparisons$p.value,a8$comparisons$p.value,a9$comparisons$p.value,a10$comparisons$p.value,a11$comparisons$p.value,a12$comparisons$p.value,a13$comparisons$p.value,a14$comparisons$p.value)
+
+res_mimp <- cbind(res1,round(c2,5))
+colnames(res_mimp) <- c('Variable','Complete Case','Multiple. Imp.')
+res_mimp
+```
+
+<br/>
+We again got very similar results to the complete case analysis. Next, we test nonlinear terms and interactions.
+<br/>
+
+```{r}
+model_no_int_mimp <- with(mimp, glm(TCHD ~ Sex + Age1 + Age2 + Age3 + Stroke + Hyp + Diab + SysP1 + SysP2 + SysP3 + DiaP1 + DiaP2 + DiaP3 + Hrate1 + BMI1 + Cig1 + Chol1 + Meds + Edu + Gluc1 + Hrate2 + Hrate3 + BMI2 + BMI3 + Cig2 + Chol2 + Chol3 + Gluc2 + Gluc3,family = binomial))
+
+model_no_nonlin_mimp <- with(mimp, glm(TCHD ~ Sex + Age1 + Stroke + Hyp + Diab + SysP1 + DiaP1 + AgeStroke + AgeHyp + AgeDiab + AgeSysP + AgeDiaP + SexStroke + SexHyp + SexDiab + SexSysP + SexDiaP + Hrate1 + BMI1 + Cig1 + Chol1 + Meds + Edu + Gluc1 + AgeHrate + AgeBMI + AgeCig + AgeChol + AgeGluc + SexHrate + SexBMI + SexCig + SexChol + SexGluc,family = binomial))
+
+
+summary(D1(model_full_mimp, model_no_int_mimp))
+summary(D1(model_full_mimp, model_no_nonlin_mimp))
+```
+
+<br/>
+Once more, these results correspond to the complete case analysis.
+
+Mice, unfortunately, does not provide a function for computing predictions and standard errors/confidence intervals. Luckily, the application of Rubin's rules for predictions is not that complicated; see *A. Miles. Obtaining predictions from models fit to multiply imputed data. Sociological Methods & Research 45.1 (2016): 175-185.*
+
+We demonstrate predicting the linear predictor (i.e., log odds ratio) for the first observation with age replaced by values (40, 45,..., 90). We manually fit the full model for each imputed dataset, compute the predictions, and pool them together using Rubin's rules. We should note that Rubin's rules assume that the statistics are normal (hence, we use the linear predictor and not the response). 
+<br/>
+
+```{r}
+age_seq <- seq(40,90,5)
+obs <- complete_data_fit[rep(1, length(age_seq)), ]
+obs$Age <- age_seq
+m <- 10
+
+fit <- matrix(NA,m,length(age_seq))
+se.fit <- matrix(NA,m,length(age_seq))
+
+for(i in 1:m){
+complete_data_i <- complete(mimp,i)
+complete_data_fit_i <- complete_data_i[,c("TCHD","Sex","Age1","Smoker","Stroke","Hyp","Diab","SysP1","DiaP1","Hrate1","BMI1","Cig1","Chol1","Meds","Edu","Gluc1")]
+colnames(complete_data_fit_i) <-c("TCHD","Sex","Age","Smoker","Stroke","Hyp","Diab","SysP","DiaP","Hrate","BMI","Cig","Chol","Meds","Edu","Gluc")
+
+full_model_mimp_i <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + rcs(Cig,4) + Meds + Stroke + Hyp + Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4) + Age:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc) + Sex:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc), family = binomial, complete_data_fit_i)
+
+pred_i <- predict(full_model_mimp_i,obs,se.fit = TRUE)
+
+fit[i,] <- pred_i$fit
+se.fit[i,] <- pred_i$se.fit
+}
+
+# Rubin's rules
+
+# point estimate = average fit
+lin_pred <- apply(fit,2,mean)
+
+# within imputation variance = average se.fit^2
+var_within <- apply(se.fit^2,2,mean)
+
+# between imputation variance
+fit_minus <- fit
+for(i in 1:m) {
+  fit_minus[i,] <- fit_minus[i,] - lin_pred
+}
+
+var_between <- 1/(m-1) * apply(fit_minus^2,2,sum)
+
+# total variance
+
+var_total <- var_within + var_between*(1-1/m)
+sd_total <- sqrt(var_total)
+
+
+lin_pred
+sd_total
+```
+
+<br/>
+The confidence interval for the response (i.e., probability of *TCHD*) can be estimated simply as
+<br/>
+
+```{r}
+prob <- exp(lin_pred) / (1 + exp(lin_pred)) 
+prob_ub <- exp(lin_pred+qnorm(0.975)*sd_total) / (1 + exp(lin_pred+qnorm(0.975)*sd_total)) 
+prob_lb <- exp(lin_pred-qnorm(0.975)*sd_total) / (1 + exp(lin_pred-qnorm(0.975)*sd_total))
+
+zci <- t(rbind(prob_lb,prob,prob_ub))
+colnames(zci) <- c('2.5%','pred','97.5%')
+zci
+```
+
+<br/>
+A valid alternative to Rubin's rules would be to use a bootstrap after the imputation, i.e., perform a bootstrap for each imputed dataset and then take, e.g., percentile-based interval from all the results. This is useful, e.g., in cases when Rubin's rules would be too complex to use or when the computed statistic does not have (at least approximately) a normal distribution, see *M. Schomaker and C. Heumann. Bootstrap inference when using multiple imputation. Statistics in medicine 37.14 (2018): 2252-2266.*
+<br/>
+
+```{r}
+set.seed(123) # for reproducibility
+age_seq <- seq(40,90,5)
+obs <- complete_data_fit[rep(1, length(age_seq)), ]
+obs$Age <- age_seq
+
+m <- 10
+nb <- 1000
+k <- 1
+
+fit_b <- matrix(NA,m*nb,length(age_seq))
+
+for(i in 1:m){
+  
+complete_data_i <- complete(mimp,i)
+complete_data_fit_i <- complete_data_i[,c("TCHD","Sex","Age1","Smoker","Stroke","Hyp","Diab","SysP1","DiaP1","Hrate1","BMI1","Cig1","Chol1","Meds","Edu","Gluc1")]
+colnames(complete_data_fit_i) <-c("TCHD","Sex","Age","Smoker","Stroke","Hyp","Diab","SysP","DiaP","Hrate","BMI","Cig","Chol","Meds","Edu","Gluc")
+
+for (j in 1:nb){
+  
+complete_data_fit_i_new <-  complete_data_fit_i[sample(nrow(complete_data_fit_i) , rep=TRUE),]
+
+full_model_mimp_i_new <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + rcs(Cig,4) + Meds + Stroke + Hyp + Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4) + Age:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc) + Sex:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc), family = binomial, complete_data_fit_i_new)
+
+fit_b[k,] <- predict(full_model_mimp_i_new,obs,type = 'response')
+k <- k + 1
+}
+}
+
+boot_ci <- t(apply(fit_b,2,function(x) quantile(x[!is.na(x)],c(0.025,0.975))))
+ci_all <- cbind(prob_lb,prob_ub,boot_ci)
+colnames(ci_all) <- c('2.5% (Rubin)','97.5% (Rubin)','2.5% (Boot)','97.5% (Boot)')
+ci_all
+```
+
+<br/>
+Multiple imputation, combined with Rubin's rules or a subsequent bootstrap, provides valid inference under correct specification and congeniality. To obtain a more robust inference, one can bootstrap the original dataset and then perform multiple imputation, see *J. W. Bartlett and R. A. Hughes. Bootstrap inference for multiple imputation under uncongeniality and misspecification. Statistical methods in medical research 29.12 (2020): 3533-3546*. This is, of course, very computationally expensive (we have to perform a separate multiple imputation for each bootstrap sample, not just once), and thus, one can use a cheaper bootstrap + single imputation, which we performed earlier.
+
+We conclude Part Two here. We observed that our inference was pretty much the same regardless of the method. In the final part of this demonstration, we examine the predictive performance of our model and discuss our results. 
+<br/>
