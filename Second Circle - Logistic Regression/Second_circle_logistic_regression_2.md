@@ -400,12 +400,12 @@ Concerning hypothesis testing, we can use the bootstrap Wald test.
 First, we compute the Wald test statistic for the original sample:
 $W =\frac{\hat{\theta}^T \hat{\theta}}{\mathrm{Cov}\; \hat{\theta}}$.
 Then, we compute for each bootstrap sample the Wald test statistic
-$W^* =\frac{(\theta - \hat{\theta})^T(\theta - \hat{\theta})}{\mathrm{Cov}\; \theta}$,
-where $\theta^*$ is the estimate for the bootstrap sample. The p-value
-for the test is then $\frac{\# W^* > W}{\# W^*}$. The idea behind the
+$W^* =\frac{(\theta' - \hat{\theta})^T(\theta' - \hat{\theta})}{\mathrm{Cov}\; \theta}$,
+where $\theta'$ is the estimate for the bootstrap sample. The p-value
+for the test is then $\frac{\# W' > W}{\# W'}$. The idea behind the
 test is that under alternative, the Wald test statistic $W$ between
 $\hat{\theta}$ and the null $\theta_0 = 0$ should be much larger than
-the Wald test statistic $W^*$ between $\hat{\theta}$ and $\theta^*$, see
+the Wald test statistic $W^*$ between $\hat{\theta}$ and $\theta'$, see
 *P. Hall, and S. R. Wilson. Two guidelines for bootstrap hypothesis
 testing. Biometrics (1991): 757-762* for more details.
 
