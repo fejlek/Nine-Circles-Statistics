@@ -849,7 +849,7 @@ plot(obs$BMI,pred,xlab = 'BMI', ylab = 'Life expectancy (Turkey)')
 ```
 
 <br/>
-Having identified BMI as a negative factor in a life expectancy model is not without some basis. BMI is associated with an increased mortality rate. See, e.g., *H.L. Walls et al. Obesity and trends in life expectancy. Journal of Obesity 2012.1 (2012): 107989*, *K. Bhaskaran et al. "Association of BMI with overall and cause-specific mortality: a population-based cohort study of 3· 6 million adults in the UK." The Lancet Diabetes & Endocrinology 6.12 (2018): 944-953*. Still, if the dependency in terms of the country-level life expectancy should follow individual trends, this dependence should be "J-shaped," i.e., life expectancy shows a decrease for very low and very high BMIs
+Having identified BMI as a negative factor in a life expectancy model is not without some basis. BMI is associated with an increased mortality rate. See, e.g., *H.L. Walls et al. Obesity and trends in life expectancy. Journal of Obesity 2012.1 (2012): 107989*, *K. Bhaskaran et al. "Association of BMI with overall and cause-specific mortality: a population-based cohort study of 3· 6 million adults in the UK." The Lancet Diabetes & Endocrinology 6.12 (2018): 944-953*. Still, if the dependency in terms of the country-level life expectancy should follow individual trends, this dependence should be "hill-shaped," i.e., life expectancy shows a decrease for very low and very high BMIs
 <br/>
 
 

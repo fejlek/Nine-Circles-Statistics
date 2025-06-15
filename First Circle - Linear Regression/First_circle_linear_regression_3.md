@@ -1066,7 +1066,7 @@ al. “Association of BMI with overall and cause-specific mortality: a
 population-based cohort study of 3· 6 million adults in the UK.” The
 Lancet Diabetes & Endocrinology 6.12 (2018): 944-953*. Still, if the
 dependency in terms of the country-level life expectancy should follow
-individual trends, this dependence should be “J-shaped,” i.e., life
+individual trends, this dependence should be “hill-shaped,” i.e., life
 expectancy shows a decrease for very low and very high BMIs <br/>
 
 ## Conclusions
