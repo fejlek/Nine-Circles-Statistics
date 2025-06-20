@@ -373,7 +373,9 @@ ci
 <br/>
 We see that bootstrap confidence intervals are quite similar to those based on likelihood profiling. We should note that the bootstrap does not fix the main issue of the mean imputation (our estimates could be severely biased in general). Bootstrap confidence intervals for predictions would be obtained in a similar manner. 
 
-Concerning hypothesis testing, we can use the bootstrap Wald test. First, we compute the Wald test statistic for the original sample: $W =\frac{\hat{\theta}^T \hat{\theta}}{\mathrm{Cov}\; \hat{\theta}}$. Then, we compute for each bootstrap sample the Wald test statistic $W^* =\frac{(\theta^* - \hat{\theta})^T(\theta^* - \hat{\theta})}{\mathrm{Cov}\; \theta^*}$, where $\theta^*$ is the estimate for the bootstrap sample. The p-value for the test is then $\frac{\# W^* > W}{\# W^*}$. The idea behind the test is that under alternative, the Wald test statistic $W$ between $\hat{\theta}$  and the null $\theta_0 = 0$ should be much larger than the Wald test statistic $W^*$ between $\hat{\theta}$ and $\theta^*$, see *P. Hall, and S. R. Wilson. Two guidelines for bootstrap hypothesis testing. Biometrics (1991): 757-762*  for more details.
+Concerning hypothesis testing, we can use the bootstrap Wald test. First, we compute the Wald test statistic for the original sample: $W =\frac{\hat{\theta}^T \hat{\theta}}{\mathrm{Cov}\; \hat{\theta}}$. Then, we compute for each bootstrap sample the Wald test statistic $W^* =\frac{(\theta' - \hat{\theta})^T(\theta' - \hat{\theta})}{\mathrm{Cov}\; \theta}$,
+where $\theta'$ is the estimate for the bootstrap sample. The p-value for the test is then $\frac{\mathrm{count}\; W' > W}{\mathrm{count}\; W'}$. The idea behind the test is that under alternative, the Wald test statistic $W$ between $\hat{\theta}$ and the null $\theta_0 = 0$ should be much larger than the Wald test statistic $W'$ between $\hat{\theta}$ and $\theta'$, see
+*P. Hall, and S. R. Wilson. Two guidelines for bootstrap hypothesis testing. Biometrics (1991): 757-762* for more details.
 
 We demonstrate the bootstrap Wald test for **Sex**, **Education**, and interactions terms.
 <br/>
@@ -570,7 +572,7 @@ meth["SexGluc"] <- "~I((as.numeric(Sex)-1)*Gluc1)"
 ```
 
 <br/>
-As the final step, we need to determine which variables should actually be used in the imputation models for each variable. We will use the function *quickpred*, which selects variables that are correlated with a given variable with a correlation coefficient greater than specified values. We also discuss using the derived variables for the imputation of variables from which these are directly derived. Not doing so would introduce imputation *loops* into our imputation, which could result in an imputation process that would not have a stationary distribution. 
+As the final step, we need to determine which variables should actually be used in the imputation models for each variable. We will use the function *quickpred*, which selects variables that are correlated with a given variable with a correlation coefficient greater than specified values. We also disallow using the derived variables for the imputation of variables from which these are directly derived. Not doing so would introduce imputation *loops* into the chained equations, which could result in an imputation process that would not have a stationary distribution. 
 <br/>
 
 ```{r}
@@ -746,7 +748,7 @@ anova(model_no_interactions_mean_imp,full_model_mvar_imp)
 As expected, the same result. We will conclude the comparisons with plots of the predicted probabilities of *TCHD*.
 <br/>
 
-```{r}
+```{r, echo=FALSE}
 library(sjPlot)
 p1 <- plot_model(full_model, type = "pred", terms = c('Age','Sex'))
 p2 <- plot_model(full_model_mvar_imp, type = "pred", terms = c('Age','Sex'))

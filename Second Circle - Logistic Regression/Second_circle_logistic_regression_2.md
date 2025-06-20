@@ -1,11 +1,3 @@
-# The Second Circle: Logistic Regression, Part Two
-
-<br/>
-Jiří Fejlek
-
-2025-06-11
-<br/>
-
 <br/> In Part Two of this project, we will demonstrate the use of
 imputation methods on the Framingham Heart Study dataset (mean,
 multivariate, and multiple imputation) and compare them with the
@@ -402,8 +394,9 @@ $W =\frac{\hat{\theta}^T \hat{\theta}}{\mathrm{Cov}\; \hat{\theta}}$.
 Then, we compute for each bootstrap sample the Wald test statistic
 $W^* =\frac{(\theta' - \hat{\theta})^T(\theta' - \hat{\theta})}{\mathrm{Cov}\; \theta}$,
 where $\theta'$ is the estimate for the bootstrap sample. The p-value
-for the test is then $\frac{\mathrm{count} W' > W}{\mathrm{count} W'}$. The idea behind the
-test is that under alternative, the Wald test statistic $W$ between
+for the test is then
+$\frac{\mathrm{count}\; W' > W}{\mathrm{count}\; W'}$. The idea behind
+the test is that under alternative, the Wald test statistic $W$ between
 $\hat{\theta}$ and the null $\theta_0 = 0$ should be much larger than
 the Wald test statistic $W'$ between $\hat{\theta}$ and $\theta'$, see
 *P. Hall, and S. R. Wilson. Two guidelines for bootstrap hypothesis
@@ -705,10 +698,10 @@ meth["SexGluc"] <- "~I((as.numeric(Sex)-1)*Gluc1)"
 actually be used in the imputation models for each variable. We will use
 the function *quickpred*, which selects variables that are correlated
 with a given variable with a correlation coefficient greater than
-specified values. We also discuss using the derived variables for the
+specified values. We also disallow using the derived variables for the
 imputation of variables from which these are directly derived. Not doing
-so would introduce imputation *loops* into our imputation, which could
-result in an imputation process that would not have a stationary
+so would introduce imputation *loops* into the chained equations, which
+could result in an imputation process that would not have a stationary
 distribution. <br/>
 
 ``` r
@@ -1048,70 +1041,7 @@ anova(model_no_interactions_mean_imp,full_model_mvar_imp)
 <br/> As expected, the same result. We will conclude the comparisons
 with plots of the predicted probabilities of *TCHD*. <br/>
 
-``` r
-library(sjPlot)
-p1 <- plot_model(full_model, type = "pred", terms = c('Age','Sex'))
-p2 <- plot_model(full_model_mvar_imp, type = "pred", terms = c('Age','Sex'))
-plot_grid(list(p1,p2))
-```
-
-![](Second_circle_logistic_regression_2_files/figure-GFM/unnamed-chunk-33-1.png)<!-- -->
-
-``` r
-p1 <- plot_model(full_model, type = "pred", terms = c('Cig','Sex')) 
-p2 <- plot_model(full_model_mvar_imp, type = "pred", terms = c('Cig','Sex')) 
-plot_grid(list(p1,p2))
-```
-
-![](Second_circle_logistic_regression_2_files/figure-GFM/unnamed-chunk-33-2.png)<!-- -->
-
-``` r
-p1 <- plot_model(full_model, type = "pred", terms = c('Age','Sex','Stroke'),title  = 'Predicted probabilities of TCHD for Stroke')
-p2 <- plot_model(full_model_mvar_imp, type = "pred", terms = c('Age','Sex','Stroke'),title  = 'Predicted probabilities of TCHD for Stroke')
-plot_grid(list(p1,p2))
-```
-
-![](Second_circle_logistic_regression_2_files/figure-GFM/unnamed-chunk-33-3.png)<!-- -->
-
-``` r
-p1 <-  plot_model(full_model, type = "pred", terms = c('Age','Sex','Hyp'),title  = 'Predicted probabilities of TCHD for Hyp')
-p2 <- plot_model(full_model_mvar_imp, type = "pred", terms = c('Age','Sex','Hyp'),title  = 'Predicted probabilities of TCHD for Hyp')
-plot_grid(list(p1,p2))
-```
-
-![](Second_circle_logistic_regression_2_files/figure-GFM/unnamed-chunk-33-4.png)<!-- -->
-
-``` r
-p1 <- plot_model(full_model, type = "pred", terms = c('Chol','Sex'))
-p2 <- plot_model(full_model_mvar_imp, type = "pred", terms = c('Chol','Sex'))
-plot_grid(list(p1,p2))
-```
-
-![](Second_circle_logistic_regression_2_files/figure-GFM/unnamed-chunk-33-5.png)<!-- -->
-
-``` r
-p1 <- plot_model(full_model, type = "pred", terms = c('SysP','Sex'))
-p2 <- plot_model(full_model_mvar_imp, type = "pred", terms = c('SysP','Sex'))
-plot_grid(list(p1,p2))
-```
-
-![](Second_circle_logistic_regression_2_files/figure-GFM/unnamed-chunk-33-6.png)<!-- -->
-
-``` r
-p1 <- plot_model(full_model, type = "pred", terms = c('DiaP','Sex'))
-p2 <- plot_model(full_model_mvar_imp, type = "pred", terms = c('DiaP','Sex'))
-plot_grid(list(p1,p2))
-```
-
-![](Second_circle_logistic_regression_2_files/figure-GFM/unnamed-chunk-33-7.png)<!-- -->
-
-``` r
-p1 <- plot_model(full_model, type = "pred", terms = c('Gluc','Sex'))
-p2 <- plot_model(full_model_mvar_imp, type = "pred", terms = c('Gluc','Sex'))
-plot_grid(list(p1,p2))
-```
-
-![](Second_circle_logistic_regression_2_files/figure-GFM/unnamed-chunk-33-8.png)<!-- -->
+![](Second_circle_logistic_regression_2_files/figure-GFM/unnamed-chunk-33-1.png)<!-- -->![](Second_circle_logistic_regression_2_files/figure-GFM/unnamed-chunk-33-2.png)<!-- -->![](Second_circle_logistic_regression_2_files/figure-GFM/unnamed-chunk-33-3.png)<!-- -->![](Second_circle_logistic_regression_2_files/figure-GFM/unnamed-chunk-33-4.png)<!-- -->![](Second_circle_logistic_regression_2_files/figure-GFM/unnamed-chunk-33-5.png)<!-- -->![](Second_circle_logistic_regression_2_files/figure-GFM/unnamed-chunk-33-6.png)<!-- -->![](Second_circle_logistic_regression_2_files/figure-GFM/unnamed-chunk-33-7.png)<!-- -->![](Second_circle_logistic_regression_2_files/figure-GFM/unnamed-chunk-33-8.png)<!-- -->
 
 <br/> Overall, the results of the multivariate single imputation are
 similar to those of the complete case analysis. Again, we can bootstrap
