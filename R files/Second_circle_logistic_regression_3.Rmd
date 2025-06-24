@@ -395,7 +395,7 @@ apply(stats_cc,2,mean)[c('Dxy','C (ROC)', 'Brier', 'Intercept', 'Slope','Emax')]
 Let's have a look at the DCA.
 <br/>
 
-```{r,message=FALSE}
+```{r,message=FALSE,warning=FALSE}
 dca_results <- cbind(apply(dca_obs_cc[,101:200],2,mean),t(apply(dca_obs_cc[,101:200],2,function(x) quantile(x[!is.na(x)],c(0.025,0.975)))))
 
 dca_results <- cbind(dca_results,apply(dca_obs_cc[,1:100],2,mean),dca_curve$dca[101:200,'net_benefit'],seq(0,0.99,0.01))
@@ -407,10 +407,10 @@ ggplot(dca_results, aes(x = threshold)) + geom_line(data=dca_results, aes(x=thre
 ```
 
 <br/>
-We see that the expected net benefit of our model remains uniformly better than the treat-all and treat-none policies. The blue band plots the confidence intervals. One thing to note is that the plot does not show the confidence band for treat-all policies (its net benefit depends on prevalence). If we plot the difference of net benefits between treta all and our model, we get the following graph.
+We see that the expected net benefit of our model remains uniformly better than the treat-all and treat-none policies. The blue band plots the confidence intervals. One thing to note is that the plot does not show the confidence band for treat-all policies (its net benefit depends on prevalence). If we plot the difference of net benefits between treat-all and our model, we get the following graph.
 <br/>
 
-```{r,message=FALSE}
+```{r,message=FALSE,warning=FALSE}
 dif <- dca_obs_cc[,1:100] - dca_obs_cc[,101:200]
 dca_results <- cbind(dca_results, apply(dif,2,mean), t(apply(dif,2,function(x) quantile(x[!is.na(x)],c(0.025,0.975)))))
 colnames(dca_results) <- c('nb_model','lb','ub','tall','tnone','threshold','mean_dif','dif_lb','dif_ub')
@@ -528,7 +528,7 @@ apply(stats_meanimp,2,mean)[c('Dxy','C (ROC)', 'Brier', 'Intercept', 'Slope','Em
 (apply(stats_meanimp,2,function(x) quantile(x[!is.na(x)],c(0.025,0.975))))[,c('Dxy','C (ROC)', 'Brier', 'Intercept', 'Slope','Emax')]
 ```
 
-```{r,message=FALSE,echo=FALSE}
+```{r,message=FALSE,echo=FALSE,warning=FALSE}
 dca_results <- cbind(apply(dca_obs_meanimp[,101:200],2,mean),t(apply(dca_obs_meanimp[,101:200],2,function(x) quantile(x[!is.na(x)],c(0.025,0.975)))))
 
 dca_results <- cbind(dca_results,apply(dca_obs_meanimp[,1:100],2,mean),dca_curve$dca[101:200,'net_benefit'],seq(0,0.99,0.01))

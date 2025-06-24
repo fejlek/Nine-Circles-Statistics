@@ -581,15 +581,15 @@ apply(stats_cc,2,mean)[c('Dxy','C (ROC)', 'Brier', 'Intercept', 'Slope','Emax')]
 ```
 
     ##        Dxy    C (ROC)      Brier  Intercept      Slope       Emax 
-    ##  0.4593607  0.7296804  0.1168955 -0.1459518  0.9099044  0.1851204
+    ##  0.4594208  0.7297104  0.1168838 -0.1456971  0.9103200  0.1848962
 
 ``` r
 (apply(stats_cc,2,function(x) quantile(x[!is.na(x)],c(0.025,0.975))))[,c('Dxy','C (ROC)', 'Brier', 'Intercept', 'Slope','Emax')]
 ```
 
     ##             Dxy   C (ROC)      Brier  Intercept     Slope      Emax
-    ## 2.5%  0.3211459 0.6605729 0.09494597 -0.7561655 0.5858181 0.0407290
-    ## 97.5% 0.5941607 0.7970804 0.14113661  0.5277224 1.3127845 0.5165698
+    ## 2.5%  0.3198227 0.6599113 0.09608185 -0.7456175 0.5883624 0.0424555
+    ## 97.5% 0.5860911 0.7930455 0.14064771  0.4734296 1.2871427 0.5459893
 
 <br/> Let’s have a look at the DCA. <br/>
 
@@ -604,15 +604,6 @@ dca_results <- as.data.frame(dca_results)
 ggplot(dca_results, aes(x = threshold)) + geom_line(data=dca_results, aes(x=threshold, y=tall),color = 'red',size = 1.1)+ geom_line(data=dca_results, aes(x=threshold, y=tnone),color = 'green',size = 1.1) + geom_line(data=dca_results, aes(x=threshold, y=nb_model),color = 'blue',size = 1.1) + geom_ribbon(data=dca_results,aes(ymin=lb,ymax=ub),alpha=0.1,color = 'blue',fill='blue') +  geom_ribbon(data=dca_results,aes(ymin=lb,ymax=ub),alpha=0.1,color = 'blue',fill='blue') + ylim(-0.05, 0.185) + xlim(0.00, 1.00) + ylab('Net benefit') + xlab('Threshold')
 ```
 
-    ## Warning: Using `size` aesthetic for lines was deprecated in ggplot2 3.4.0.
-    ## ℹ Please use `linewidth` instead.
-    ## This warning is displayed once every 8 hours.
-    ## Call `lifecycle::last_lifecycle_warnings()` to see where this warning was
-    ## generated.
-
-    ## Warning: Removed 80 rows containing missing values or values outside the scale range
-    ## (`geom_line()`).
-
 ![](Second_circle_logistic_regression_3_files/figure-GFM/unnamed-chunk-28-1.png)<!-- -->
 
 <br/> We see that the expected net benefit of our model remains
@@ -620,7 +611,7 @@ uniformly better than the treat-all and treat-none policies. The blue
 band plots the confidence intervals. One thing to note is that the plot
 does not show the confidence band for treat-all policies (its net
 benefit depends on prevalence). If we plot the difference of net
-benefits between treta all and our model, we get the following graph.
+benefits between treat-all and our model, we get the following graph.
 <br/>
 
 ``` r
@@ -631,11 +622,6 @@ dca_results <- as.data.frame(dca_results)
 
 ggplot(dca_results, aes(x = threshold)) + geom_line(data=dca_results, aes(x=threshold, y=tnone),color = 'green',size = 1.1) + geom_line(data=dca_results, aes(x=threshold, y=mean_dif),color = 'blue',size = 1.1) + geom_ribbon(data=dca_results,aes(ymin=dif_lb,ymax=dif_ub),alpha=0.1,color = 'blue',fill='blue') + xlim(0.00, 0.15) + ylim(-0.075, 0.01) + xlab('Threshold') + ylab('Net Gain: Treat All - Model')
 ```
-
-    ## Warning: Removed 84 rows containing missing values or values outside the scale range
-    ## (`geom_line()`).
-    ## Removed 84 rows containing missing values or values outside the scale range
-    ## (`geom_line()`).
 
 ![](Second_circle_logistic_regression_3_files/figure-GFM/unnamed-chunk-29-1.png)<!-- -->
 
@@ -752,14 +738,11 @@ degraded, similar to those in the complete case analysis. <br/>
     ##    0.4775    0.7387    0.1144    0.0000    1.0000    0.0534
 
     ##        Dxy    C (ROC)      Brier  Intercept      Slope       Emax 
-    ##  0.4473638  0.7236819  0.1170287 -0.1342630  0.9174184  0.1803385
+    ##  0.4472482  0.7236241  0.1170616 -0.1383267  0.9148410  0.1832099
 
-    ##             Dxy   C (ROC)      Brier  Intercept     Slope      Emax
-    ## 2.5%  0.3210374 0.6605187 0.09597859 -0.6905964 0.5888924 0.0433077
-    ## 97.5% 0.5640408 0.7820204 0.13828172  0.4786449 1.2791129 0.5295231
-
-    ## Warning: Removed 80 rows containing missing values or values outside the scale range
-    ## (`geom_line()`).
+    ##             Dxy   C (ROC)      Brier  Intercept    Slope       Emax
+    ## 2.5%  0.3254944 0.6627472 0.09734071 -0.7511737 0.604647 0.04015378
+    ## 97.5% 0.5760956 0.7880478 0.13881821  0.4596812 1.278341 0.51688267
 
 ![](Second_circle_logistic_regression_3_files/figure-GFM/unnamed-chunk-34-1.png)<!-- -->
 
