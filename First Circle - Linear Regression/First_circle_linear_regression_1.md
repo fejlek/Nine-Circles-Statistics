@@ -1,11 +1,3 @@
-# The First Circle: Linear Regression, Part One
-
-<br/>
-Jiří Fejlek
-
-2025-05-17
-<br/>
-
 <br/> In this project, we will demonstrate application of using linear
 regression and some of its extensions (we will eventually move to models
 for panel data and the final model will be a mixed effects model). Our
@@ -353,43 +345,70 @@ summary(lm(Infant_deaths~Under_five_deaths,data = life_expectancy))$r.squared
 
     ## [1] 0.9715086
 
+<br/> The reason for this is the fact that **Under_five_deaths** also
+include **Infant_deaths** and **Infant_deaths** are a large proportion
+of **Under_five_deaths**. <br/>
+
+``` r
+hist(life_expectancy$Infant_deaths,xlab = 'Infant deaths',main = NULL)
+```
+
+![](First_circle_linear_regression_1_files/figure-GFM/unnamed-chunk-28-1.png)<!-- -->
+
+``` r
+hist(life_expectancy$Under_five_deaths,xlab = 'Under five deaths',main = NULL)
+```
+
+![](First_circle_linear_regression_1_files/figure-GFM/unnamed-chunk-28-2.png)<!-- -->
+
+``` r
+hist(life_expectancy$Under_five_deaths-life_expectancy$Infant_deaths,xlab = 'Under five deaths - Infant deaths',main = NULL)
+```
+
+![](First_circle_linear_regression_1_files/figure-GFM/unnamed-chunk-28-3.png)<!-- -->
+
 <br/> When faced with a group of collinear predictors, it is recommended
-to summarize the predictors instead of arbitrarily choosing one. In our
-case, we use principal component analysis (PCA). <br/>
+to summarize the predictors(e.g., using the principal component
+analysis) instead of arbitrarily choosing one. In our case, it makes
+sense to simply split **Infant_deaths** and **Under_five_deaths** that
+are not **Infant_deaths** <br/>
 
 ``` r
-# PCA
-pc_infant_and_under_five <- prcomp(~life_expectancy$Infant_deaths+life_expectancy$Under_five_deaths,'scale' = TRUE,'center' = TRUE)
-summary(pc_infant_and_under_five)
+udf_diff <- life_expectancy$Under_five_deaths - life_expectancy$Infant_deaths
+life_expectancy <- life_expectancy %>% add_column(udf_diff) %>% rename(Under_five_deaths_dif = udf_diff)
+
+summary(lm(Under_five_deaths_dif~Infant_deaths,data = life_expectancy))$r.squared
 ```
 
-    ## Importance of components:
-    ##                           PC1     PC2
-    ## Standard deviation     1.4091 0.11979
-    ## Proportion of Variance 0.9928 0.00717
-    ## Cumulative Proportion  0.9928 1.00000
+    ## [1] 0.8260172
 
 ``` r
-# Extract the first component and add it to the dataset
-pc1 <- pc_infant_and_under_five$x[,1]
-life_expectancy <- life_expectancy %>% add_column(pc1) %>% rename(Inf5_m = pc1)
-
-# Coefficients for PC
-pc_infant_and_under_five$rotation
+model <- lm(Life_expectancy ~ .  - Year - Country - Region - GDP_per_capita - Adult_mortality - Population_mln - Under_five_deaths + Under_five_deaths_dif, data=life_expectancy)
+vif(model)
 ```
 
-    ##                                         PC1        PC2
-    ## life_expectancy$Infant_deaths     0.7071068  0.7071068
-    ## life_expectancy$Under_five_deaths 0.7071068 -0.7071068
+    ##               Infant_deaths         Alcohol_consumption 
+    ##                   11.238622                    2.266525 
+    ##                 Hepatitis_B                     Measles 
+    ##                    2.618636                    1.622987 
+    ##                         BMI                       Polio 
+    ##                    2.918694                   12.154609 
+    ##                  Diphtheria               Incidents_HIV 
+    ##                   13.065068                    1.350231 
+    ## Thinness_ten_nineteen_years    Thinness_five_nine_years 
+    ##                    8.894234                    8.942022 
+    ##                   Schooling              Economy_status 
+    ##                    4.352311                    2.657490 
+    ##              Population_log                     GDP_log 
+    ##                    1.230802                    4.257298 
+    ##       Under_five_deaths_dif 
+    ##                    7.104666
 
-<br/> We can notice that since we have two almost perfectly collinear
-predictors, we obtain an equal proportion of both as the first principal
-component (after centering and rescaling to unit variance). We will use
-this first component as our new summarizing predictor.
-
-The second pair of collinear predictors that could be combined is
-**Polio** and **Diphtheria**, However, they are closer to the rule of
-thumb cutoff: VIF = 10. Hence, I chose to keep both for modelling. <br/>
+<br/> We see that by this simple fix the major collinearity issue
+disappeared. The second pair of collinear predictors that could be
+combined is **Polio** and **Diphtheria**, However, they are much closer
+to the rule of thumb cutoff: VIF = 10. Hence, I chose to keep both for
+modelling. <br/>
 
 ``` r
 summary(lm(Diphtheria~Polio,data = life_expectancy))$r.squared
@@ -406,19 +425,19 @@ R-squared cutoff). <br/>
 
 ``` r
 library(Hmisc)
-redun(~.- Life_expectancy - Infant_deaths - Under_five_deaths - Year - Country  -  Adult_mortality - Population_mln - GDP_per_capita,data = life_expectancy,nk = 4, r2 = 0.95)
+redun(~.- Life_expectancy - Under_five_deaths - Year - Country  -  Adult_mortality - Population_mln - GDP_per_capita,data = life_expectancy,nk = 4, r2 = 0.95)
 ```
 
     ## 
     ## Redundancy Analysis
     ## 
-    ## ~Region + Alcohol_consumption + Hepatitis_B + Measles + BMI + 
-    ##     Polio + Diphtheria + Incidents_HIV + Thinness_ten_nineteen_years + 
+    ## ~Region + Infant_deaths + Alcohol_consumption + Hepatitis_B + 
+    ##     Measles + BMI + Polio + Diphtheria + Incidents_HIV + Thinness_ten_nineteen_years + 
     ##     Thinness_five_nine_years + Schooling + Economy_status + Population_log + 
-    ##     GDP_log + Inf5_m
-    ## <environment: 0x0000021e014aa238>
+    ##     GDP_log + Under_five_deaths_dif
+    ## <environment: 0x0000021673cbc158>
     ## 
-    ## n: 2864  p: 15   nk: 4 
+    ## n: 2864  p: 16   nk: 4 
     ## 
     ## Number of NAs:    0 
     ## 
@@ -428,22 +447,22 @@ redun(~.- Life_expectancy - Infant_deaths - Under_five_deaths - Year - Country  
     ## 
     ## R^2 with which each variable can be predicted from all other variables:
     ## 
-    ##                      Region         Alcohol_consumption 
-    ##                       0.870                       0.752 
-    ##                 Hepatitis_B                     Measles 
-    ##                       0.663                       0.535 
-    ##                         BMI                       Polio 
-    ##                       0.803                       0.927 
-    ##                  Diphtheria               Incidents_HIV 
-    ##                       0.930                       0.472 
-    ## Thinness_ten_nineteen_years    Thinness_five_nine_years 
-    ##                       0.892                       0.895 
-    ##                   Schooling              Economy_status 
-    ##                       0.849                       0.910 
-    ##              Population_log                     GDP_log 
-    ##                       0.456                       0.881 
-    ##                      Inf5_m 
-    ##                       0.902 
+    ##                      Region               Infant_deaths 
+    ##                       0.876                       0.947 
+    ##         Alcohol_consumption                 Hepatitis_B 
+    ##                       0.758                       0.667 
+    ##                     Measles                         BMI 
+    ##                       0.545                       0.810 
+    ##                       Polio                  Diphtheria 
+    ##                       0.927                       0.930 
+    ##               Incidents_HIV Thinness_ten_nineteen_years 
+    ##                       0.529                       0.893 
+    ##    Thinness_five_nine_years                   Schooling 
+    ##                       0.896                       0.849 
+    ##              Economy_status              Population_log 
+    ##                       0.912                       0.467 
+    ##                     GDP_log       Under_five_deaths_dif 
+    ##                       0.884                       0.918 
     ## 
     ## No redundant variables
 
