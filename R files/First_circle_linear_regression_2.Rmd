@@ -27,12 +27,8 @@ levels(life_expectancy$Region) <-  c('Afr','Asia','CAm','EU','MidE','NAm','Oce',
 life_expectancy <- life_expectancy %>% rename(Economy_status = Economy_status_Developed)
 life_expectancy$Economy_status_Developing <- NULL
 
-pc_infant_and_under_five <- prcomp(~life_expectancy$Infant_deaths+life_expectancy$Under_five_deaths,'scale' = TRUE,'center' = TRUE)
-
-pc1 <- pc_infant_and_under_five$x[,1]
-life_expectancy$Infant_deaths <- NULL
-life_expectancy$Under_five_deaths <- NULL
-life_expectancy <- life_expectancy %>% add_column(pc1) %>% rename(Inf5_m = pc1)
+udf_diff <- life_expectancy$Under_five_deaths - life_expectancy$Infant_deaths
+life_expectancy <- life_expectancy %>% add_column(udf_diff) %>% rename(Under_five_deaths_dif = udf_diff)
 
 Population_log <- log(life_expectancy$Population_mln + 1)
 GDP_log <- log(life_expectancy$GDP_per_capita)
@@ -69,7 +65,8 @@ Still, we will proceed to use a simple linear regression model as our starting p
 Overall, we get the following predictors
 <br/>
 
-* **Inf5_m** - Linear combination of **Infant_deaths** and **Under_five_deaths** (see Part One)
+* **Infant_deaths**
+* **Under_five_deaths** - **Infant_deaths** 
 * **Region**
 * **Alcohol_consumption** 
 * **Hepatitis_B** 
@@ -96,8 +93,7 @@ library(tibble)
 library(dplyr)
 
 ## Renaming variables
-life_expectancy <- life_expectancy %>% rename(Thin_10_19 = Thinness_ten_nineteen_years) %>% rename(Thin_5_9 = Thinness_five_nine_years) %>% rename(Alcohol = Alcohol_consumption) %>% rename(HIV = Incidents_HIV) %>% rename(Economy = Economy_status ) %>% rename(Adult_m = Adult_mortality ) %>% rename(Pop_log = Population_log)
-
+life_expectancy <- life_expectancy %>% rename(Thin_10_19 = Thinness_ten_nineteen_years) %>% rename(Thin_5_9 = Thinness_five_nine_years) %>% rename(Alcohol = Alcohol_consumption) %>% rename(HIV = Incidents_HIV) %>% rename(Economy = Economy_status ) %>% rename(Adult_m = Adult_mortality ) %>% rename(Pop_log = Population_log) %>% rename(I_deaths = Infant_deaths) %>% rename(U5_deaths = Under_five_deaths_dif)
 ```
 
 ## Simple linear model (and accounting for heteroskedasticity)
@@ -108,7 +104,7 @@ As we discussed earlier, we first fit a simple linear model ignoring the panel n
 
 ```{r}
 ## Simple linear model
-linear_model <- lm(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m, data = life_expectancy)
+linear_model <- lm(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + I_deaths + U5_deaths, data = life_expectancy)
 summary(linear_model)
 ```
 
@@ -125,15 +121,19 @@ qqline((residuals(linear_model)))
 plot(life_expectancy$Life_expectancy,residuals(linear_model), xlab="Life Expectancy", ylab="Residuals")
 plot(life_expectancy$Economy,residuals(linear_model), xlab="Economy", ylab="Residuals")
 par(mfrow = c(1, 2))
+
+
 plot(life_expectancy$GDP_log,residuals(linear_model), xlab="log(GDP_per_capita)", ylab="Residuals")
-plot(life_expectancy$Inf5_m,residuals(linear_model), xlab="Inf5_m", ylab="Residuals")
-par(mfrow = c(1, 2))
+plot(life_expectancy$I_deaths,residuals(linear_model), xlab="I_deaths", ylab="Residuals")
+plot(life_expectancy$U5_deaths,residuals(linear_model), xlab="U5_deaths", ylab="Residuals")
+
 plot(life_expectancy$BMI,residuals(linear_model), xlab="BMI", ylab="Residuals")
 plot(life_expectancy$Alcohol,residuals(linear_model), xlab="Alcohol", ylab="Residuals")
-par(mfrow = c(1, 2))
+
 plot(life_expectancy$HIV,residuals(linear_model), xlab="HIV", ylab="Residuals")
 plot(life_expectancy$Schooling,residuals(linear_model), xlab="Schooling", ylab="Residuals")
-par(mfrow = c(1, 2))
+
+
 plot(life_expectancy$Measles,residuals(linear_model), xlab="Measles", ylab="Residuals")
 plot(life_expectancy$Hepatitis_B,residuals(linear_model), xlab="Hepatitis_B", ylab="Residuals")
 plot(life_expectancy$Pop_log,residuals(linear_model), xlab="Log(Population_mln + 1)", ylab="Residuals")
@@ -159,10 +159,10 @@ We should note here that we will compute a simple percentile-based confidence in
 ```{r}
 set.seed(123) # for reproducibility
 nb <- 2500
-coefmat <- matrix(NA,nb,23)
+coefmat <- matrix(NA,nb,24)
 for(i in 1:nb){
 life_expectancy_new <-  life_expectancy[sample(nrow(life_expectancy) , rep=TRUE),]
-model_new <- lm(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m, data = life_expectancy_new)
+model_new <- lm(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + I_deaths + U5_deaths, data = life_expectancy_new)
 coefmat[i,] <- coef(model_new)
 }
 colnames(coefmat) <- rownames(as.data.frame(coef(linear_model)))
@@ -187,11 +187,11 @@ plot(cooks.distance(linear_model),ylab = "Cook's distance")
 A simple rule of thumb is that an observation could be overtly influential if its Cook's distance is greater than one. That is definitely not the case for our model. Still, some observations have a significantly greater Cook's distance than others. Let us compare the regression of coefficients with observations deleted based on the Cook's distance.
 
 ```{r}
-linear_model_red1 <- lm(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m, data = life_expectancy[cooks.distance(linear_model) < 0.02,])
+linear_model_red1 <- lm(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + I_deaths + U5_deaths, data = life_expectancy[cooks.distance(linear_model) < 0.02,])
 
-linear_model_red2 <- lm(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m, data = life_expectancy[cooks.distance(linear_model) < 0.01,])
+linear_model_red2 <- lm(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + I_deaths + U5_deaths, data = life_expectancy[cooks.distance(linear_model) < 0.01,])
 
-linear_model_red3 <- lm(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m, data = life_expectancy[cooks.distance(linear_model) < 0.005,])
+linear_model_red3 <- lm(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + I_deaths + U5_deaths, data = life_expectancy[cooks.distance(linear_model) < 0.005,])
 
 coeff_delete <- cbind(coefficients(linear_model),coefficients(linear_model_red1),coefficients(linear_model_red2),coefficients(linear_model_red3))
 colnames(coeff_delete) <- c('All','CD<0.02','CD<0.01','CD<0.005')
@@ -237,7 +237,7 @@ We first consider time fixed effects, i.e., effects corresponding to unobservabl
 <br/>
 
 ```{r}
-linear_model_year <- lm(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m + factor(Year), data = life_expectancy)
+linear_model_year <- lm(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + I_deaths + U5_deaths + factor(Year), data = life_expectancy)
 coef_test(linear_model_year, vcov = "CR2", cluster = life_expectancy$Country)
 ```
 
@@ -263,7 +263,6 @@ years <- seq(2000,2015,1)
 plot(years, pred_lin_year_mean, type = "n", xlab ='Year', ylab = 'Mean life expectancy')
 lines(years, pred_lin_year_mean, type = "l", col = "red")
 lines(years, pred_lin_mean, type = "l", col = "blue")
-
 ```
 
 <br/>
@@ -281,11 +280,11 @@ The pooled model is an ordinary linear regression model; thus, to be efficient, 
 library(plm)
 
 # individual fixed effects + time fixed effects 
-fixed_effect_model_plm <- plm(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m + factor(Year), data = life_expectancy,index = c("Country", "Year"),  model = 'within', effect = 'individual')
+fixed_effect_model_plm <- plm(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + I_deaths + U5_deaths + factor(Year), data = life_expectancy,index = c("Country", "Year"),  model = 'within', effect = 'individual')
 summary(fixed_effect_model_plm)
 
 # individual random effects + time fixed effects
-random_effect_model_plm <- plm(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m + factor(Year), data = life_expectancy,index = c("Country", "Year"),  model = 'random', effect = 'individual')
+random_effect_model_plm <- plm(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + I_deaths + U5_deaths + factor(Year), data = life_expectancy,index = c("Country", "Year"),  model = 'random', effect = 'individual')
 summary(random_effect_model_plm)
 ```
 
@@ -315,10 +314,11 @@ life_expectancy_cent <- within(life_expectancy, {
   Thin_10_19_cent <- tapply(Thin_10_19, Country, mean)[factor(Country)]
   Thin_5_9_cent <- tapply(Thin_5_9, Country, mean)[factor(Country)]
   Schooling_cent <- tapply(Schooling, Country, mean)[factor(Country)]
-  Inf5_m_cent <- tapply(Inf5_m, Country, mean)[factor(Country)]
+  I_deaths_cent <- tapply(I_deaths, Country, mean)[factor(Country)]
+  U5_deaths_cent <- tapply(U5_deaths, Country, mean)[factor(Country)]
 })
 
-corr_random_effect_model_plm <- plm(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m  + Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + Inf5_m_cent + factor(Year), data = life_expectancy_cent,index = c("Country", "Year"),  model = 'random', effect = 'individual')
+corr_random_effect_model_plm <- plm(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + I_deaths + U5_deaths  + Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + I_deaths_cent + U5_deaths_cent + factor(Year), data = life_expectancy_cent,index = c("Country", "Year"),  model = 'random', effect = 'individual')
 summary(corr_random_effect_model_plm)
 ```
 
@@ -327,7 +327,7 @@ If there is no significant endogeneity in the model, the estimates of parameters
 <br/>
 
 ```{r}
-Wald_test(corr_random_effect_model_plm, constraints = constrain_zero(c("Alcohol_cent","Hepatitis_B_cent","Measles_cent","BMI_cent","Polio_cent","Diphtheria_cent","HIV_cent","GDP_log_cent","Pop_log_cent","Thin_10_19_cent","Thin_5_9_cent","Schooling_cent","Inf5_m_cent")), vcov = "CR2", cluster = life_expectancy$Country)
+Wald_test(corr_random_effect_model_plm, constraints = constrain_zero(c("Alcohol_cent","Hepatitis_B_cent","Measles_cent","BMI_cent","Polio_cent","Diphtheria_cent","HIV_cent","GDP_log_cent","Pop_log_cent","Thin_10_19_cent","Thin_5_9_cent","Schooling_cent","I_deaths_cent","U5_deaths_cent")), vcov = "CR2", cluster = life_expectancy$Country)
 ```
 
 <br/>
@@ -351,16 +351,15 @@ qqnorm(residuals(corr_random_effect_model_plm))
 qqline((residuals(corr_random_effect_model_plm)))
 plot(life_expectancy$Life_expectancy,residuals(corr_random_effect_model_plm), xlab="Life Expectancy", ylab="Residuals")
 plot(life_expectancy$Economy,residuals(corr_random_effect_model_plm), xlab="Economy", ylab="Residuals")
+
 par(mfrow = c(1, 2))
 plot(life_expectancy$GDP_log,residuals(corr_random_effect_model_plm), xlab="log(GDP_per_capita)", ylab="Residuals")
-plot(life_expectancy$Inf5_m,residuals(corr_random_effect_model_plm), xlab="Inf5_m", ylab="Residuals")
-par(mfrow = c(1, 2))
+plot(life_expectancy$I_deaths,residuals(corr_random_effect_model_plm), xlab="I_deaths", ylab="Residuals")
+plot(life_expectancy$U5_deaths,residuals(corr_random_effect_model_plm), xlab="U5_deaths", ylab="Residuals")
 plot(life_expectancy$BMI,residuals(corr_random_effect_model_plm), xlab="BMI", ylab="Residuals")
 plot(life_expectancy$Alcohol,residuals(corr_random_effect_model_plm), xlab="Alcohol", ylab="Residuals")
-par(mfrow = c(1, 2))
 plot(life_expectancy$HIV,residuals(corr_random_effect_model_plm), xlab="HIV", ylab="Residuals")
 plot(life_expectancy$Schooling,residuals(corr_random_effect_model_plm), xlab="Schooling", ylab="Residuals")
-par(mfrow = c(1, 2))
 plot(life_expectancy$Measles,residuals(corr_random_effect_model_plm), xlab="Measles", ylab="Residuals")
 plot(life_expectancy$Hepatitis_B,residuals(corr_random_effect_model_plm), xlab="Hepatitis_B", ylab="Residuals")
 plot(life_expectancy$Pop_log,residuals(corr_random_effect_model_plm), xlab="Log(Population_mln + 1)", ylab="Residuals")
@@ -387,7 +386,7 @@ Unfortunately, *plm* package does not have support for computing influence diagn
 ```{r, fig.align = 'center'}
 library(lme4)
 
-lmer_model <- lmer(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m  + Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + Inf5_m_cent + factor(Year) + (1 | Country), life_expectancy_cent)
+lmer_model <- lmer(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + I_deaths + U5_deaths  + Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + I_deaths_cent + U5_deaths_cent + factor(Year) + (1 | Country), life_expectancy_cent)
 
 sum_lmer <- summary(lmer_model)
 sum_plm <- summary(corr_random_effect_model_plm)
@@ -410,22 +409,22 @@ inf <- hlm_influence(lmer_model, level = "Country")
 plot(inf$cooksd,ylab = "Cook's distance")
 
 # Refit model for deleted observations
-lmer_model_red1 <- lmer(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m  + Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + Inf5_m_cent + factor(Year) + (1 | Country), data = life_expectancy_cent[life_expectancy_cent$Country  %in% inf$Country[inf$cooksd < 0.4],])
+lmer_model_red1 <- lmer(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + I_deaths + U5_deaths  + Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + I_deaths_cent + U5_deaths_cent + factor(Year) + (1 | Country), data = life_expectancy_cent[life_expectancy_cent$Country  %in% inf$Country[inf$cooksd < 0.4],])
 
-lmer_model_red2 <- lmer(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m  + Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + Inf5_m_cent + factor(Year) + (1 | Country),data = life_expectancy_cent[life_expectancy_cent$Country  %in% inf$Country[inf$cooksd < 0.2],])
+lmer_model_red2 <- lmer(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + I_deaths + U5_deaths  + Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + I_deaths_cent + U5_deaths_cent + factor(Year) + (1 | Country),data = life_expectancy_cent[life_expectancy_cent$Country  %in% inf$Country[inf$cooksd < 0.2],])
 
-lmer_model_red3 <- lmer(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m  + Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + Inf5_m_cent + factor(Year) + (1 | Country), data = life_expectancy_cent[life_expectancy_cent$Country  %in% inf$Country[inf$cooksd < 0.1],])
+lmer_model_red3 <- lmer(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + I_deaths + U5_deaths  + Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + I_deaths_cent + U5_deaths_cent + factor(Year) + (1 | Country), data = life_expectancy_cent[life_expectancy_cent$Country  %in% inf$Country[inf$cooksd < 0.1],])
 
-lmer_model_red4 <- lmer(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m  + Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + Inf5_m_cent + factor(Year) + (1 | Country), data = life_expectancy_cent[life_expectancy_cent$Country  %in% inf$Country[inf$cooksd < 0.05],])
+lmer_model_red4 <- lmer(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + I_deaths + U5_deaths  + Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + I_deaths_cent + U5_deaths_cent + factor(Year) + (1 | Country), data = life_expectancy_cent[life_expectancy_cent$Country  %in% inf$Country[inf$cooksd < 0.05],])
 
 
 coeff_delete <- cbind(fixef(lmer_model),fixef(lmer_model_red1),fixef(lmer_model_red2),fixef(lmer_model_red3),fixef(lmer_model_red4))
 colnames(coeff_delete) <- c('All','CD<0.4','CD<0.2','CD<0.1','CD<0.05')
-round(coeff_delete,4)[1:23,]
+round(coeff_delete,4)[1:24,]
 ```
 
 <br/>
-We see that our estimates  did not change much, thus, there is no reason to delete some observations from the data.
+We see that our estimates did not change that much (the coefficients for predictors that appear somewhat significant did not change signs), thus, there is no reason to delete some observations from the data.
 
 The last thing that remains is computing confidence intervals for the effect estimates. We already discussed that random effects account for the correlation of observations within the same clusters, thus we could take the standard errors as is. However, with random effect models, things are a bit murky, because it is in general non-trivial to determine correct degrees of freedom, see https://bbolker.github.io/mixedmodels-misc/glmmFAQ.html#why-doesnt-lme4-display-denominator-degrees-of-freedomp-values-what-other-options-do-i-have that discusses several alternatives to use. Let us explore them.
 
@@ -458,8 +457,8 @@ Another another another alternative is t-test statistics with a degrees of freed
 
 
 ```{r}
-coef_stats <- coef_test(corr_random_effect_model_plm, vcov = "CR2", cluster = life_expectancy$Country)[1:23,]
-conf_int <- cbind(coefficients(corr_random_effect_model_plm)[1:23] - coef_stats$SE*qt(0.975,coef_stats$df_Satt),coefficients(corr_random_effect_model_plm)[1:23] + coef_stats$SE*qt(0.975,coef_stats$df_Satt))
+coef_stats <- coef_test(corr_random_effect_model_plm, vcov = "CR2", cluster = life_expectancy$Country)[1:24,]
+conf_int <- cbind(coefficients(corr_random_effect_model_plm)[1:24] - coef_stats$SE*qt(0.975,coef_stats$df_Satt),coefficients(corr_random_effect_model_plm)[1:24] + coef_stats$SE*qt(0.975,coef_stats$df_Satt))
 colnames(conf_int) <- c('2.5 %','97.5 %')
 conf_int
 ```
@@ -484,7 +483,7 @@ for (j in 2:length(Countries_list)){
   life_expectancy_new <- rbind(life_expectancy_new,life_expectancy_cent[life_expectancy_cent$Country == Countries_new[j],])
 }
 
-model_new <-  plm(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m  + Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + Inf5_m_cent + factor(Year), data = life_expectancy_new,index = c("Country", "Year"),  model = 'random', effect = 'individual')
+model_new <-  plm(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + I_deaths + U5_deaths  + Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + I_deaths_cent + U5_deaths_cent + factor(Year), data = life_expectancy_new,index = c("Country", "Year"),  model = 'random', effect = 'individual')
 
 ## Some region coefficients might be inestimable due to resample  
 coefmat[i,colnames(t(as.data.frame(model_new$coefficients)))] <- t(as.data.frame(model_new$coefficients))
@@ -495,7 +494,7 @@ coefmat <- data.frame(coefmat)
 
 ## Bootstrap CI
 boot_ci <- t(apply(coefmat,2,function(x) quantile(x[!is.na(x)],c(0.025,0.5,0.975))))
-boot_ci[1:23,]
+boot_ci[1:24,]
 ```
 
 <br/>

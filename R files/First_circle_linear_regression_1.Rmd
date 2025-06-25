@@ -249,7 +249,7 @@ vif(model)
 ```
 
 <br/>
-Since **Infant_deaths** and **Under_five_deaths** are almost perfectly collinear, we indeed observe that these two predictors have extremely high VIF, because one predictor can accurately model the other.
+Since **Infant_deaths** and **Under_five_deaths** are almost perfectly collinear, we indeed observe that these two predictors have extremely high VIF, because one predictor can accurately model the other. 
 <br/>
 
 ```{r, message=FALSE}
@@ -258,26 +258,32 @@ summary(lm(Infant_deaths~Under_five_deaths,data = life_expectancy))$r.squared
 ```
 
 <br/>
-When faced with a group of collinear predictors, it is recommended to summarize the predictors instead of arbitrarily choosing one. In our case, we use principal component analysis (PCA). 
+The reason for this is the fact that **Under_five_deaths** also include **Infant_deaths** and **Infant_deaths** are a large proportion of **Under_five_deaths**.
 <br/>
 
 ```{r, message=FALSE}
-# PCA
-pc_infant_and_under_five <- prcomp(~life_expectancy$Infant_deaths+life_expectancy$Under_five_deaths,'scale' = TRUE,'center' = TRUE)
-summary(pc_infant_and_under_five)
+hist(life_expectancy$Infant_deaths,xlab = 'Infant deaths',main = NULL)
+hist(life_expectancy$Under_five_deaths,xlab = 'Under five deaths',main = NULL)
+hist(life_expectancy$Under_five_deaths-life_expectancy$Infant_deaths,xlab = 'Under five deaths - Infant deaths',main = NULL)
+```
 
-# Extract the first component and add it to the dataset
-pc1 <- pc_infant_and_under_five$x[,1]
-life_expectancy <- life_expectancy %>% add_column(pc1) %>% rename(Inf5_m = pc1)
 
-# Coefficients for PC
-pc_infant_and_under_five$rotation
+<br/>
+When faced with a group of collinear predictors, it is recommended to summarize the predictors (e.g., using the principal component analysis) instead of arbitrarily choosing one. In our case, it makes sense to simply split **Infant_deaths** and **Under_five_deaths** that are not **Infant_deaths**.
+<br/>
+
+```{r, message=FALSE}
+udf_diff <- life_expectancy$Under_five_deaths - life_expectancy$Infant_deaths
+life_expectancy <- life_expectancy %>% add_column(udf_diff) %>% rename(Under_five_deaths_dif = udf_diff)
+
+summary(lm(Under_five_deaths_dif~Infant_deaths,data = life_expectancy))$r.squared
+
+model <- lm(Life_expectancy ~ .  - Year - Country - Region - GDP_per_capita - Adult_mortality - Population_mln - Under_five_deaths + Under_five_deaths_dif, data=life_expectancy)
+vif(model)
 ```
 
 <br/>
-We can notice that since we have two almost perfectly collinear predictors, we obtain an equal proportion of both as the first principal component (after centering and rescaling to unit variance). We will use this first component as our new summarizing predictor. 
-
-The second pair of collinear predictors that could be combined is **Polio** and **Diphtheria**, However, they are closer to the rule of thumb cutoff: VIF = 10. Hence, I chose to keep both for modelling. 
+We see that by this simple fix the major collinearity issue disappeared. The second pair of collinear predictors that could be combined is **Polio** and **Diphtheria**, However, they are much closer to the rule of thumb cutoff: VIF = 10. Hence, I chose to keep both for modelling. 
 <br/>
 
 ```{r, message=FALSE}
@@ -290,7 +296,7 @@ VIF considers only regression models in which all predictors enter linearly. We 
 
 ```{r, message=FALSE}
 library(Hmisc)
-redun(~.- Life_expectancy - Infant_deaths - Under_five_deaths - Year - Country  -  Adult_mortality - Population_mln - GDP_per_capita,data = life_expectancy,nk = 4, r2 = 0.95)
+redun(~.- Life_expectancy - Under_five_deaths - Year - Country  -  Adult_mortality - Population_mln - GDP_per_capita,data = life_expectancy,nk = 4, r2 = 0.95)
 ```
 
 <br/>

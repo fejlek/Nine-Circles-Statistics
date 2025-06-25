@@ -1,3 +1,11 @@
+# The First Circle: Linear Regression, Part One
+
+<br/>
+Jiří Fejlek
+
+2025-05-17
+<br/>
+
 <br/> In this project, we will demonstrate application of using linear
 regression and some of its extensions (we will eventually move to models
 for panel data and the final model will be a mixed effects model). Our
@@ -368,10 +376,10 @@ hist(life_expectancy$Under_five_deaths-life_expectancy$Infant_deaths,xlab = 'Und
 ![](First_circle_linear_regression_1_files/figure-GFM/unnamed-chunk-28-3.png)<!-- -->
 
 <br/> When faced with a group of collinear predictors, it is recommended
-to summarize the predictors(e.g., using the principal component
+to summarize the predictors (e.g., using the principal component
 analysis) instead of arbitrarily choosing one. In our case, it makes
 sense to simply split **Infant_deaths** and **Under_five_deaths** that
-are not **Infant_deaths** <br/>
+are not **Infant_deaths**. <br/>
 
 ``` r
 udf_diff <- life_expectancy$Under_five_deaths - life_expectancy$Infant_deaths
@@ -435,7 +443,7 @@ redun(~.- Life_expectancy - Under_five_deaths - Year - Country  -  Adult_mortali
     ##     Measles + BMI + Polio + Diphtheria + Incidents_HIV + Thinness_ten_nineteen_years + 
     ##     Thinness_five_nine_years + Schooling + Economy_status + Population_log + 
     ##     GDP_log + Under_five_deaths_dif
-    ## <environment: 0x0000021673cbc158>
+    ## <environment: 0x000001fcbfc93268>
     ## 
     ## n: 2864  p: 16   nk: 4 
     ## 
