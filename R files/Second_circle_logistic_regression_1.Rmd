@@ -591,7 +591,7 @@ plotResiduals(simulationOutput_null, framingham_complete$Gluc)
 ```
 
 <br/>
-we see discrepancies for the trivial model (e.g., **Age**, **SysP*, ***Hyp**, and **Diab** are visually quite apparent). Thus, one can detect misspecification from the residuals provided that if one **knows** where to look. We should note that *DHARMa* also provides goodness-of-fit tests based on quantile regression, e.g., 
+we see discrepancies for the trivial model (e.g., **Age**, **SysP**, **Hyp**, and **Diab** are visually quite apparent). Thus, one can detect misspecification from the residuals provided that if one *knows* where to look. We should note that *DHARMa* also provides goodness-of-fit tests based on quantile regression, e.g., 
 <br/>
 
 ```{r, ,message=FALSE,warning=FALSE}

@@ -290,7 +290,7 @@ redun(~.- TCHD ,data = framingham[rowSums(is.na(framingham)) == 0,],nk = 4, r2 =
     ## 
     ## ~Sex + Age + Edu + Smoker + Cig + Meds + Stroke + Hyp + Diab + 
     ##     Chol + SysP + DiaP + BMI + Hrate + Gluc
-    ## <environment: 0x00000288f1e5a268>
+    ## <environment: 0x000001b23de69c80>
     ## 
     ## n: 3656  p: 15   nk: 4 
     ## 
@@ -1000,9 +1000,9 @@ plotResiduals(simulationOutput_null, framingham_complete$Gluc)
 ![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-29-14.png)<!-- -->
 
 <br/> we see discrepancies for the trivial model (e.g., **Age**,
-**SysP*, ***Hyp**, and **Diab\*\* are visually quite apparent). Thus,
-one can detect misspecification from the residuals provided that if one
-**knows** where to look. We should note that *DHARMa* also provides
+**SysP**, **Hyp**, and **Diab** are visually quite apparent). Thus, one
+can detect misspecification from the residuals provided that if one
+*knows* where to look. We should note that *DHARMa* also provides
 goodness-of-fit tests based on quantile regression, e.g., <br/>
 
 ``` r
