@@ -134,7 +134,7 @@ conf_table <- xtabs( ~ y + y_pred)
 
 acc[i] <- (conf_table[1,1] + conf_table[2,2])/ sum(conf_table)
 }
-plot(tresh,acc, type="l")
+plot(tresh,acc, type="l",xlab = 'Threshold', ylab = 'Accuracy')
 ```
 
 <br/>
@@ -254,7 +254,7 @@ mean((y-mean(y))^2)
 
 
 <br/>
-The Brier score for "coin flip" predictions is always 0.25. The second Brier score corresponds to predicting the outcome based on overall prevalence. We see that our model is better than that. 
+The Brier score for "coin flip" predictions is always 0.25. The second Brier score corresponds to predicting the outcome based on overall prevalence. We see that our model is better than that, but the difference seem to be not that large in the absolute terms. 
 
 The optimal value of the Brier score depends on the true distribution. Consequently, the absolute value of the Brier score may be a bit misleading, depending on the true distribution of the outcome; see *L Hoessly. On misconceptions about the Brier score in binary prediction models. arXiv preprint (2025).* Overall, the Brier score is easier to interpret than log loss, and its values are somewhat comparable for different models on different data sets, provided that the underlying distribution is the same. 
 <br/>
@@ -852,7 +852,7 @@ plot_model(full_model, type = "pred", terms = c('Gluc'))
 ```
 
 <br/>
-Overall, the significant predictors identified in our model are in line with established risk factors for developing cardiovascular heart disease. As far as the predictive performance of our model is concerned, our model is relatively weak for outcome predictions (especially in terms of sensitivity). However, we demonstrated through decision curve analysis that even such a model can be helpful in practice for making informed decisions. 
+Overall, the significant predictors identified in our model are in line with established risk factors for developing cardiovascular heart disease (CHD). As far as the predictive performance of our model is concerned, our model is relatively weak for outcome predictions (especially in terms of sensitivity). We conclude that either our model is missing some crucial predictors or the process of developing  CHD in the span of ten years is fairly non-deterministic. Still, we demonstrated through decision curve analysis that even such a model can be helpful in practice for making informed decisions about identifying patients at risk. 
 
 With that conclusion, we leave The Second Circle: Logistic Regression (and imputation to some extent).
 <br/>

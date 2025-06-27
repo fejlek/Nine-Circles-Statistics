@@ -1,3 +1,11 @@
+# The Second Circle: Logistic Regression, Part Two
+
+<br/>
+Jiří Fejlek
+
+2025-06-11
+<br/>
+
 <br/> In Part Two of this project, we will demonstrate the use of
 imputation methods on the Framingham Heart Study dataset (mean,
 multivariate, and multiple imputation) and compare them with the

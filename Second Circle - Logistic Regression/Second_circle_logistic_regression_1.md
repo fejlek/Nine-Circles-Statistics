@@ -172,7 +172,7 @@ should not matter that much how the observation with missing values is
 treated. Hence, we may need to employ a multiple imputation: data may
 not be missing completely at random (MCAR), and if so, then case
 deletion or single imputation may cause a significant bias (see *Stef
-Van Buuren. Flexible imputation of missing data. CRC press, 2012*).
+Van Buuren. Flexible imputation of missing data. CRC press, 2018*).
 
 Before we perform any imputation, we have to analyze predictors.
 Improper predictors could easily ruin the subsequent imputation process.
@@ -290,7 +290,7 @@ redun(~.- TCHD ,data = framingham[rowSums(is.na(framingham)) == 0,],nk = 4, r2 =
     ## 
     ## ~Sex + Age + Edu + Smoker + Cig + Meds + Stroke + Hyp + Diab + 
     ##     Chol + SysP + DiaP + BMI + Hrate + Gluc
-    ## <environment: 0x000001c3ebe55190>
+    ## <environment: 0x00000288f1e5a268>
     ## 
     ## n: 3656  p: 15   nk: 4 
     ## 
@@ -705,7 +705,7 @@ anova(model_no_interactions,full_model)
 removing all interactions from our **TCHD** prediction model. Let us
 test whether we would include interactions in the cross-validation that
 would repeat in our modeling process (we will choose a p-value cut-off
-of 0.2). <br/>
+of 0.10). <br/>
 
 ``` r
 library(caret)
@@ -741,10 +741,10 @@ for(j in 1:rep){
   }
 }
 
-mean(dev_matrix > qchisq(0.80,20))
+mean(dev_matrix > qchisq(0.90,20))
 ```
 
-    ## [1] 0.013
+    ## [1] 0.003
 
 <br/> We observe that almost no cross-validation samples would retain
 interactions in the model. We can repeat the same test for nonlinear
@@ -787,10 +787,10 @@ for(j in 1:rep){
   }
 }
 
-mean(dev_matrix > qchisq(0.80,15))
+mean(dev_matrix > qchisq(0.90,15))
 ```
 
-    ## [1] 0.985
+    ## [1] 0.85
 
 <br/> We observe that almost all cross-validation samples would keep
 nonlinear terms in the model.
@@ -800,19 +800,271 @@ model diagnostics. Logistic regression of a binary response does not
 have distributional assumptions (we directly model the probability of an
 event $\mathrm{ln} \frac{p}{1-p} = X\beta$); hence, bias in our
 estimates will be connected to model misspecifications, such as omitted
-variable bias. An interesting fact about logistic regression is that
-omitted variable bias is caused by both missing predictors correlated
-with $X$ (as in linear regression) but also by uncorrelated omitted
-variables (unlike linear regression, see *C. Mood. Logistic regression:
-Why we cannot do what we think we can do, and what we can do about it.
-European sociological review 26.1 (2010): 67-82.* for more details).
-However, this second source of bias is always downwards (i.e., other
-effects will tend to look smaller than they actually are).
+variable bias or the choice of the link function (which is in our case
+*logit*: $\mathrm{logit} (p) = \mathrm{ln} \frac{p}{1-p}$).
 
-Having discussed distribution assumptions, let us examine influence
-observations using Cook’s distance next. <br/>
+An interesting fact about logistic regression is that omitted variable
+bias is caused by both missing predictors correlated with $X$ (as in
+linear regression) but also by uncorrelated omitted variables (unlike
+linear regression, see *C. Mood. Logistic regression: Why we cannot do
+what we think we can do, and what we can do about it. European
+sociological review 26.1 (2010): 67-82.* for more details). However,
+this second source of bias is always downwards (i.e., other effects will
+tend to look smaller than they actually are).
 
-<img src="Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-23-1.png" style="display: block; margin: auto;" />
+A usual method for assessing the model misspecification in linear
+regression is an analysis of residuals. However, plain residual plots
+are much less helpful in the case of binary regression. <br/>
+
+``` r
+plot(predict(full_model,type = 'response'),residuals(full_model,type = 'response'),xlab = 'Predicted probabilities', ylab = 'Raw residuals')
+```
+
+![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-23-1.png)<!-- -->
+
+<br/> Here, we plotted so-called **raw residuals** (observed outcomes
+minus predicted probabilities of outcomes) vs. predicted probabilities.
+These residuals have values in the interval \[-1,1\] that are quite
+apparently not normally distributed (and they cannot be, since apart
+from being bounded to \[-1,1\], they are inherently heteroskedastic,
+since the variance of binary outcome is $p(1-p)$) <br/>
+
+``` r
+qqnorm(residuals(full_model,type = 'response'))
+qqline(residuals(full_model,type = 'response'))
+```
+
+![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-24-1.png)<!-- -->
+
+<br/> To obtain asymptotically normal residuals, we first need to
+normalize them by their expected standard deviation
+$\sqrt{\hat{p}(1-\hat{p})}$ (obtaining so-called *Pearson residuals* in
+the process <br/>
+
+``` r
+pearson_res <-  residuals(full_model,type = 'response')/sqrt(predict(full_model,type = 'response')*(1-predict(full_model,type = 'response')))
+# or simply pearson_res <- residuals(full_model,type = 'pearson')
+```
+
+<br/> and then group them by the value of the linear predictor
+$X\hat{\beta}$ into bins and average them over these bins (letting the
+central limit theorem kick in) <br/>
+
+``` r
+# group by quantiles of the linear predictor
+grouping <- cut(predict(full_model,type = 'response') , breaks = quantile(predict(full_model,type = 'response') , seq(0,1,0.01)))
+
+qqnorm(aggregate(pearson_res,list(grouping),mean)[,2])
+qqline(aggregate(pearson_res,list(grouping),mean)[,2])
+```
+
+![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-26-1.png)<!-- -->
+
+``` r
+plot(aggregate(predict(full_model,type = 'response'),list(grouping),mean)[,2],aggregate(pearson_res,list(grouping),mean)[,2],xlab = 'Binned predicted probability', ylab = 'Binned Pearson residuals')
+```
+
+![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-26-2.png)<!-- -->
+
+<br/> An alternative to binning the data is to use so-called *quantile
+residuals*
+(<https://cran.r-project.org/web/packages/DHARMa/vignettes/DHARMa.html#lm-and-glm>).
+These are based on a simmulation approach similar to parametric
+bootstrap. First, new responses are generated from the model and then
+then the cumulative probability of the observed outcome is calculated
+from the simulated responses. Provided that the model is correctly
+specified these values should have uniform distribution. Quantile
+residuals can be easily computed in R using the package *DHARMa* <br/>
+
+``` r
+library(DHARMa)
+simulationOutput <- simulateResiduals(fittedModel = full_model)
+plot(simulationOutput)
+```
+
+![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-27-1.png)<!-- -->
+
+<br/> We see no obvious problems, But before we celebrate about having
+well-specified model, consider a trivial model model: <br/>
+
+``` r
+full_model <- glm(TCHD ~ 1, family = binomial, framingham_complete)
+simulationOutput_null <- simulateResiduals(fittedModel = full_model)
+plot(simulationOutput_null)
+```
+
+![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-28-1.png)<!-- -->
+
+<br/> There are no issues overall as well for this obviously wrong
+model. However, if we look more closely and plot quantile residuals
+against predictors <br/>
+
+``` r
+par(mfrow = c(1, 2))
+
+plotResiduals(simulationOutput, framingham_complete$Sex)
+plotResiduals(simulationOutput_null, framingham_complete$Sex)
+```
+
+![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-29-1.png)<!-- -->
+
+``` r
+plotResiduals(simulationOutput, framingham_complete$Age)
+plotResiduals(simulationOutput_null, framingham_complete$Age)
+```
+
+![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-29-2.png)<!-- -->
+
+``` r
+plotResiduals(simulationOutput, framingham_complete$Edu)
+plotResiduals(simulationOutput_null, framingham_complete$Edu)
+```
+
+![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-29-3.png)<!-- -->
+
+``` r
+plotResiduals(simulationOutput, framingham_complete$Cig)
+plotResiduals(simulationOutput_null, framingham_complete$Cig)
+```
+
+![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-29-4.png)<!-- -->
+
+``` r
+plotResiduals(simulationOutput, framingham_complete$Meds)
+plotResiduals(simulationOutput_null, framingham_complete$Meds)
+```
+
+![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-29-5.png)<!-- -->
+
+``` r
+plotResiduals(simulationOutput, framingham_complete$Stroke)
+plotResiduals(simulationOutput_null, framingham_complete$Stroke)
+```
+
+![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-29-6.png)<!-- -->
+
+``` r
+plotResiduals(simulationOutput, framingham_complete$Hyp)
+plotResiduals(simulationOutput_null, framingham_complete$Hyp)
+```
+
+![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-29-7.png)<!-- -->
+
+``` r
+plotResiduals(simulationOutput, framingham_complete$Diab)
+plotResiduals(simulationOutput_null, framingham_complete$Diab)
+```
+
+![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-29-8.png)<!-- -->
+
+``` r
+plotResiduals(simulationOutput, framingham_complete$Chol)
+plotResiduals(simulationOutput_null, framingham_complete$Chol)
+```
+
+![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-29-9.png)<!-- -->
+
+``` r
+plotResiduals(simulationOutput, framingham_complete$SysP)
+plotResiduals(simulationOutput_null, framingham_complete$SysP)
+```
+
+![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-29-10.png)<!-- -->
+
+``` r
+plotResiduals(simulationOutput, framingham_complete$DiaP)
+plotResiduals(simulationOutput_null, framingham_complete$DiaP)
+```
+
+![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-29-11.png)<!-- -->
+
+``` r
+plotResiduals(simulationOutput, framingham_complete$BMI)
+plotResiduals(simulationOutput_null, framingham_complete$BMI)
+```
+
+![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-29-12.png)<!-- -->
+
+``` r
+plotResiduals(simulationOutput, framingham_complete$Hrate)
+plotResiduals(simulationOutput_null, framingham_complete$Hrate)
+```
+
+![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-29-13.png)<!-- -->
+
+``` r
+plotResiduals(simulationOutput, framingham_complete$Gluc)
+plotResiduals(simulationOutput_null, framingham_complete$Gluc)
+```
+
+![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-29-14.png)<!-- -->
+
+<br/> we see discrepancies for the trivial model (e.g., **Age**,
+**SysP*, ***Hyp**, and **Diab\*\* are visually quite apparent). Thus,
+one can detect misspecification from the residuals provided that if one
+**knows** where to look. We should note that *DHARMa* also provides
+goodness-of-fit tests based on quantile regression, e.g., <br/>
+
+``` r
+par(mfrow = c(1, 2))
+plotResiduals(simulationOutput, framingham_complete$DiaP, quantreg =  TRUE)
+plotResiduals(simulationOutput_null, framingham_complete$DiaP, quantreg =  TRUE)
+```
+
+![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-30-1.png)<!-- -->
+
+<br/> We can check the fit wrt. all numerical predictors in the model
+<br/>
+
+``` r
+par(mfrow = c(1, 1))
+plotResiduals(simulationOutput, framingham_complete$Age, quantreg =  TRUE)
+```
+
+![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-31-1.png)<!-- -->
+
+``` r
+plotResiduals(simulationOutput, framingham_complete$Cig, quantreg =  TRUE)
+```
+
+![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-31-2.png)<!-- -->
+
+``` r
+plotResiduals(simulationOutput, framingham_complete$Chol, quantreg =  TRUE)
+```
+
+![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-31-3.png)<!-- -->
+
+``` r
+plotResiduals(simulationOutput, framingham_complete$SysP, quantreg =  TRUE)
+```
+
+![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-31-4.png)<!-- -->
+
+``` r
+plotResiduals(simulationOutput, framingham_complete$BMI, quantreg =  TRUE)
+```
+
+![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-31-5.png)<!-- -->
+
+``` r
+plotResiduals(simulationOutput, framingham_complete$Hrate, quantreg =  TRUE)
+```
+
+![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-31-6.png)<!-- -->
+
+``` r
+plotResiduals(simulationOutput, framingham_complete$Gluc, quantreg =  TRUE)
+```
+
+![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-31-7.png)<!-- -->
+
+<br/> Overall, we have not detected any obvious misspecification of our
+model (at least wrt. the predictors in our model). Having discussed the
+misspecification, let us examine influential observations using Cook’s
+distance next. <br/>
+
+<img src="Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-32-1.png" style="display: block; margin: auto;" />
 
 <br/> Some observations may be overly influential. Hence, let us test
 whether deleting them significantly changes the estimates. <br/>
@@ -835,59 +1087,59 @@ ci <- confint(full_model)
 cbind(round(coeff_delete,4),round(ci,4))
 ```
 
-    ##                          All CD<0.02  CD<0.01 CD<0.005    2.5 % 97.5 %
-    ## (Intercept)          -8.9136 -8.3868  -7.7348 -10.3267 -18.8173 0.7098
-    ## SexMale              -1.9001 -2.1158  -1.8750  -1.9468  -4.4332 0.6342
-    ## rcs(Age, 4)Age        0.1645  0.1539   0.1339   0.1666   0.0019 0.3303
-    ## rcs(Age, 4)Age'      -0.0240 -0.0282  -0.0230  -0.0371  -0.2921 0.2381
-    ## rcs(Age, 4)Age''     -0.0277 -0.0192  -0.0309  -0.0185  -0.6918 0.6462
-    ## Edu.L                -0.0060  0.0031   0.0065   0.0160  -0.2416 0.2226
-    ## Edu.Q                 0.1739  0.1667   0.1741   0.1663  -0.0589 0.4059
-    ## Edu.C                 0.0152  0.0112   0.0021   0.0091  -0.2147 0.2488
-    ## rcs(Cig, 4)Cig        0.0298  0.0307   0.0310   0.0348  -0.0329 0.0927
-    ## rcs(Cig, 4)Cig'      -0.0166 -0.0158  -0.0163  -0.0192  -0.0588 0.0254
-    ## Meds1                 0.1143  0.0988   0.1680   0.2124  -0.3684 0.5802
-    ## Stroke1              -4.5127 -4.6299 -23.3719 -18.0537 -19.5736 5.9276
-    ## Hyp1                 -0.4834 -0.5164  -0.4330  -0.8449  -2.6140 1.6142
-    ## Diab1                 2.4763  2.6766   2.7674  -0.4495  -3.1107 7.7223
-    ## rcs(Chol, 4)Chol      0.0037  0.0044   0.0053   0.0021  -0.0142 0.0221
-    ## rcs(Chol, 4)Chol'     0.0032  0.0030   0.0031   0.0083  -0.0304 0.0363
-    ## rcs(Chol, 4)Chol''    0.0049  0.0061   0.0056  -0.0178  -0.1000 0.1109
-    ## rcs(SysP, 4)SysP      0.0046  0.0016   0.0041   0.0039  -0.0625 0.0714
-    ## rcs(SysP, 4)SysP'    -0.0798 -0.0787  -0.0809  -0.1004  -0.2307 0.0679
-    ## rcs(SysP, 4)SysP''    0.1988  0.1959   0.2041   0.2539  -0.2006 0.6048
-    ## rcs(DiaP, 4)DiaP      0.0144  0.0216   0.0172   0.0468  -0.0829 0.1140
-    ## rcs(DiaP, 4)DiaP'     0.1432  0.1366   0.1369   0.1160  -0.0067 0.2923
-    ## rcs(DiaP, 4)DiaP''   -0.3416 -0.3212  -0.3325  -0.2626  -0.8245 0.1426
-    ## rcs(BMI, 4)BMI       -0.0583 -0.0496  -0.0516  -0.0646  -0.2554 0.1410
-    ## rcs(BMI, 4)BMI'       0.2653  0.2524   0.2045   0.1652  -0.1301 0.6552
-    ## rcs(BMI, 4)BMI''     -0.7437 -0.7044  -0.5214  -0.4125  -1.9592 0.4820
-    ## rcs(Hrate, 4)Hrate    0.0186  0.0167   0.0187   0.0174  -0.0509 0.0890
-    ## rcs(Hrate, 4)Hrate'  -0.1267 -0.1255  -0.1264  -0.1165  -0.2729 0.0172
-    ## rcs(Hrate, 4)Hrate''  0.3229  0.3208   0.3221   0.2984  -0.0467 0.6957
-    ## rcs(Gluc, 4)Gluc     -0.0110 -0.0233  -0.0336  -0.0209  -0.0567 0.0355
-    ## rcs(Gluc, 4)Gluc'    -0.0184 -0.0304  -0.0363  -0.0366  -0.1568 0.1163
-    ## rcs(Gluc, 4)Gluc''    0.0733  0.1136   0.1358   0.1406  -0.2936 0.4486
-    ## Age:Cig               0.0001  0.0000   0.0000   0.0000  -0.0010 0.0011
-    ## Stroke1:Age           0.0879  0.0899   0.4094   0.3188  -0.0946 0.3463
-    ## Hyp1:Age              0.0184  0.0192   0.0171   0.0242  -0.0188 0.0563
-    ## Diab1:Age            -0.0525 -0.0571  -0.0624  -0.0156  -0.1440 0.0424
-    ## Age:Chol             -0.0001 -0.0001  -0.0002  -0.0001  -0.0004 0.0002
-    ## Age:SysP              0.0005  0.0005   0.0005   0.0006  -0.0006 0.0015
-    ## Age:DiaP             -0.0015 -0.0016  -0.0014  -0.0019  -0.0031 0.0002
-    ## Age:BMI              -0.0002 -0.0003  -0.0001   0.0003  -0.0032 0.0029
-    ## Age:Hrate             0.0000  0.0000   0.0000   0.0000  -0.0010 0.0011
-    ## Age:Gluc              0.0003  0.0005   0.0007   0.0005  -0.0004 0.0009
-    ## SexMale:Cig          -0.0059 -0.0062  -0.0055  -0.0036  -0.0256 0.0144
-    ## SexMale:Stroke1       0.4554  0.4829  -0.0627   0.5496  -1.6274 2.5827
-    ## SexMale:Hyp1         -0.5314 -0.5265  -0.4804  -0.4423  -1.1093 0.0427
-    ## SexMale:Diab1         0.6458  0.5258   0.6495   1.2462  -0.6526 1.9920
-    ## SexMale:Chol          0.0037  0.0036   0.0035   0.0045  -0.0009 0.0083
-    ## SexMale:SysP          0.0107  0.0118   0.0123   0.0090  -0.0049 0.0265
-    ## SexMale:DiaP          0.0040  0.0024   0.0018   0.0057  -0.0211 0.0291
-    ## SexMale:BMI          -0.0195 -0.0211  -0.0233  -0.0200  -0.0747 0.0353
-    ## SexMale:Hrate         0.0069  0.0076   0.0070   0.0077  -0.0104 0.0241
-    ## SexMale:Gluc         -0.0009  0.0021   0.0003  -0.0023  -0.0102 0.0085
+    ##                          All CD<0.02 CD<0.01 CD<0.005        
+    ## (Intercept)          -1.7163 -8.9136 -8.9136  -8.9136 -1.8074
+    ## SexMale              -1.7163 -1.9001 -1.9001  -1.9001 -1.6270
+    ## rcs(Age, 4)Age       -1.7163  0.1645  0.1645   0.1645 -1.8074
+    ## rcs(Age, 4)Age'      -1.7163 -0.0240 -0.0240  -0.0240 -1.6270
+    ## rcs(Age, 4)Age''     -1.7163 -0.0277 -0.0277  -0.0277 -1.8074
+    ## Edu.L                -1.7163 -0.0060 -0.0060  -0.0060 -1.6270
+    ## Edu.Q                -1.7163  0.1739  0.1739   0.1739 -1.8074
+    ## Edu.C                -1.7163  0.0152  0.0152   0.0152 -1.6270
+    ## rcs(Cig, 4)Cig       -1.7163  0.0298  0.0298   0.0298 -1.8074
+    ## rcs(Cig, 4)Cig'      -1.7163 -0.0166 -0.0166  -0.0166 -1.6270
+    ## Meds1                -1.7163  0.1143  0.1143   0.1143 -1.8074
+    ## Stroke1              -1.7163 -4.5127 -4.5127  -4.5127 -1.6270
+    ## Hyp1                 -1.7163 -0.4834 -0.4834  -0.4834 -1.8074
+    ## Diab1                -1.7163  2.4763  2.4763   2.4763 -1.6270
+    ## rcs(Chol, 4)Chol     -1.7163  0.0037  0.0037   0.0037 -1.8074
+    ## rcs(Chol, 4)Chol'    -1.7163  0.0032  0.0032   0.0032 -1.6270
+    ## rcs(Chol, 4)Chol''   -1.7163  0.0049  0.0049   0.0049 -1.8074
+    ## rcs(SysP, 4)SysP     -1.7163  0.0046  0.0046   0.0046 -1.6270
+    ## rcs(SysP, 4)SysP'    -1.7163 -0.0798 -0.0798  -0.0798 -1.8074
+    ## rcs(SysP, 4)SysP''   -1.7163  0.1988  0.1988   0.1988 -1.6270
+    ## rcs(DiaP, 4)DiaP     -1.7163  0.0144  0.0144   0.0144 -1.8074
+    ## rcs(DiaP, 4)DiaP'    -1.7163  0.1432  0.1432   0.1432 -1.6270
+    ## rcs(DiaP, 4)DiaP''   -1.7163 -0.3416 -0.3416  -0.3416 -1.8074
+    ## rcs(BMI, 4)BMI       -1.7163 -0.0583 -0.0583  -0.0583 -1.6270
+    ## rcs(BMI, 4)BMI'      -1.7163  0.2653  0.2653   0.2653 -1.8074
+    ## rcs(BMI, 4)BMI''     -1.7163 -0.7437 -0.7437  -0.7437 -1.6270
+    ## rcs(Hrate, 4)Hrate   -1.7163  0.0186  0.0186   0.0186 -1.8074
+    ## rcs(Hrate, 4)Hrate'  -1.7163 -0.1267 -0.1267  -0.1267 -1.6270
+    ## rcs(Hrate, 4)Hrate'' -1.7163  0.3229  0.3229   0.3229 -1.8074
+    ## rcs(Gluc, 4)Gluc     -1.7163 -0.0110 -0.0110  -0.0110 -1.6270
+    ## rcs(Gluc, 4)Gluc'    -1.7163 -0.0184 -0.0184  -0.0184 -1.8074
+    ## rcs(Gluc, 4)Gluc''   -1.7163  0.0733  0.0733   0.0733 -1.6270
+    ## Age:Cig              -1.7163  0.0001  0.0001   0.0001 -1.8074
+    ## Stroke1:Age          -1.7163  0.0879  0.0879   0.0879 -1.6270
+    ## Hyp1:Age             -1.7163  0.0184  0.0184   0.0184 -1.8074
+    ## Diab1:Age            -1.7163 -0.0525 -0.0525  -0.0525 -1.6270
+    ## Age:Chol             -1.7163 -0.0001 -0.0001  -0.0001 -1.8074
+    ## Age:SysP             -1.7163  0.0005  0.0005   0.0005 -1.6270
+    ## Age:DiaP             -1.7163 -0.0015 -0.0015  -0.0015 -1.8074
+    ## Age:BMI              -1.7163 -0.0002 -0.0002  -0.0002 -1.6270
+    ## Age:Hrate            -1.7163  0.0000  0.0000   0.0000 -1.8074
+    ## Age:Gluc             -1.7163  0.0003  0.0003   0.0003 -1.6270
+    ## SexMale:Cig          -1.7163 -0.0059 -0.0059  -0.0059 -1.8074
+    ## SexMale:Stroke1      -1.7163  0.4554  0.4554   0.4554 -1.6270
+    ## SexMale:Hyp1         -1.7163 -0.5314 -0.5314  -0.5314 -1.8074
+    ## SexMale:Diab1        -1.7163  0.6458  0.6458   0.6458 -1.6270
+    ## SexMale:Chol         -1.7163  0.0037  0.0037   0.0037 -1.8074
+    ## SexMale:SysP         -1.7163  0.0107  0.0107   0.0107 -1.6270
+    ## SexMale:DiaP         -1.7163  0.0040  0.0040   0.0040 -1.8074
+    ## SexMale:BMI          -1.7163 -0.0195 -0.0195  -0.0195 -1.6270
+    ## SexMale:Hrate        -1.7163  0.0069  0.0069   0.0069 -1.8074
+    ## SexMale:Gluc         -1.7163 -0.0009 -0.0009  -0.0009 -1.6270
 
 <br/> We see that the estimates remained within the confidence intervals
 for the coefficients; thus, there seems to be no reason to delete any

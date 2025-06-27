@@ -30,7 +30,7 @@ library(clubSandwich)
 life_expectancy_pred <- life_expectancy_cent[order(life_expectancy_cent$Country,life_expectancy_cent$Year),]
 
 ## Correlated random effects model
-cre_model <- lmer(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m  + Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + Inf5_m_cent + factor(Year) + (1 | Country), life_expectancy_pred)
+cre_model <- lmer(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + I_deaths + U5_deaths  + Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + I_deaths_cent + U5_deaths_cent + factor(Year) + (1 | Country), life_expectancy_pred)
 
 summary(lmer_model)
 ```
@@ -38,78 +38,80 @@ summary(lmer_model)
     ## Linear mixed model fit by REML ['lmerMod']
     ## Formula: Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B +  
     ##     Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log +  
-    ##     Thin_10_19 + Thin_5_9 + Schooling + Inf5_m + Alcohol_cent +  
-    ##     Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent +  
-    ##     Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent +  
-    ##     Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + Inf5_m_cent +  
-    ##     factor(Year) + (1 | Country)
+    ##     Thin_10_19 + Thin_5_9 + Schooling + I_deaths + U5_deaths +  
+    ##     Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent +  
+    ##     Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent +  
+    ##     Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent +  
+    ##     I_deaths_cent + U5_deaths_cent + factor(Year) + (1 | Country)
     ##    Data: life_expectancy_cent
     ## 
-    ## REML criterion at convergence: 7515.6
+    ## REML criterion at convergence: 7537.4
     ## 
     ## Scaled residuals: 
     ##     Min      1Q  Median      3Q     Max 
-    ## -4.5599 -0.4188  0.0450  0.3907 10.1744 
+    ## -4.5058 -0.4206  0.0423  0.3938 10.5988 
     ## 
     ## Random effects:
     ##  Groups   Name        Variance Std.Dev.
-    ##  Country  (Intercept) 4.3560   2.0871  
-    ##  Residual             0.5728   0.7568  
+    ##  Country  (Intercept) 4.3290   2.0806  
+    ##  Residual             0.5726   0.7567  
     ## Number of obs: 2864, groups:  Country, 179
     ## 
     ## Fixed effects:
     ##                    Estimate Std. Error t value
-    ## (Intercept)       5.657e+01  4.610e+00  12.271
-    ## EconomyDeveloped  4.626e+00  1.003e+00   4.612
-    ## RegionAsia        1.426e+00  7.041e-01   2.025
-    ## RegionCAm         2.321e+00  7.818e-01   2.969
-    ## RegionEU         -8.122e-01  1.159e+00  -0.701
-    ## RegionMidE        2.045e-01  8.943e-01   0.229
-    ## RegionNAm         1.244e-01  1.577e+00   0.079
-    ## RegionOce        -6.862e-01  9.635e-01  -0.712
-    ## RegionNotEU       1.138e+00  9.402e-01   1.210
-    ## RegionSAm         2.058e+00  8.867e-01   2.321
-    ## Alcohol          -9.912e-03  1.900e-02  -0.522
-    ## Hepatitis_B       9.379e-04  2.132e-03   0.440
-    ## Measles          -6.292e-03  2.137e-03  -2.945
-    ## BMI              -9.757e-01  9.575e-02 -10.190
-    ## Polio             1.088e-03  4.270e-03   0.255
-    ## Diphtheria        1.297e-02  4.270e-03   3.039
-    ## HIV              -8.416e-01  2.678e-02 -31.430
-    ## GDP_log           4.553e-01  1.247e-01   3.650
-    ## Pop_log           2.635e-01  2.812e-01   0.937
-    ## Thin_10_19        4.314e-05  1.125e-02   0.004
-    ## Thin_5_9          7.771e-04  1.111e-02   0.070
-    ## Schooling        -2.305e-02  4.464e-02  -0.516
-    ## Inf5_m           -2.697e+00  6.837e-02 -39.451
-    ## Alcohol_cent     -2.009e-01  8.016e-02  -2.507
-    ## Hepatitis_B_cent -2.438e-02  2.426e-02  -1.005
-    ## Measles_cent      1.093e-02  1.304e-02   0.838
-    ## BMI_cent          1.015e+00  1.755e-01   5.784
-    ## Polio_cent        3.908e-02  5.861e-02   0.667
-    ## Diphtheria_cent  -3.119e-02  5.984e-02  -0.521
-    ## HIV_cent         -7.397e-02  8.997e-02  -0.822
-    ## GDP_log_cent      9.513e-01  2.882e-01   3.301
-    ## Pop_log_cent     -1.099e-01  3.119e-01  -0.352
-    ## Thin_10_19_cent  -1.014e-01  2.437e-01  -0.416
-    ## Thin_5_9_cent     8.899e-02  2.435e-01   0.365
-    ## Schooling_cent   -2.625e-01  1.310e-01  -2.004
-    ## Inf5_m_cent      -1.795e+00  3.792e-01  -4.735
-    ## factor(Year)2001  1.145e-01  8.067e-02   1.419
-    ## factor(Year)2002  1.798e-01  8.259e-02   2.178
-    ## factor(Year)2003  2.983e-01  8.567e-02   3.482
-    ## factor(Year)2004  5.307e-01  9.037e-02   5.873
-    ## factor(Year)2005  6.565e-01  9.551e-02   6.874
-    ## factor(Year)2006  8.810e-01  1.019e-01   8.643
-    ## factor(Year)2007  1.097e+00  1.085e-01  10.117
-    ## factor(Year)2008  1.392e+00  1.156e-01  12.044
-    ## factor(Year)2009  1.676e+00  1.223e-01  13.709
-    ## factor(Year)2010  1.990e+00  1.292e-01  15.401
-    ## factor(Year)2011  2.255e+00  1.370e-01  16.463
-    ## factor(Year)2012  2.514e+00  1.443e-01  17.426
-    ## factor(Year)2013  2.808e+00  1.521e-01  18.468
-    ## factor(Year)2014  3.110e+00  1.602e-01  19.416
-    ## factor(Year)2015  3.297e+00  1.673e-01  19.708
+    ## (Intercept)      63.7522355  4.9919363  12.771
+    ## EconomyDeveloped  4.7366387  1.0031813   4.722
+    ## RegionAsia        1.1229449  0.7344149   1.529
+    ## RegionCAm         2.1110071  0.7936562   2.660
+    ## RegionEU         -1.0208671  1.1653390  -0.876
+    ## RegionMidE        0.1085228  0.8941319   0.121
+    ## RegionNAm        -0.0316028  1.5764442  -0.020
+    ## RegionOce        -0.9432563  0.9778563  -0.965
+    ## RegionNotEU       1.0004367  0.9424483   1.062
+    ## RegionSAm         1.7899278  0.9044568   1.979
+    ## Alcohol          -0.0101209  0.0189949  -0.533
+    ## Hepatitis_B       0.0012912  0.0021489   0.601
+    ## Measles          -0.0062920  0.0021364  -2.945
+    ## BMI              -0.9488611  0.0978906  -9.693
+    ## Polio             0.0012032  0.0042701   0.282
+    ## Diphtheria        0.0124742  0.0042863   2.910
+    ## HIV              -0.8235209  0.0300837 -27.374
+    ## GDP_log           0.4896268  0.1274160   3.843
+    ## Pop_log           0.2557956  0.2812397   0.910
+    ## Thin_10_19        0.0004360  0.0112506   0.039
+    ## Thin_5_9          0.0003912  0.0111143   0.035
+    ## Schooling        -0.0208967  0.0446620  -0.468
+    ## I_deaths         -0.1052106  0.0059274 -17.750
+    ## U5_deaths        -0.0507045  0.0061097  -8.299
+    ## Alcohol_cent     -0.1885333  0.0804033  -2.345
+    ## Hepatitis_B_cent -0.0217338  0.0242810  -0.895
+    ## Measles_cent      0.0099784  0.0130219   0.766
+    ## BMI_cent          0.9576477  0.1775969   5.392
+    ## Polio_cent        0.0439016  0.0585337   0.750
+    ## Diphtheria_cent  -0.0387575  0.0599350  -0.647
+    ## HIV_cent         -0.0907275  0.0907605  -1.000
+    ## GDP_log_cent      0.9486936  0.2894961   3.277
+    ## Pop_log_cent     -0.0924875  0.3118582  -0.297
+    ## Thin_10_19_cent  -0.0921497  0.2430496  -0.379
+    ## Thin_5_9_cent     0.0679226  0.2432645   0.279
+    ## Schooling_cent   -0.2770380  0.1309398  -2.116
+    ## I_deaths_cent    -0.0598539  0.0225904  -2.650
+    ## U5_deaths_cent   -0.0595839  0.0290875  -2.048
+    ## factor(Year)2001  0.1156249  0.0806644   1.433
+    ## factor(Year)2002  0.1817870  0.0825891   2.201
+    ## factor(Year)2003  0.3006714  0.0856809   3.509
+    ## factor(Year)2004  0.5328253  0.0903749   5.896
+    ## factor(Year)2005  0.6585426  0.0955124   6.895
+    ## factor(Year)2006  0.8819733  0.1019276   8.653
+    ## factor(Year)2007  1.0970934  0.1084690  10.114
+    ## factor(Year)2008  1.3910840  0.1156085  12.033
+    ## factor(Year)2009  1.6749357  0.1222797  13.698
+    ## factor(Year)2010  1.9892076  0.1292177  15.394
+    ## factor(Year)2011  2.2514562  0.1369971  16.434
+    ## factor(Year)2012  2.5089088  0.1442841  17.389
+    ## factor(Year)2013  2.8027296  0.1521142  18.425
+    ## factor(Year)2014  3.1030577  0.1602211  19.367
+    ## factor(Year)2015  3.2898619  0.1673746  19.656
 
 <br/> We used *lmer* for the fit instead of *plm*, because we plan to
 compare models using a likelihood ratio test in a bit and *plm* does not
@@ -157,7 +159,7 @@ us try that (we will model **Year** using a restricted cubic spline).
 
 ``` r
 library(rms)
-cre_model_year <- lmer(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m  + Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + Inf5_m_cent + rcs(Year,4) + (1 | Country), life_expectancy_pred)
+cre_model_year <- lmer(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + I_deaths + U5_deaths  + Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + I_deaths_cent + U5_deaths_cent + rcs(Year,4) + (1 | Country), life_expectancy_pred)
 ```
 
 <br/> We can compare these two models using the likelihood ratio test.
@@ -175,11 +177,11 @@ anova(cre_model,cre_model_year)
 
     ## Data: life_expectancy_pred
     ## Models:
-    ## cre_model_year: Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m + Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + Inf5_m_cent + rcs(Year, 4) + (1 | Country)
-    ## cre_model: Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m + Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + Inf5_m_cent + factor(Year) + (1 | Country)
-    ##                npar    AIC    BIC  logLik deviance  Chisq Df Pr(>Chisq)
-    ## cre_model_year   41 7424.9 7669.2 -3671.4   7342.9                     
-    ## cre_model        53 7445.9 7761.8 -3669.9   7339.9 3.0132 12     0.9954
+    ## cre_model_year: Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + I_deaths + U5_deaths + Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + I_deaths_cent + U5_deaths_cent + rcs(Year, 4) + (1 | Country)
+    ## cre_model: Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + I_deaths + U5_deaths + Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + I_deaths_cent + U5_deaths_cent + factor(Year) + (1 | Country)
+    ##                npar    AIC    BIC  logLik deviance Chisq Df Pr(>Chisq)
+    ## cre_model_year   43 7424.9 7681.2 -3669.5   7338.9                    
+    ## cre_model        55 7445.9 7773.7 -3667.9   7335.9 3.039 12     0.9953
 
 <br/> As can be seen from the results, these two models indeed seem
 almost identical in terms of log-likelihood. Hence, we will use the
@@ -200,23 +202,22 @@ for(i in 1:16){
   train_set <- life_expectancy_pred[life_expectancy_pred$Year != years[i],]
   test_set <- life_expectancy_pred[life_expectancy_pred$Year == years[i],]
   
-  
-cre_model_year_new <- lmer(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m  + Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + Inf5_m_cent + rcs(Year,4) + (1 | Country), train_set)
+cre_model_year_new <- lmer(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + I_deaths + U5_deaths  + Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + I_deaths_cent + U5_deaths_cent + rcs(Year,4) + (1 | Country), train_set)
   
   MSE_pred[i] <- mean((test_set$Life_expectancy - predict(cre_model_year_new,test_set))^2)
   }
 MSE_pred
 ```
 
-    ##  [1] 2.1632567 0.9825796 0.5638226 0.4621187 0.4167693 0.4485832 0.4290238
-    ##  [8] 0.3617235 0.2488589 0.2264488 0.7179689 0.4322098 0.4481797 0.6004497
-    ## [15] 0.8282301 1.0851344
+    ##  [1] 2.1862874 0.9799063 0.5659197 0.4634224 0.4162323 0.4455651 0.4271891
+    ##  [8] 0.3587713 0.2482901 0.2264938 0.9138499 0.4326662 0.4495528 0.5996300
+    ## [15] 0.8258693 1.0836092
 
 ``` r
 mean(MSE_pred)
 ```
 
-    ## [1] 0.6509599
+    ## [1] 0.6639534
 
 <br/> We see that predictions are fairly accurate on average. The
 squared root of MSE (0.81) is just a bit higher than the estimated
@@ -226,11 +227,66 @@ dataset (i.e., the prediction for the year 2000 using the data from
 2001-2015 and the prediction for the year 2015 using the data from
 2000-2014).
 
+This validation is slightly incorrect due to a *data leakage* that is
+often easy to miss. The centered predictors for the train set were
+computed for each country using the whole dataset, i.e. using the test
+set data. The correct cross-validation should be computed as follows.
+<br/>
+
+``` r
+years <- seq(2000,2015,1)
+MSE_pred <- numeric(16)
+
+for(i in 1:16){
+  
+  train_set <- life_expectancy_pred[life_expectancy_pred$Year != years[i],]
+  test_set <- life_expectancy_pred[life_expectancy_pred$Year == years[i],]
+  
+  train_set <- within(train_set, {
+  Alcohol_cent <- tapply(Alcohol, Country, mean)[factor(Country)]
+  Hepatitis_B_cent <- tapply(Hepatitis_B, Country, mean)[factor(Country)]
+  Measles_cent <- tapply(Measles, Country, mean)[factor(Country)]
+  BMI_cent <- tapply(BMI, Country, mean)[factor(Country)]
+  Polio_cent <- tapply(Polio, Country, mean)[factor(Country)]
+  Diphtheria_cent <- tapply(Diphtheria, Country, mean)[factor(Country)]
+  HIV_cent <- tapply(HIV, Country, mean)[factor(Country)]
+  GDP_log_cent <- tapply(GDP_log, Country, mean)[factor(Country)]
+  Pop_log_cent <- tapply(Pop_log, Country, mean)[factor(Country)]
+  Thin_10_19_cent <- tapply(Thin_10_19, Country, mean)[factor(Country)]
+  Thin_5_9_cent <- tapply(Thin_5_9, Country, mean)[factor(Country)]
+  Schooling_cent <- tapply(Schooling, Country, mean)[factor(Country)]
+  I_deaths_cent <- tapply(I_deaths, Country, mean)[factor(Country)]
+  U5_deaths_cent <- tapply(U5_deaths, Country, mean)[factor(Country)]
+})
+
+cre_model_year_new <- lmer(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + I_deaths + U5_deaths  + Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + I_deaths_cent + U5_deaths_cent + rcs(Year,4) + (1 | Country), train_set)
+  
+  MSE_pred[i] <- mean((test_set$Life_expectancy - predict(cre_model_year_new,test_set))^2)
+  }
+MSE_pred
+```
+
+    ##  [1] 2.2256107 1.0019984 0.5662997 0.4582212 0.4146832 0.4417465 0.4211425
+    ##  [8] 0.3547708 0.2501417 0.2305672 0.9529928 0.4352325 0.4506142 0.5877513
+    ## [15] 0.8029303 1.0665156
+
+``` r
+mean(MSE_pred)
+```
+
+    ## [1] 0.6663262
+
+<br/> We observe that the results are only a tiny bit worse (this data
+leakage was not that severe).
+
 Let us try the predictions for a new individual. Thus, we will now
 perform a cross-validation on the countries, i.e., using the rows of the
 dataset. I will perform 100 repetitions of the 10-fold cross-validation.
 We should emphasize that for a new individual, the prediction of the
-individual random effect is simply zero. <br/>
+individual random effect is simply zero. We should note that the data
+leakage due to centered predictors are not the problem in this case,
+because these are computed for each countries, i.e., the train set and
+the test set is in this setup correctly separated. <br/>
 
 ``` r
 library(caret)
@@ -264,13 +320,14 @@ for(j in 1:rep){
     countries_test <- countries_list[unlist(d[i])]
     train_set <- le_cc[le_cc$Country %!in% countries_test,]
     test_set <- le_cc[le_cc$Country %in% countries_test,]
-
+    
     cre_model_year_new <- lmer(Life_expectancy ~ Economy + NAm + Asia + CAm + EU + MidE + Oce + NotEU + SAm + 
                                  Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + 
-                                 Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m  + Alcohol_cent + 
-                                 Hepatitis_B_cent+ Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + 
-                                 HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent +
-                                 Schooling_cent + Inf5_m_cent + rcs(Year,4) + (1 | Country), train_set)
+                                 Pop_log + Thin_10_19 + Thin_5_9 + Schooling + I_deaths + U5_deaths  + 
+                                 Alcohol_cent + Hepatitis_B_cent+ Measles_cent + BMI_cent + Polio_cent + 
+                                 Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + 
+                                 Thin_5_9_cent + Schooling_cent + I_deaths_cent + U5_deaths_cent + rcs(Year,4) + 
+                                 (1 | Country),train_set)
 
     ## Set random effect prediction zero via re.form=~0
     MSE_pred[i,j] <- mean((test_set$Life_expectancy - predict(cre_model_year_new,test_set, re.form=~0))^2)
@@ -281,7 +338,7 @@ for(j in 1:rep){
 mean(MSE_pred)  
 ```
 
-    ## [1] 6.325255
+    ## [1] 6.28858
 
 <br/> We see that the mean square error is significantly higher than in
 the previous setup. Still, the squared root of MSE (2.5) again mostly
@@ -293,8 +350,8 @@ VarCorr(cre_model_year)
 ```
 
     ##  Groups   Name        Std.Dev.
-    ##  Country  (Intercept) 2.08714 
-    ##  Residual             0.75555
+    ##  Country  (Intercept) 2.08065 
+    ##  Residual             0.75544
 
 <br/> Overall, our predictors model life expectancy fairly well. Still,
 a noticeable portion of the variance in life expectancy is captured by
@@ -318,7 +375,7 @@ creates bootstrap samples directly from the model. <br/>
 le_france <- life_expectancy_pred[life_expectancy_pred$Country == 'France',]
 le_nofrance <- life_expectancy_pred[life_expectancy_pred$Country != 'France',]
 
-model_nofrance <- lmer(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m  + Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + Inf5_m_cent + rcs(Year,4) + (1 | Country), le_nofrance)
+model_nofrance <- lmer(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + I_deaths + U5_deaths  + Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + I_deaths_cent + U5_deaths_cent + rcs(Year,4) + (1 | Country), le_nofrance)
 
 ## Random effects & error estimates
 country_sd <- as.data.frame(VarCorr(model_nofrance))$sdcor[1]
@@ -354,7 +411,7 @@ qqnorm(unlist(ranef(model_nofrance)), main = "Random effects")
 qqline(unlist(ranef(model_nofrance)))
 ```
 
-<img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-10-1.png" style="display: block; margin: auto;" />
+<img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-11-1.png" style="display: block; margin: auto;" />
 
 <br/> We see that residuals do not have a normal distribution. Thus,
 instead of a parametric bootstrap, we can consider a semi-parametric
@@ -440,7 +497,7 @@ for (j in 2:length(Countries_list)){
 }
 
 ## Refit the model and predict France (confidence interval)
-model_new <- lmer(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m  + Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + Inf5_m_cent + rcs(Year,4) + (1 | Country), le_nofrance_new)
+model_new <- lmer(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + I_deaths + U5_deaths  + Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + I_deaths_cent + U5_deaths_cent + rcs(Year,4) + (1 | Country), le_nofrance_new)
 
 pred_france_pcb[i,] <- predict(model_new, le_france, re.form=~0)
 }
@@ -467,22 +524,22 @@ ci_france
 ```
 
     ##       2.5% (Par) 97.5% (Par) 2.5% (Semi-Par) 97.5% (Semi-Par) 2.5% (Wild) 97.5% (Wild) 2.5% (Pairs) 97.5% (Pairs)
-    ##  [1,]   75.01653    80.02804        74.95629         79.99386    74.89860     80.30795     75.47026      79.62444
-    ##  [2,]   75.02097    80.05916        74.99642         80.00336    74.92078     80.28307     75.49082      79.62930
-    ##  [3,]   75.15086    80.19861        75.10462         80.12476    75.06134     80.41120     75.60051      79.70364
-    ##  [4,]   75.29730    80.35208        75.22136         80.28829    75.26493     80.55889     75.77792      79.84461
-    ##  [5,]   75.40582    80.46887        75.33470         80.39512    75.34130     80.62156     75.84445      79.98333
-    ##  [6,]   75.61219    80.68519        75.52712         80.59968    75.56166     80.81484     76.06027      80.20230
-    ##  [7,]   75.84619    80.94960        75.74420         80.82069    75.79641     81.07350     76.30385      80.45333
-    ##  [8,]   76.11015    81.23791        76.02022         81.12155    76.04009     81.33190     76.57865      80.69782
-    ##  [9,]   76.39512    81.49626        76.30733         81.38206    76.32355     81.63169     76.81878      81.03116
-    ## [10,]   76.67587    81.75129        76.55992         81.64558    76.56129     81.88197     77.10031      81.22202
-    ## [11,]   76.95615    82.01075        76.87710         81.94095    76.83840     82.13498     77.34276      81.57064
-    ## [12,]   77.18767    82.27237        77.12228         82.17348    77.11516     82.34062     77.58371      81.82797
-    ## [13,]   77.50788    82.61496        77.45262         82.49961    77.47878     82.70530     77.96575      82.15238
-    ## [14,]   77.73091    82.87598        77.70943         82.79578    77.72438     82.92494     78.24446      82.39478
-    ## [15,]   77.99397    83.14406        77.93634         83.02149    77.99098     83.18327     78.50487      82.65954
-    ## [16,]   78.27526    83.37908        78.20063         83.30831    78.26793     83.42383     78.75552      82.93481
+    ##  [1,]   74.96131    79.95261        74.89121         79.87688    74.87707     80.20532     75.35319      79.60903
+    ##  [2,]   74.96817    79.99057        74.94441         79.90277    74.88762     80.20887     75.37770      79.64143
+    ##  [3,]   75.10434    80.13502        75.07571         80.04820    75.02876     80.37163     75.48796      79.76549
+    ##  [4,]   75.25188    80.29389        75.17741         80.20390    75.19862     80.49522     75.61519      79.91382
+    ##  [5,]   75.36012    80.41233        75.30636         80.32307    75.32084     80.58576     75.72071      80.01800
+    ##  [6,]   75.55850    80.62059        75.50314         80.53933    75.49192     80.76456     75.90881      80.22095
+    ##  [7,]   75.79673    80.87371        75.75336         80.74429    75.72713     81.01643     76.20469      80.46394
+    ##  [8,]   76.07965    81.13089        76.05162         81.00217    75.99328     81.26127     76.46990      80.74862
+    ##  [9,]   76.34848    81.39141        76.31684         81.27968    76.28955     81.54891     76.74882      81.01625
+    ## [10,]   76.62689    81.66365        76.56803         81.59916    76.53336     81.79977     77.05274      81.27159
+    ## [11,]   76.89246    81.95120        76.87825         81.86025    76.81260     82.04001     77.26913      81.53861
+    ## [12,]   77.14739    82.22572        77.08470         82.13277    77.09114     82.31048     77.55942      81.87417
+    ## [13,]   77.49180    82.58734        77.40807         82.45334    77.46407     82.62059     77.92333      82.27384
+    ## [14,]   77.72113    82.84062        77.68708         82.71368    77.71849     82.85035     78.19158      82.45193
+    ## [15,]   77.96990    83.11390        77.91528         82.93889    77.97424     83.08763     78.43622      82.78936
+    ## [16,]   78.24485    83.35971        78.17803         83.22360    78.23703     83.32616     78.64705      83.06904
 
 <br/> We see that the results of all four bootstraps are fairly similar
 in this particular case. Having demonstrated the computation of
@@ -560,7 +617,7 @@ could compute in a way that was robust to heteroskedasticity.
 For example, we can notice that there seems to be heteroskedasticity
 wrt. the **Economy** factor developing/developed. <br/>
 
-<img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-17-1.png" style="display: block; margin: auto;" />
+<img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-18-1.png" style="display: block; margin: auto;" />
 
 <br/> We can fit a new model that models this heteroskedasticity by
 assuming a different idiosyncratic error variance per stratum developed
@@ -572,111 +629,115 @@ for the available options). <br/>
 ``` r
 library(nlme)
 library(lmeInfo)
-model_economy <- lme(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m  + Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + Inf5_m_cent + rcs(Year,4), random = ~1|Country, weights=varIdent(form =  ~ 1|Economy), data = le_nofrance)
+model_economy <- lme(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + I_deaths + U5_deaths  + Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + I_deaths_cent + U5_deaths_cent + rcs(Year,4), random = ~1|Country, weights=varIdent(form =  ~ 1|Economy), data = le_nofrance)
 summary(model_economy)
 ```
 
     ## Linear mixed-effects model fit by REML
     ##   Data: le_nofrance 
     ##        AIC      BIC    logLik
-    ##   7323.873 7573.377 -3619.936
+    ##   7346.196 7607.551 -3629.098
     ## 
     ## Random effects:
     ##  Formula: ~1 | Country
     ##         (Intercept)  Residual
-    ## StdDev:    2.087928 0.8245656
+    ## StdDev:     2.08115 0.8246889
     ## 
     ## Variance function:
     ##  Structure: Different standard deviations per stratum
     ##  Formula: ~1 | Economy 
     ##  Parameter estimates:
     ## Developing  Developed 
-    ##  1.0000000  0.5383832 
-    ## Fixed effects:  Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B +      Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log +      Thin_10_19 + Thin_5_9 + Schooling + Inf5_m + Alcohol_cent +      Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent +      Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent +      Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + Inf5_m_cent +      rcs(Year, 4) 
-    ##                         Value Std.Error   DF   t-value p-value
-    ## (Intercept)        -249.94103  34.79842 2654  -7.18254  0.0000
-    ## EconomyDeveloped      4.72741   1.01028  155   4.67929  0.0000
-    ## RegionAsia            1.43964   0.70505  155   2.04189  0.0429
-    ## RegionCAm             2.34254   0.78302  155   2.99168  0.0032
-    ## RegionEU             -0.86659   1.16053  155  -0.74672  0.4564
-    ## RegionMidE            0.19088   0.89528  155   0.21320  0.8314
-    ## RegionNAm             0.31097   1.59450  155   0.19503  0.8456
-    ## RegionOce            -0.71243   0.96491  155  -0.73833  0.4614
-    ## RegionNotEU           1.16569   0.94135  155   1.23832  0.2175
-    ## RegionSAm             2.11286   0.89030  155   2.37321  0.0189
-    ## Alcohol              -0.01846   0.01630 2654  -1.13238  0.2576
-    ## Hepatitis_B          -0.00011   0.00205 2654  -0.05266  0.9580
-    ## Measles              -0.00653   0.00206 2654  -3.16914  0.0015
-    ## BMI                  -0.84858   0.08515 2654  -9.96511  0.0000
-    ## Polio                -0.00022   0.00443 2654  -0.05024  0.9599
-    ## Diphtheria            0.01367   0.00444 2654   3.08018  0.0021
-    ## HIV                  -0.82057   0.02891 2654 -28.38756  0.0000
-    ## GDP_log               0.29623   0.12666 2654   2.33883  0.0194
-    ## Pop_log              -0.38225   0.28053 2654  -1.36261  0.1731
-    ## Thin_10_19           -0.00217   0.01223 2654  -0.17760  0.8590
-    ## Thin_5_9              0.00027   0.01208 2654   0.02264  0.9819
-    ## Schooling            -0.05367   0.03927 2654  -1.36661  0.1719
-    ## Inf5_m               -2.64274   0.07102 2654 -37.21233  0.0000
-    ## Alcohol_cent         -0.20042   0.08019  155  -2.49944  0.0135
-    ## Hepatitis_B_cent     -0.01303   0.02728  155  -0.47758  0.6336
-    ## Measles_cent          0.01248   0.01314  155   0.94939  0.3439
-    ## BMI_cent              0.89055   0.17007  155   5.23631  0.0000
-    ## Polio_cent            0.03975   0.05869  155   0.67738  0.4992
-    ## Diphtheria_cent      -0.04260   0.06129  155  -0.69503  0.4881
-    ## HIV_cent             -0.09303   0.09074  155  -1.02526  0.3068
-    ## GDP_log_cent          1.08942   0.29038  155   3.75173  0.0002
-    ## Pop_log_cent          0.52897   0.31147  155   1.69831  0.0915
-    ## Thin_10_19_cent      -0.11860   0.24516  155  -0.48376  0.6292
-    ## Thin_5_9_cent         0.11274   0.24551  155   0.45919  0.6467
-    ## Schooling_cent       -0.22430   0.12970  155  -1.72942  0.0857
-    ## Inf5_m_cent          -1.86706   0.38058  155  -4.90584  0.0000
-    ## rcs(Year, 4)Year      0.15315   0.01722 2654   8.89645  0.0000
-    ## rcs(Year, 4)Year'     0.25229   0.04350 2654   5.80020  0.0000
-    ## rcs(Year, 4)Year''   -0.60231   0.12592 2654  -4.78324  0.0000
+    ##  1.0000000  0.5359667 
+    ## Fixed effects:  Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B +      Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log +      Thin_10_19 + Thin_5_9 + Schooling + I_deaths + U5_deaths +      Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent +      Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent +      Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent +      I_deaths_cent + U5_deaths_cent + rcs(Year, 4) 
+    ##                         Value Std.Error   DF    t-value p-value
+    ## (Intercept)        -242.75178  34.79071 2653  -6.977489  0.0000
+    ## EconomyDeveloped      4.84111   1.01023  154   4.792085  0.0000
+    ## RegionAsia            1.13469   0.73520  154   1.543370  0.1248
+    ## RegionCAm             2.13085   0.79476  154   2.681120  0.0081
+    ## RegionEU             -1.07841   1.16646  154  -0.924516  0.3567
+    ## RegionMidE            0.09375   0.89505  154   0.104748  0.9167
+    ## RegionNAm             0.15827   1.59303  154   0.099351  0.9210
+    ## RegionOce            -0.97224   0.97925  154  -0.992842  0.3223
+    ## RegionNotEU           1.02731   0.94342  154   1.088920  0.2779
+    ## RegionSAm             1.84375   0.90766  154   2.031328  0.0439
+    ## Alcohol              -0.01949   0.01627 2653  -1.198192  0.2309
+    ## Hepatitis_B           0.00041   0.00206 2653   0.199552  0.8418
+    ## Measles              -0.00651   0.00206 2653  -3.163047  0.0016
+    ## BMI                  -0.80257   0.08725 2653  -9.198066  0.0000
+    ## Polio                -0.00008   0.00443 2653  -0.017691  0.9859
+    ## Diphtheria            0.01289   0.00445 2653   2.897873  0.0038
+    ## HIV                  -0.78779   0.03235 2653 -24.351961  0.0000
+    ## GDP_log               0.35456   0.12936 2653   2.740944  0.0062
+    ## Pop_log              -0.39706   0.28036 2653  -1.416257  0.1568
+    ## Thin_10_19           -0.00143   0.01224 2653  -0.116743  0.9071
+    ## Thin_5_9             -0.00047   0.01209 2653  -0.038845  0.9690
+    ## Schooling            -0.05186   0.03921 2653  -1.322748  0.1860
+    ## I_deaths             -0.09746   0.00622 2653 -15.667460  0.0000
+    ## U5_deaths            -0.05645   0.00656 2653  -8.604199  0.0000
+    ## Alcohol_cent         -0.18727   0.08039  154  -2.329464  0.0211
+    ## Hepatitis_B_cent     -0.01028   0.02729  154  -0.376847  0.7068
+    ## Measles_cent          0.01153   0.01312  154   0.878922  0.3808
+    ## BMI_cent              0.81395   0.17209  154   4.729672  0.0000
+    ## Polio_cent            0.04457   0.05861  154   0.760516  0.4481
+    ## Diphtheria_cent      -0.05020   0.06138  154  -0.817798  0.4147
+    ## HIV_cent             -0.12447   0.09164  154  -1.358193  0.1764
+    ## GDP_log_cent          1.06257   0.29166  154   3.643142  0.0004
+    ## Pop_log_cent          0.55343   0.31120  154   1.778388  0.0773
+    ## Thin_10_19_cent      -0.11004   0.24446  154  -0.450148  0.6532
+    ## Thin_5_9_cent         0.09240   0.24518  154   0.376880  0.7068
+    ## Schooling_cent       -0.23837   0.12959  154  -1.839444  0.0678
+    ## I_deaths_cent        -0.06815   0.02270  154  -3.002741  0.0031
+    ## U5_deaths_cent       -0.05444   0.02922  154  -1.863141  0.0643
+    ## rcs(Year, 4)Year      0.15317   0.01718 2653   8.913223  0.0000
+    ## rcs(Year, 4)Year'     0.24988   0.04342 2653   5.754651  0.0000
+    ## rcs(Year, 4)Year''   -0.59719   0.12569 2653  -4.751260  0.0000
     ##  Correlation: 
-    ##                    (Intr) EcnmyD RegnAs RgnCAm RegnEU RgnMdE RgnNAm RegnOc RgnNEU RgnSAm Alcohl Hptt_B Measls BMI    Polio  Dphthr HIV    GDP_lg Pop_lg Th_10_19 Th_5_9 Schlng Inf5_m Alchl_ Hpt_B_ Msls_c BMI_cn Pl_cnt Dphth_ HIV_cn GDP_l_ Pp_lg_ T_10_19_ T_5_9_ Schln_ Inf5__ rc(Y,4)Y rc(Y,4)Y'
-    ## EconomyDeveloped    0.002                                                                                                                                                                                                                                                                            
-    ## RegionAsia         -0.012  0.036                                                                                                                                                                                                                                                                     
-    ## RegionCAm          -0.007  0.074  0.365                                                                                                                                                                                                                                                              
-    ## RegionEU           -0.013 -0.588  0.304  0.459                                                                                                                                                                                                                                                       
-    ## RegionMidE          0.023 -0.023  0.445  0.441  0.311                                                                                                                                                                                                                                                
-    ## RegionNAm           0.015 -0.190  0.263  0.315  0.458  0.320                                                                                                                                                                                                                                         
-    ## RegionOce          -0.011 -0.221  0.277  0.490  0.480  0.430  0.293                                                                                                                                                                                                                                  
-    ## RegionNotEU        -0.025 -0.104  0.440  0.565  0.616  0.381  0.390  0.475                                                                                                                                                                                                                           
-    ## RegionSAm          -0.009  0.146  0.337  0.538  0.378  0.395  0.319  0.407  0.498                                                                                                                                                                                                                    
-    ## Alcohol            -0.033  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000                                                                                                                                                                                                             
-    ## Hepatitis_B         0.062  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.063                                                                                                                                                                                                      
-    ## Measles             0.020  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000 -0.048 -0.196                                                                                                                                                                                               
-    ## BMI                 0.350  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000 -0.053  0.049  0.061                                                                                                                                                                                        
-    ## Polio               0.028  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000 -0.033  0.001 -0.050  0.010                                                                                                                                                                                 
-    ## Diphtheria         -0.018  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.031 -0.225 -0.007  0.006 -0.785                                                                                                                                                                          
-    ## HIV                -0.051  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.031  0.011 -0.031 -0.058 -0.007  0.005                                                                                                                                                                   
-    ## GDP_log             0.150  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000 -0.284 -0.085 -0.044 -0.143  0.028 -0.020 -0.097                                                                                                                                                            
-    ## Pop_log             0.096  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000 -0.027 -0.028 -0.017 -0.088 -0.026 -0.032 -0.030  0.361                                                                                                                                                     
-    ## Thin_10_19          0.014  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000 -0.022 -0.003 -0.009  0.005 -0.055  0.049 -0.050  0.012  0.005                                                                                                                                              
-    ## Thin_5_9            0.012  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000 -0.033  0.003  0.003  0.008 -0.010  0.002 -0.081  0.007 -0.017 -0.652                                                                                                                                       
-    ## Schooling           0.346  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000 -0.017 -0.024 -0.107  0.105  0.034  0.001  0.015 -0.038  0.018  0.022    0.008                                                                                                                              
-    ## Inf5_m              0.017  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.005 -0.053 -0.069  0.138  0.080  0.132 -0.279  0.343  0.443 -0.007   -0.007 -0.080                                                                                                                       
-    ## Alcohol_cent        0.009 -0.111  0.133 -0.247 -0.292  0.211 -0.093  0.011 -0.236 -0.221 -0.203 -0.013  0.010  0.011  0.007 -0.006 -0.006  0.058  0.005  0.005    0.007  0.003 -0.001                                                                                                                
-    ## Hepatitis_B_cent   -0.001  0.108  0.069  0.098  0.065  0.024  0.313  0.025  0.130  0.095 -0.005 -0.075  0.015 -0.004  0.000  0.017 -0.001  0.006  0.002  0.000    0.000  0.002  0.004 -0.131                                                                                                         
-    ## Measles_cent       -0.013  0.098 -0.019  0.018 -0.051 -0.045 -0.038  0.083 -0.063  0.123  0.008  0.031 -0.157 -0.010  0.008  0.001  0.005  0.007  0.003  0.001   -0.001  0.017  0.011 -0.047  0.006                                                                                                  
-    ## BMI_cent           -0.254  0.237  0.071 -0.167 -0.180 -0.263 -0.211 -0.270 -0.064 -0.109  0.027 -0.025 -0.031 -0.501 -0.005 -0.003  0.029  0.071  0.044 -0.002   -0.004 -0.053 -0.069  0.084 -0.061  0.031                                                                                           
-    ## Polio_cent         -0.023  0.011 -0.006  0.127  0.091  0.077  0.099  0.113  0.120  0.122  0.002  0.000  0.004 -0.001 -0.075  0.059  0.001 -0.002  0.002  0.004    0.001 -0.003 -0.006 -0.043  0.075 -0.131 -0.093                                                                                    
-    ## Diphtheria_cent    -0.004 -0.087 -0.016 -0.104 -0.052 -0.032 -0.201 -0.013 -0.086 -0.109 -0.002  0.016  0.001  0.000  0.057 -0.072  0.000  0.001  0.002 -0.004    0.000  0.000 -0.010  0.091 -0.500  0.026  0.104 -0.833                                                                             
-    ## HIV_cent            0.041  0.067  0.293  0.258  0.195  0.208  0.147  0.179  0.241  0.207 -0.010 -0.004  0.010  0.018  0.002 -0.002 -0.319  0.031  0.010  0.016    0.026 -0.005  0.089 -0.132  0.058  0.050 -0.112 -0.063 -0.033                                                                      
-    ## GDP_log_cent       -0.115 -0.392  0.057  0.084  0.285 -0.097  0.032  0.210  0.247  0.018  0.124  0.037  0.019  0.062 -0.012  0.009  0.042 -0.436 -0.158 -0.005   -0.003  0.016 -0.149 -0.162 -0.029 -0.119 -0.148  0.146 -0.036 -0.075                                                               
-    ## Pop_log_cent       -0.104 -0.059 -0.049  0.059  0.046 -0.044 -0.075  0.089  0.034 -0.034  0.024  0.026  0.016  0.079  0.023  0.029  0.027 -0.325 -0.901 -0.005    0.016 -0.016 -0.399 -0.024  0.032  0.046  0.006  0.026 -0.025  0.023  0.213                                                        
-    ## Thin_10_19_cent     0.005 -0.109  0.087 -0.005  0.035  0.009 -0.025  0.052 -0.004 -0.052  0.001  0.000  0.000  0.000  0.003 -0.002  0.003 -0.001  0.000 -0.050    0.033 -0.001  0.000  0.108 -0.131 -0.245 -0.018 -0.049  0.102  0.050 -0.012  0.006                                                 
-    ## Thin_5_9_cent      -0.020  0.145 -0.162  0.022 -0.038 -0.054  0.026 -0.032  0.017  0.096  0.002  0.000  0.000  0.000  0.000  0.000  0.004  0.000  0.001  0.032   -0.049  0.000  0.000 -0.117  0.139  0.272  0.089  0.058 -0.110 -0.093  0.009 -0.009 -0.964                                          
-    ## Schooling_cent     -0.091 -0.138 -0.293  0.057  0.046  0.000  0.024  0.017 -0.154  0.053  0.005  0.007  0.032 -0.032 -0.010  0.000 -0.005  0.011 -0.005 -0.007   -0.002 -0.303  0.024 -0.276  0.082 -0.067 -0.208  0.006 -0.029 -0.130 -0.133 -0.026  0.097   -0.040                                 
-    ## Inf5_m_cent        -0.090 -0.145  0.196  0.326  0.331  0.211  0.099  0.350  0.368  0.302 -0.001  0.010  0.013 -0.026 -0.015 -0.025  0.052 -0.064 -0.083  0.001    0.001  0.015 -0.187 -0.105 -0.069 -0.007  0.094  0.265  0.019 -0.234  0.443  0.124 -0.062    0.087  0.208                          
-    ## rcs(Year, 4)Year   -0.991  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.033 -0.063 -0.020 -0.353 -0.028  0.018  0.051 -0.152 -0.097 -0.014   -0.012 -0.349 -0.017 -0.007  0.005  0.003  0.177  0.002 -0.001 -0.016  0.066  0.087  0.001    0.001  0.106  0.003                   
-    ## rcs(Year, 4)Year'   0.802  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.046  0.015  0.004  0.023  0.009 -0.008 -0.013  0.031 -0.014  0.004    0.023  0.036 -0.004 -0.009 -0.001 -0.001 -0.012 -0.001  0.001  0.004 -0.013  0.013  0.000   -0.001 -0.011  0.001 -0.810            
-    ## rcs(Year, 4)Year'' -0.727  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000 -0.035 -0.004 -0.008 -0.010 -0.004  0.013  0.010 -0.015  0.016  0.000   -0.025 -0.010  0.008  0.007  0.000  0.001  0.005  0.000 -0.001 -0.003  0.006 -0.014  0.000    0.001  0.003 -0.001  0.734   -0.983   
+    ##                    (Intr) EcnmyD RegnAs RgnCAm RegnEU RgnMdE RgnNAm RegnOc RgnNEU RgnSAm Alcohl Hptt_B Measls BMI    Polio  Dphthr HIV    GDP_lg Pop_lg Th_10_19 Th_5_9 Schlng I_dths U5_dth Alchl_ Hpt_B_ Msls_c BMI_cn Pl_cnt Dphth_ HIV_cn GDP_l_ Pp_lg_ T_10_19_ T_5_9_ Schln_ I_dth_ U5_dt_ rc(Y,4)Y rc(Y,4)Y'
+    ## EconomyDeveloped    0.006                                                                                                                                                                                                                                                                                          
+    ## RegionAsia         -0.019  0.011                                                                                                                                                                                                                                                                                   
+    ## RegionCAm          -0.014  0.058  0.398                                                                                                                                                                                                                                                                            
+    ## RegionEU           -0.019 -0.592  0.326  0.472                                                                                                                                                                                                                                                                     
+    ## RegionMidE          0.019 -0.029  0.447  0.446  0.317                                                                                                                                                                                                                                                              
+    ## RegionNAm           0.013 -0.194  0.271  0.321  0.462  0.323                                                                                                                                                                                                                                                       
+    ## RegionOce          -0.019 -0.231  0.315  0.508  0.491  0.436  0.300                                                                                                                                                                                                                                                
+    ## RegionNotEU        -0.032 -0.111  0.449  0.572  0.621  0.386  0.394  0.483                                                                                                                                                                                                                                         
+    ## RegionSAm          -0.016  0.125  0.376  0.557  0.393  0.401  0.325  0.430  0.507                                                                                                                                                                                                                                  
+    ## Alcohol            -0.033  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000                                                                                                                                                                                                                           
+    ## Hepatitis_B         0.063  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.059                                                                                                                                                                                                                    
+    ## Measles             0.020  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000 -0.048 -0.194                                                                                                                                                                                                             
+    ## BMI                 0.343  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000 -0.057  0.074  0.061                                                                                                                                                                                                      
+    ## Polio               0.028  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000 -0.033  0.002 -0.050  0.014                                                                                                                                                                                               
+    ## Diphtheria         -0.019  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.033 -0.232 -0.007 -0.012 -0.784                                                                                                                                                                                        
+    ## HIV                -0.040  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.016  0.061 -0.026  0.051  0.001 -0.031                                                                                                                                                                                 
+    ## GDP_log             0.149  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000 -0.284 -0.059 -0.042 -0.090  0.031 -0.036  0.008                                                                                                                                                                          
+    ## Pop_log             0.096  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000 -0.027 -0.030 -0.017 -0.089 -0.026 -0.031 -0.033  0.351                                                                                                                                                                   
+    ## Thin_10_19          0.014  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000 -0.023  0.000 -0.009  0.011 -0.055  0.047 -0.033  0.017  0.005                                                                                                                                                            
+    ## Thin_5_9            0.012  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000 -0.033  0.000  0.003  0.002 -0.010  0.004 -0.084  0.001 -0.017 -0.652                                                                                                                                                     
+    ## Schooling           0.347  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000 -0.018 -0.021 -0.108  0.108  0.034 -0.001  0.024 -0.032  0.018  0.022    0.008                                                                                                                                            
+    ## I_deaths            0.018  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000 -0.021  0.075 -0.029  0.262  0.052 -0.006  0.277  0.340  0.197  0.021   -0.027 -0.016                                                                                                                                     
+    ## U5_deaths          -0.008  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.027 -0.121 -0.016 -0.199 -0.002  0.099 -0.485 -0.145  0.091 -0.028    0.025 -0.038 -0.786                                                                                                                              
+    ## Alcohol_cent        0.012 -0.101  0.095 -0.261 -0.302  0.201 -0.100 -0.009 -0.245 -0.237 -0.202 -0.012  0.010  0.012  0.007 -0.007 -0.003  0.057  0.005  0.005    0.007  0.004  0.004 -0.005                                                                                                                       
+    ## Hepatitis_B_cent    0.001  0.114  0.041  0.080  0.053  0.018  0.306  0.009  0.120  0.075 -0.004 -0.075  0.015 -0.006  0.000  0.017 -0.005  0.004  0.002  0.000    0.000  0.002 -0.006  0.009 -0.121                                                                                                                
+    ## Measles_cent       -0.013  0.093 -0.004  0.027 -0.044 -0.041 -0.035  0.091 -0.058  0.130  0.008  0.030 -0.157 -0.010  0.008  0.001  0.004  0.007  0.003  0.001   -0.001  0.017  0.005  0.003 -0.052  0.002                                                                                                         
+    ## BMI_cent           -0.254  0.222  0.104 -0.138 -0.160 -0.248 -0.198 -0.238 -0.049 -0.078  0.029 -0.037 -0.031 -0.507 -0.007  0.006 -0.026  0.046  0.045 -0.005   -0.001 -0.055 -0.133  0.101  0.068 -0.069  0.037                                                                                                  
+    ## Polio_cent         -0.027  0.016 -0.023  0.113  0.082  0.072  0.094  0.099  0.113  0.107  0.003  0.000  0.004 -0.001 -0.076  0.059  0.000 -0.002  0.002  0.004    0.001 -0.003 -0.004  0.000 -0.036  0.079 -0.134 -0.099                                                                                           
+    ## Diphtheria_cent    -0.006 -0.094  0.013 -0.083 -0.039 -0.024 -0.193  0.006 -0.075 -0.085 -0.002  0.017  0.001  0.001  0.057 -0.072  0.002  0.003  0.002 -0.003    0.000  0.000  0.000 -0.007  0.080 -0.504  0.031  0.114 -0.834                                                                                    
+    ## HIV_cent            0.042  0.067  0.273  0.249  0.189  0.204  0.144  0.172  0.235  0.197 -0.006 -0.021  0.009 -0.018  0.000  0.011 -0.353 -0.003  0.012  0.011    0.030 -0.009 -0.098  0.171 -0.129  0.060  0.049 -0.092 -0.061 -0.034                                                                             
+    ## GDP_log_cent       -0.121 -0.382  0.032  0.068  0.270 -0.102  0.026  0.190  0.236  0.001  0.126  0.026  0.019  0.040 -0.014  0.016 -0.004 -0.444 -0.155 -0.008   -0.001  0.014 -0.151  0.064 -0.153 -0.021 -0.122 -0.144  0.149 -0.044 -0.059                                                                      
+    ## Pop_log_cent       -0.104 -0.057 -0.053  0.054  0.043 -0.045 -0.077  0.083  0.031 -0.037  0.024  0.027  0.016  0.080  0.024  0.028  0.030 -0.316 -0.901 -0.005    0.015 -0.016 -0.177 -0.082 -0.021  0.034  0.045  0.002  0.027 -0.026  0.020  0.212                                                               
+    ## Thin_10_19_cent     0.006 -0.107  0.076 -0.010  0.031  0.007 -0.027  0.046 -0.007 -0.056  0.001  0.000  0.000 -0.001  0.003 -0.002  0.002 -0.001  0.000 -0.050    0.033 -0.001 -0.001  0.001  0.110 -0.128 -0.246 -0.021 -0.047  0.099  0.050 -0.010  0.007                                                        
+    ## Thin_5_9_cent      -0.022  0.140 -0.137  0.033 -0.030 -0.049  0.030 -0.020  0.023  0.106  0.002  0.000  0.000  0.000  0.000  0.000  0.004  0.000  0.001  0.032   -0.049  0.000  0.001 -0.001 -0.122  0.133  0.274  0.095  0.054 -0.104 -0.093  0.004 -0.010 -0.964                                                 
+    ## Schooling_cent     -0.095 -0.143 -0.260  0.069  0.054  0.005  0.029  0.029 -0.146  0.065  0.005  0.006  0.033 -0.033 -0.010  0.000 -0.007  0.010 -0.005 -0.007   -0.002 -0.303  0.005  0.011 -0.281  0.076 -0.063 -0.195  0.002 -0.022 -0.127 -0.136 -0.027  0.095   -0.036                                        
+    ## I_deaths_cent      -0.067 -0.046 -0.069  0.094  0.140  0.094  0.023  0.111  0.184  0.062  0.006 -0.021  0.008 -0.072 -0.014  0.002 -0.076 -0.093 -0.054 -0.006    0.007  0.004 -0.274  0.215 -0.001  0.012 -0.039  0.007  0.225 -0.054 -0.115  0.379  0.098 -0.024    0.019  0.101                                 
+    ## U5_deaths_cent     -0.031 -0.106  0.319  0.246  0.190  0.117  0.085  0.250  0.174  0.261 -0.006  0.027  0.004  0.045  0.000 -0.022  0.109  0.033 -0.020  0.006   -0.006  0.008  0.176 -0.225 -0.122 -0.097  0.046  0.114 -0.003  0.097 -0.093 -0.003  0.008 -0.039    0.076  0.105 -0.557                          
+    ## rcs(Year, 4)Year   -0.990  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.033 -0.064 -0.020 -0.346 -0.028  0.019  0.041 -0.151 -0.096 -0.014   -0.012 -0.350 -0.018  0.008 -0.007  0.005  0.003  0.175  0.002 -0.001 -0.014  0.067  0.087  0.001    0.001  0.106  0.005 -0.002                   
+    ## rcs(Year, 4)Year'   0.801  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.046  0.013  0.004  0.018  0.008 -0.006 -0.020  0.027 -0.014  0.003    0.023  0.036 -0.019  0.018 -0.009 -0.001 -0.001 -0.009 -0.001  0.000  0.007 -0.012  0.012  0.000   -0.001 -0.011  0.005 -0.004 -0.810            
+    ## rcs(Year, 4)Year'' -0.726  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000 -0.036 -0.002 -0.008 -0.006 -0.004  0.012  0.016 -0.012  0.016  0.000   -0.025 -0.010  0.017 -0.014  0.007  0.000  0.001  0.003  0.000 -0.001 -0.006  0.005 -0.014  0.000    0.001  0.003 -0.005  0.003  0.734   -0.983   
     ## 
     ## Standardized Within-Group Residuals:
     ##         Min          Q1         Med          Q3         Max 
-    ## -4.71935555 -0.43012383  0.02300607  0.40328170  9.03973243 
+    ## -4.73330164 -0.43261355  0.01850146  0.40108111  9.76592298 
     ## 
     ## Number of Observations: 2848
     ## Number of Groups: 178
@@ -710,7 +771,7 @@ new_ref <- rep(rnorm(178,0,country_sd),each = 16)
 le_new <- X_nofrance %*% fixef(model_economy) + new_ref + new_res
 
 ## Refit the model
-model_new <- lme(le_new ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m  + Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + Inf5_m_cent + rcs(Year,4), random = ~1|Country, weights=varIdent(form =  ~ 1|Economy), data = le_nofrance)
+model_new <- lme(le_new ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + I_deaths + U5_deaths  + Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + I_deaths_cent + U5_deaths_cent + rcs(Year,4), random = ~1|Country, weights=varIdent(form =  ~ 1|Economy), data = le_nofrance)
 
 country_sd_new <-  as.numeric(VarCorr(model_economy)[1,2])
 res_nofrance_new <- residuals(model_new)
@@ -744,22 +805,22 @@ pi_france
 ```
 
     ##       2.5% (Par) 97.5% (Par) 2.5% (Semi-Par) 97.5% (Semi-Par) 2.5% (Het. Eco) 97.5% (Het. Eco)
-    ##  [1,]   72.47659    82.28048        72.50501         82.23970        72.09306         82.18711
-    ##  [2,]   72.61622    82.73907        72.28958         82.25184        72.18341         82.22117
-    ##  [3,]   72.63750    82.39562        72.67585         82.24425        72.22373         82.19017
-    ##  [4,]   72.68780    82.74515        72.74275         82.52454        72.40041         82.37849
-    ##  [5,]   72.61368    82.74347        72.98978         82.58019        72.62420         82.56339
-    ##  [6,]   72.75291    82.83589        72.84371         82.67432        72.89825         82.80101
-    ##  [7,]   73.08848    83.07026        73.36079         83.13692        73.17628         83.07372
-    ##  [8,]   73.29208    83.62257        73.55795         83.28172        73.54691         83.39764
-    ##  [9,]   73.91079    83.78639        73.89797         83.48660        73.93141         83.62997
-    ## [10,]   73.88592    84.18325        74.18283         83.81993        74.22687         83.88079
-    ## [11,]   74.13028    84.23198        74.09747         84.33955        74.43959         84.28576
-    ## [12,]   74.77617    84.46284        74.90058         84.62171        74.82945         84.52522
-    ## [13,]   74.91688    84.91984        74.90866         84.63818        75.01286         84.83705
-    ## [14,]   75.03803    85.16312        75.20921         85.32377        75.27152         85.08898
-    ## [15,]   75.34649    85.21657        75.54219         85.30182        75.44507         85.30824
-    ## [16,]   75.95765    85.74094        75.71568         85.70238        75.74157         85.49925
+    ##  [1,]   72.40293    82.22017        72.50725         82.17980        72.03600         82.08407
+    ##  [2,]   72.56667    82.70503        72.33023         82.20903        72.13053         82.12589
+    ##  [3,]   72.59532    82.36305        72.67333         82.18353        72.24321         82.14180
+    ##  [4,]   72.63160    82.67893        72.76513         82.53613        72.38242         82.27355
+    ##  [5,]   72.60310    82.66077        72.95186         82.51990        72.62507         82.49229
+    ##  [6,]   72.72288    82.75497        72.79033         82.61260        72.87115         82.71614
+    ##  [7,]   73.06174    83.01461        73.35064         83.11307        73.15855         82.98351
+    ##  [8,]   73.26913    83.56650        73.56941         83.23171        73.47242         83.31632
+    ##  [9,]   73.86445    83.71593        73.84272         83.42450        73.90011         83.57517
+    ## [10,]   73.82115    84.10104        74.14955         83.79026        74.17154         83.82726
+    ## [11,]   74.05816    84.18073        74.09517         84.28646        74.42257         84.24625
+    ## [12,]   74.74285    84.41918        74.87387         84.56432        74.78860         84.44850
+    ## [13,]   74.85090    84.84944        75.02561         84.57254        74.98825         84.77712
+    ## [14,]   75.00187    85.11177        75.23524         85.27390        75.23172         85.03207
+    ## [15,]   75.29603    85.17326        75.48787         85.26256        75.44512         85.26189
+    ## [16,]   75.90935    85.70450        75.63266         85.67732        75.71685         85.46743
 
 <br/> We see that the prediction intervals did not change that much.
 Still we cannot be really sure that the coverage of the prediction is
@@ -788,7 +849,7 @@ library(lme4)
 life_expectancy <- life_expectancy_cent
 
 ## Correlated random effects model
-cre_model <- lmer(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m  + Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + Inf5_m_cent + factor(Year) + (1 | Country), life_expectancy)
+cre_model <- lmer(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + I_deaths + U5_deaths  + Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + I_deaths_cent + U5_deaths_cent + factor(Year) + (1 | Country), life_expectancy)
 ```
 
 <br/> We will determine which predictors appeared to be significant in
@@ -806,73 +867,74 @@ coef_stats
 ```
 
     ## Alternative hypothesis: two-sided 
-    ##             Coef.  Estimate      SE Null value   t-stat d.f. (Satt) p-val (Satt) Sig.
-    ##       (Intercept)  5.66e+01 5.06094          0 11.17700       47.49      < 0.001  ***
-    ##  EconomyDeveloped  4.63e+00 0.97155          0  4.76174       23.02      < 0.001  ***
-    ##        RegionAsia  1.43e+00 0.76490          0  1.86386       42.24      0.06930    .
-    ##         RegionCAm  2.32e+00 0.80738          0  2.87522       37.92      0.00659   **
-    ##          RegionEU -8.12e-01 1.14468          0 -0.70951       31.52      0.48322     
-    ##        RegionMidE  2.05e-01 0.89237          0  0.22918       30.62      0.82026     
-    ##         RegionNAm  1.24e-01 1.95445          0  0.06363        4.32      0.95210     
-    ##         RegionOce -6.86e-01 1.28595          0 -0.53363       20.71      0.59928     
-    ##       RegionNotEU  1.14e+00 1.05947          0  1.07423       48.14      0.28808     
-    ##         RegionSAm  2.06e+00 0.82448          0  2.49626       31.07      0.01806    *
-    ##           Alcohol -9.91e-03 0.05562          0 -0.17821       31.81      0.85969     
-    ##       Hepatitis_B  9.38e-04 0.00407          0  0.23025       45.47      0.81893     
-    ##           Measles -6.29e-03 0.00557          0 -1.12882       38.04      0.26604     
-    ##               BMI -9.76e-01 0.27433          0 -3.55676       38.63      0.00101   **
-    ##             Polio  1.09e-03 0.00802          0  0.13570       54.35      0.89256     
-    ##        Diphtheria  1.30e-02 0.00879          0  1.47602       51.91      0.14598     
-    ##               HIV -8.42e-01 0.14720          0 -5.71709        5.81      0.00138   **
-    ##           GDP_log  4.55e-01 0.38777          0  1.17401       38.42      0.24762     
-    ##           Pop_log  2.63e-01 0.75910          0  0.34709       18.39      0.73247     
-    ##        Thin_10_19  4.31e-05 0.01195          0  0.00361        5.89      0.99724     
-    ##          Thin_5_9  7.77e-04 0.01307          0  0.05943        5.44      0.95473     
-    ##         Schooling -2.30e-02 0.11752          0 -0.19610       66.66      0.84513     
-    ##            Inf5_m -2.70e+00 0.30261          0 -8.91381       35.44      < 0.001  ***
+    ##             Coef.  Estimate      SE Null value  t-stat d.f. (Satt) p-val (Satt) Sig.
+    ##       (Intercept) 63.752235 5.39478          0 11.8174       45.88      < 0.001  ***
+    ##  EconomyDeveloped  4.736639 0.97500          0  4.8581       23.25      < 0.001  ***
+    ##        RegionAsia  1.122945 0.80643          0  1.3925       42.65      0.17099     
+    ##         RegionCAm  2.111007 0.80864          0  2.6106       37.57      0.01291    *
+    ##          RegionEU -1.020867 1.12064          0 -0.9110       32.77      0.36896     
+    ##        RegionMidE  0.108523 0.88235          0  0.1230       29.93      0.90293     
+    ##         RegionNAm -0.031603 1.90213          0 -0.0166        4.39      0.98747     
+    ##         RegionOce -0.943256 1.22423          0 -0.7705       24.35      0.44842     
+    ##       RegionNotEU  1.000437 1.03929          0  0.9626       47.58      0.34061     
+    ##         RegionSAm  1.789928 0.84057          0  2.1294       32.59      0.04087    *
+    ##           Alcohol -0.010121 0.05545          0 -0.1825       31.73      0.85633     
+    ##       Hepatitis_B  0.001291 0.00451          0  0.2863       45.37      0.77598     
+    ##           Measles -0.006292 0.00561          0 -1.1214       38.04      0.26914     
+    ##               BMI -0.948861 0.26718          0 -3.5514       34.53      0.00113   **
+    ##             Polio  0.001203 0.00801          0  0.1502       54.32      0.88120     
+    ##        Diphtheria  0.012474 0.00943          0  1.3226       51.94      0.19177     
+    ##               HIV -0.823521 0.16649          0 -4.9463        8.01      0.00112   **
+    ##           GDP_log  0.489627 0.39850          0  1.2287       36.77      0.22700     
+    ##           Pop_log  0.255796 0.78693          0  0.3251       18.30      0.74883     
+    ##        Thin_10_19  0.000436 0.01237          0  0.0352        5.91      0.97305     
+    ##          Thin_5_9  0.000391 0.01326          0  0.0295        5.45      0.97752     
+    ##         Schooling -0.020897 0.11947          0 -0.1749       66.24      0.86168     
+    ##          I_deaths -0.105211 0.02388          0 -4.4061       32.28      < 0.001  ***
 
 ``` r
-conf_int <- cbind(fixef(cre_model)[1:23] - coef_stats$SE*qt(0.975,coef_stats$df_Satt),fixef(cre_model)[1:23] + coef_stats$SE*qt(0.975,coef_stats$df_Satt))
+conf_int <- cbind(fixef(cre_model)[1:24] - coef_stats$SE*qt(0.975,coef_stats$df_Satt),fixef(cre_model)[1:23] + coef_stats$SE*qt(0.975,coef_stats$df_Satt))
 colnames(conf_int) <- c('2.5 %','97.5 %')
 conf_int
 ```
 
-    ##                         2.5 %       97.5 %
-    ## (Intercept)      46.387583751 66.744617060
-    ## EconomyDeveloped  2.616563847  6.636000135
-    ## RegionAsia       -0.117700221  2.969022982
-    ## RegionCAm         0.686834662  3.955979599
-    ## RegionEU         -3.145213314  1.520878392
-    ## RegionMidE       -1.616408543  2.025428100
-    ## RegionNAm        -5.148086642  5.396807020
-    ## RegionOce        -3.362797486  1.990347310
-    ## RegionNotEU      -0.991935825  3.268152273
-    ## RegionSAm         0.376744323  3.739504142
-    ## Alcohol          -0.123232662  0.103408899
-    ## Hepatitis_B      -0.007264218  0.009140078
-    ## Measles          -0.017575275  0.004991439
-    ## BMI              -1.530774539 -0.420669814
-    ## Polio            -0.014984663  0.017160789
-    ## Diphtheria       -0.004665023  0.030613943
-    ## HIV              -1.204608137 -0.478536109
-    ## GDP_log          -0.329472381  1.239977779
-    ## Pop_log          -1.328905481  1.855856759
-    ## Thin_10_19       -0.029316444  0.029402719
-    ## Thin_5_9         -0.032028810  0.033582982
-    ## Schooling        -0.257634833  0.211544356
-    ## Inf5_m           -3.311423816 -2.083322253
+    ##                          2.5 %       97.5 %
+    ## (Intercept)       52.892342652 74.612128270
+    ## EconomyDeveloped   2.720914918  6.752362405
+    ## RegionAsia        -0.503765307  2.749655092
+    ## RegionCAm          0.473382198  3.748631975
+    ## RegionEU          -3.301433348  1.259699062
+    ## RegionMidE        -1.693654341  1.910700025
+    ## RegionNAm         -5.133503702  5.070298182
+    ## RegionOce         -3.468022466  1.581509793
+    ## RegionNotEU       -1.089677428  3.090550775
+    ## RegionSAm          0.078961716  3.500893922
+    ## Alcohol           -0.123101253  0.102859534
+    ## Hepatitis_B       -0.007791515  0.010374007
+    ## Measles           -0.017649993  0.005065983
+    ## BMI               -1.491535406 -0.406186810
+    ## Polio             -0.014860712  0.017267204
+    ## Diphtheria        -0.006452436  0.031400804
+    ## HIV               -1.207360936 -0.439680906
+    ## GDP_log           -0.317984965  1.297238484
+    ## Pop_log           -1.395556658  1.907147880
+    ## Thin_10_19        -0.029958452  0.030830508
+    ## Thin_5_9          -0.032866872  0.033649214
+    ## Schooling         -0.259408355  0.217614987
+    ## I_deaths          -0.153832977 -0.056588163
+    ## U5_deaths        -10.910597342 74.612128270
 
 ``` r
-summary(life_expectancy[,c(5:11,14:16,19,20,21)])
+summary(life_expectancy[,c(4,6:11,14:18,21,22,23)])
 ```
 
-    ##     Alcohol        Hepatitis_B       Measles           BMI            Polio        Diphtheria         HIV            Thin_10_19        Thin_5_9      Schooling          Inf5_m           Pop_log           GDP_log      
-    ##  Min.   : 0.000   Min.   :12.00   Min.   :10.00   Min.   :19.80   Min.   : 8.0   Min.   :16.00   Min.   : 0.0100   Min.   : 0.100   Min.   : 0.1   Min.   : 1.100   Min.   :-1.3782   Min.   :0.07696   Min.   : 4.997  
-    ##  1st Qu.: 1.200   1st Qu.:78.00   1st Qu.:64.00   1st Qu.:23.20   1st Qu.:81.0   1st Qu.:81.00   1st Qu.: 0.0800   1st Qu.: 1.600   1st Qu.: 1.6   1st Qu.: 5.100   1st Qu.:-1.0980   1st Qu.:1.13059   1st Qu.: 7.255  
-    ##  Median : 4.020   Median :89.00   Median :83.00   Median :25.50   Median :93.0   Median :93.00   Median : 0.1500   Median : 3.300   Median : 3.4   Median : 7.800   Median :-0.5904   Median :2.18042   Median : 8.347  
-    ##  Mean   : 4.821   Mean   :84.29   Mean   :77.34   Mean   :25.03   Mean   :86.5   Mean   :86.27   Mean   : 0.8943   Mean   : 4.866   Mean   : 4.9   Mean   : 7.632   Mean   : 0.0000   Mean   :2.26750   Mean   : 8.399  
-    ##  3rd Qu.: 7.777   3rd Qu.:96.00   3rd Qu.:93.00   3rd Qu.:26.40   3rd Qu.:97.0   3rd Qu.:97.00   3rd Qu.: 0.4600   3rd Qu.: 7.200   3rd Qu.: 7.3   3rd Qu.:10.300   3rd Qu.: 0.8325   3rd Qu.:3.20630   3rd Qu.: 9.438  
-    ##  Max.   :17.870   Max.   :99.00   Max.   :99.00   Max.   :32.10   Max.   :99.0   Max.   :99.00   Max.   :21.6800   Max.   :27.700   Max.   :28.6   Max.   :14.100   Max.   : 5.6532   Max.   :7.23046   Max.   :11.630
+    ##     I_deaths         Adult_m          Alcohol        Hepatitis_B       Measles           BMI            Polio      GDP_per_capita   Population_mln       Thin_10_19        Thin_5_9      Schooling        U5_deaths         Pop_log           GDP_log      
+    ##  Min.   :  1.80   Min.   : 49.38   Min.   : 0.000   Min.   :12.00   Min.   :10.00   Min.   :19.80   Min.   : 8.0   Min.   :   148   Min.   :   0.080   Min.   : 0.100   Min.   : 0.1   Min.   : 1.100   Min.   :  0.50   Min.   :0.07696   Min.   : 4.997  
+    ##  1st Qu.:  8.10   1st Qu.:106.91   1st Qu.: 1.200   1st Qu.:78.00   1st Qu.:64.00   1st Qu.:23.20   1st Qu.:81.0   1st Qu.:  1416   1st Qu.:   2.098   1st Qu.: 1.600   1st Qu.: 1.6   1st Qu.: 5.100   1st Qu.:  1.40   1st Qu.:1.13059   1st Qu.: 7.255  
+    ##  Median : 19.60   Median :163.84   Median : 4.020   Median :89.00   Median :83.00   Median :25.50   Median :93.0   Median :  4217   Median :   7.850   Median : 3.300   Median : 3.4   Median : 7.800   Median :  3.30   Median :2.18042   Median : 8.347  
+    ##  Mean   : 30.36   Mean   :192.25   Mean   : 4.821   Mean   :84.29   Mean   :77.34   Mean   :25.03   Mean   :86.5   Mean   : 11541   Mean   :  36.676   Mean   : 4.866   Mean   : 4.9   Mean   : 7.632   Mean   : 12.57   Mean   :2.26750   Mean   : 8.399  
+    ##  3rd Qu.: 47.35   3rd Qu.:246.79   3rd Qu.: 7.777   3rd Qu.:96.00   3rd Qu.:93.00   3rd Qu.:26.40   3rd Qu.:97.0   3rd Qu.: 12557   3rd Qu.:  23.688   3rd Qu.: 7.200   3rd Qu.: 7.3   3rd Qu.:10.300   3rd Qu.: 17.60   3rd Qu.:3.20630   3rd Qu.: 9.438  
+    ##  Max.   :138.10   Max.   :719.36   Max.   :17.870   Max.   :99.00   Max.   :99.00   Max.   :32.10   Max.   :99.0   Max.   :112418   Max.   :1379.860   Max.   :27.700   Max.   :28.6   Max.   :14.100   Max.   :127.90   Max.   :7.23046   Max.   :11.630
 
 <br/> First, we will compute the confidence intervals for the
 predictions, varying one predictor while keeping the other fixed (other
@@ -880,7 +942,7 @@ fixed effects are chosen as Turkey 2015) using a simple parametric
 bootstrap (we assume that the individual random effects are fixed).
 <br/>
 
-<img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-23-1.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-23-2.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-23-3.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-23-4.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-23-5.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-23-6.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-23-7.png" style="display: block; margin: auto;" />
+<img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-24-1.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-24-2.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-24-3.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-24-4.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-24-5.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-24-6.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-24-7.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-24-8.png" style="display: block; margin: auto;" />
 
 <br/> We see that many predictors seem to have little absolute effect:
 **Alcohol**, **Hepatitis_B**, **Measles**, **Polio**, **Diphtheria**,
@@ -900,8 +962,8 @@ for more details). <br/>
 
     ## $lsmeans
     ##  Economy    lsmean    SE  df lower.CL upper.CL
-    ##  Developing   68.0 0.329 156     67.3     68.6
-    ##  Developed    72.6 0.819 156     71.0     74.2
+    ##  Developing   67.9 0.329 155     67.3     68.6
+    ##  Developed    72.7 0.818 155     71.1     74.3
     ## 
     ## Results are averaged over the levels of: Region, Year 
     ## Degrees-of-freedom method: kenward-roger 
@@ -909,12 +971,12 @@ for more details). <br/>
     ## 
     ## $contrasts
     ##  contrast               estimate SE  df t.ratio p.value
-    ##  Developing - Developed    -4.63  1 156  -4.612  <.0001
+    ##  Developing - Developed    -4.74  1 155  -4.722  <.0001
     ## 
     ## Results are averaged over the levels of: Region, Year 
     ## Degrees-of-freedom method: kenward-roger
 
-<img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-24-1.png" style="display: block; margin: auto;" />
+<img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-25-1.png" style="display: block; margin: auto;" />
 
 <br/> Next, we focus on the **Region**-specific factors. We can test
 formally that this factor **Region** is significant in the model. <br/>
@@ -924,22 +986,22 @@ Wald_test(cre_model, constraints = constrain_zero(c("RegionAsia","RegionCAm","Re
 ```
 
     ##  test Fstat df_num df_denom  p_val sig
-    ##   HTZ  2.95      8     32.4 0.0134   *
+    ##   HTZ   2.6      8     32.6 0.0256   *
 
 <br/> However, the differences between the estimated marginal means for
 regions seem overall pretty close. <br/>
 
     ## $lsmeans
     ##  Region lsmean    SE  df lower.CL upper.CL
-    ##  Afr      69.7 0.631 156     68.4     70.9
-    ##  Asia     71.1 0.698 156     69.7     72.5
-    ##  CAm      72.0 0.707 156     70.6     73.4
-    ##  EU       68.9 0.680 156     67.5     70.2
-    ##  MidE     69.9 0.811 156     68.3     71.5
-    ##  NAm      69.8 1.380 156     67.1     72.5
-    ##  Oce      69.0 0.775 156     67.4     70.5
-    ##  NotEU    70.8 0.719 156     69.4     72.2
-    ##  SAm      71.7 0.845 156     70.1     73.4
+    ##  Afr      69.9 0.643 155     68.6     71.1
+    ##  Asia     71.0 0.701 155     69.6     72.4
+    ##  CAm      72.0 0.705 155     70.6     73.4
+    ##  EU       68.8 0.678 155     67.5     70.2
+    ##  MidE     70.0 0.811 155     68.4     71.6
+    ##  NAm      69.8 1.370 155     67.1     72.5
+    ##  Oce      68.9 0.774 155     67.4     70.4
+    ##  NotEU    70.9 0.718 155     69.4     72.3
+    ##  SAm      71.6 0.844 155     70.0     73.3
     ## 
     ## Results are averaged over the levels of: Economy, Year 
     ## Degrees-of-freedom method: kenward-roger 
@@ -947,61 +1009,61 @@ regions seem overall pretty close. <br/>
     ## 
     ## $contrasts
     ##  contrast     estimate    SE  df t.ratio p.value
-    ##  Afr - Asia    -1.4257 0.704 156  -2.025  0.5287
-    ##  Afr - CAm     -2.3214 0.782 156  -2.969  0.0808
-    ##  Afr - EU       0.8122 1.160 156   0.701  0.9987
-    ##  Afr - MidE    -0.2045 0.894 156  -0.229  1.0000
-    ##  Afr - NAm     -0.1244 1.580 156  -0.079  1.0000
-    ##  Afr - Oce      0.6862 0.963 156   0.712  0.9986
-    ##  Afr - NotEU   -1.1381 0.940 156  -1.210  0.9532
-    ##  Afr - SAm     -2.0581 0.887 156  -2.321  0.3361
-    ##  Asia - CAm    -0.8957 0.840 156  -1.067  0.9781
-    ##  Asia - EU      2.2378 1.160 156   1.932  0.5929
-    ##  Asia - MidE    1.2212 0.857 156   1.425  0.8865
-    ##  Asia - NAm     1.3013 1.550 156   0.840  0.9954
-    ##  Asia - Oce     2.1119 1.020 156   2.064  0.5020
-    ##  Asia - NotEU   0.2876 0.893 156   0.322  1.0000
-    ##  Asia - SAm    -0.6325 0.929 156  -0.681  0.9990
-    ##  CAm - EU       3.1336 1.060 156   2.962  0.0823
-    ##  CAm - MidE     2.1169 0.891 156   2.377  0.3043
-    ##  CAm - NAm      2.1970 1.530 156   1.440  0.8804
-    ##  CAm - Oce      3.0076 0.894 156   3.364  0.0263
-    ##  CAm - NotEU    1.1833 0.816 156   1.451  0.8759
-    ##  CAm - SAm      0.2633 0.807 156   0.326  1.0000
-    ##  EU - MidE     -1.0167 1.230 156  -0.830  0.9958
-    ##  EU - NAm      -0.9365 1.450 156  -0.645  0.9993
-    ##  EU - Oce      -0.1259 1.100 156  -0.115  1.0000
-    ##  EU - NotEU    -1.9503 0.938 156  -2.078  0.4920
-    ##  EU - SAm      -2.8703 1.160 156  -2.477  0.2511
-    ##  MidE - NAm     0.0801 1.540 156   0.052  1.0000
-    ##  MidE - Oce     0.8907 0.994 156   0.896  0.9929
-    ##  MidE - NotEU  -0.9336 1.020 156  -0.915  0.9919
-    ##  MidE - SAm    -1.8536 0.978 156  -1.895  0.6180
-    ##  NAm - Oce      0.8106 1.580 156   0.513  0.9999
-    ##  NAm - NotEU   -1.0137 1.490 156  -0.680  0.9990
-    ##  NAm - SAm     -1.9338 1.550 156  -1.247  0.9444
-    ##  Oce - NotEU   -1.8243 0.975 156  -1.872  0.6340
-    ##  Oce - SAm     -2.7443 1.010 156  -2.727  0.1469
-    ##  NotEU - SAm   -0.9200 0.917 156  -1.003  0.9851
+    ##  Afr - Asia    -1.1229 0.734 155  -1.529  0.8402
+    ##  Afr - CAm     -2.1110 0.794 155  -2.660  0.1713
+    ##  Afr - EU       1.0209 1.170 155   0.876  0.9939
+    ##  Afr - MidE    -0.1085 0.894 155  -0.121  1.0000
+    ##  Afr - NAm      0.0316 1.580 155   0.020  1.0000
+    ##  Afr - Oce      0.9433 0.978 155   0.965  0.9884
+    ##  Afr - NotEU   -1.0004 0.942 155  -1.062  0.9787
+    ##  Afr - SAm     -1.7899 0.904 155  -1.979  0.5603
+    ##  Asia - CAm    -0.9881 0.840 155  -1.176  0.9603
+    ##  Asia - EU      2.1438 1.160 155   1.853  0.6466
+    ##  Asia - MidE    1.0144 0.867 155   1.170  0.9615
+    ##  Asia - NAm     1.1545 1.550 155   0.746  0.9980
+    ##  Asia - Oce     2.0662 1.020 155   2.024  0.5291
+    ##  Asia - NotEU   0.1225 0.898 155   0.136  1.0000
+    ##  Asia - SAm    -0.6670 0.926 155  -0.720  0.9984
+    ##  CAm - EU       3.1319 1.050 155   2.970  0.0808
+    ##  CAm - MidE     2.0025 0.892 155   2.246  0.3820
+    ##  CAm - NAm      2.1426 1.520 155   1.408  0.8931
+    ##  CAm - Oce      3.0543 0.892 155   3.424  0.0219
+    ##  CAm - NotEU    1.1106 0.815 155   1.363  0.9097
+    ##  CAm - SAm      0.3211 0.806 155   0.398  1.0000
+    ##  EU - MidE     -1.1294 1.220 155  -0.923  0.9914
+    ##  EU - NAm      -0.9893 1.450 155  -0.683  0.9989
+    ##  EU - Oce      -0.0776 1.090 155  -0.071  1.0000
+    ##  EU - NotEU    -2.0213 0.937 155  -2.157  0.4388
+    ##  EU - SAm      -2.8108 1.160 155  -2.432  0.2744
+    ##  MidE - NAm     0.1401 1.540 155   0.091  1.0000
+    ##  MidE - Oce     1.0518 0.997 155   1.054  0.9796
+    ##  MidE - NotEU  -0.8919 1.020 155  -0.876  0.9939
+    ##  MidE - SAm    -1.6814 0.983 155  -1.711  0.7389
+    ##  NAm - Oce      0.9117 1.580 155   0.578  0.9997
+    ##  NAm - NotEU   -1.0320 1.490 155  -0.695  0.9988
+    ##  NAm - SAm     -1.8215 1.550 155  -1.177  0.9602
+    ##  Oce - NotEU   -1.9437 0.975 155  -1.993  0.5506
+    ##  Oce - SAm     -2.7332 1.000 155  -2.725  0.1479
+    ##  NotEU - SAm   -0.7895 0.919 155  -0.859  0.9947
     ## 
     ## Results are averaged over the levels of: Economy, Year 
     ## Degrees-of-freedom method: kenward-roger 
     ## P value adjustment: tukey method for comparing a family of 9 estimates
 
-<img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-26-1.png" style="display: block; margin: auto;" />
+<img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-27-1.png" style="display: block; margin: auto;" />
 
 <br/> So overall, the differences between regions after adjusting for
 other covariates are not that noticeable.
 
 Let us move to the time-varying predictors in our model. We start with
-**Inf5_m**, i.e., infant mortality/deaths of children under five years
-old per 1000 population. This effect appears strongly significant in the
-model. This is expected since the incidence of such early deaths
-necessarily drives the life expectancy down. We could observe this
-effect quite clearly from the data (the red curve is a LOESS fit of the
-data: span = 0.5, degree = 2) <br/>
+**I_deaths** and **U5_deaths**, i.e., infant mortality/deaths of
+children under five years old per 1000 population. This effect appears
+strongly significant in the model. This is expected since the incidence
+of such early deaths necessarily drives the life expectancy down. We
+could observe this effect quite clearly from the data (the red curve is
+a LOESS fit of the data: span = 0.5, degree = 2) <br/>
 
-<img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-27-1.png" style="display: block; margin: auto;" />
+<img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-28-1.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-28-2.png" style="display: block; margin: auto;" />
 
 <br/> Another predictor worth mentioning is **GDP_log**. Now, this
 predictor is not significant (using a commonly used p-value cut-off
@@ -1010,7 +1072,7 @@ a bit too large. However, its point estimate is positive, as one would
 expect; more economically developed countries tend to have higher life
 expectancy. <br/>
 
-<img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-28-1.png" style="display: block; margin: auto;" />
+<img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-29-1.png" style="display: block; margin: auto;" />
 
 <br/> Another highly significant predictor in the model is the number of
 **HIV** incidents. The importance of this effect is again to be
@@ -1020,14 +1082,14 @@ expectancy in Africa increased from 56 to 61 between 2010 and 2024.
 Again, if we visualize the data, the effect of **HIV** is also quite
 noticeable. <br/>
 
-<img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-29-1.png" style="display: block; margin: auto;" />
+<img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-30-1.png" style="display: block; margin: auto;" />
 
 <br/> The last predictor we need to mention is the average **BMI** of
 the adult population. This one is a bit trickier to interpret. If we
 simply visualize the data, we could argue that **Life_expectancy**
 actually increases slightly with **BMI**. <br/>
 
-<img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-30-1.png" style="display: block; margin: auto;" />
+<img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-31-1.png" style="display: block; margin: auto;" />
 
 <br/> However, more economically developed countries tend to have higher
 average **BMI**. Actually, if we plot **BMI** vs **Life_expectancy** for
@@ -1035,7 +1097,7 @@ developed countries, this negative effect for large average **BMI** is
 hinted at (that low **BMI** and high **Life_expectancy** country is
 Japan) <br/>
 
-<img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-31-1.png" style="display: block; margin: auto;" />
+<img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-32-1.png" style="display: block; margin: auto;" />
 
 <br/> We could suspect a nonlinear dependence in **BMI**, although
 interestingly enough, fitting a more complex nonlinear (via restricted
@@ -1044,7 +1106,7 @@ cubic splines) does not change the downward trend much. <br/>
 ``` r
 # I fit just a fixed effects model for simplicity's sake
 library(rms)
-fixed_effect_model_nonlin <- lm(Life_expectancy ~ Alcohol + Hepatitis_B + Measles + rcs(BMI,4) + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + Inf5_m + factor(Country) + factor(Year), data = life_expectancy)
+fixed_effect_model_nonlin <- lm(Life_expectancy ~ Alcohol + Hepatitis_B + Measles + rcs(BMI,4) + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + I_deaths + U5_deaths        + factor(Country) + factor(Year), data = life_expectancy)
 
 # Plot the predicted life expectancy vs. BMI for the first observation
 BMI_seq <- seq(min(life_expectancy$BMI),max(life_expectancy$BMI),1)
@@ -1056,7 +1118,7 @@ pred <- predict(fixed_effect_model_nonlin ,obs,type = 'response')
 plot(obs$BMI,pred,xlab = 'BMI', ylab = 'Life expectancy (Turkey)')
 ```
 
-<img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-32-1.png" style="display: block; margin: auto;" />
+<img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-33-1.png" style="display: block; margin: auto;" />
 
 <br/> Having identified BMI as a negative factor in a life expectancy
 model is not without some basis. BMI is associated with an increased
@@ -1075,13 +1137,13 @@ expectancy shows a decrease for very low and very high BMIs <br/>
 Wikipedia, which claims that *… great variations in life expectancy …
 (are) mostly caused by differences in public health, medical care, and
 diet*. With some hyperbole, our stand-ins for these causes are the three
-time-varying factors in our model: **HIV**, **infant mortality**, and
-**BMI**. However, we also observed a lot of additional heterogeneity in
-the data (see, e.g., our analysis of the predictive performance of our
-model) unexplained by these three predictors (some of it is captured by
-the **Economy** factor). Thus, if we were to investigate models of life
-expectancy further, we should explore including additional predictors in
-the model.
+time-varying factors in our model: **HIV**, **infant/child mortality**,
+and **BMI**. However, we also observed a lot of additional heterogeneity
+in the data (see, e.g., our analysis of the predictive performance of
+our model) unexplained by these three predictors (some of it is captured
+by the **Economy** factor). Thus, if we were to investigate models of
+life expectancy further, we should explore including additional
+predictors in the model.
 
 This conclusion wraps up the The First Circle: Linear Regression. I
 strayed a bit from ordinary linear regression by including random
