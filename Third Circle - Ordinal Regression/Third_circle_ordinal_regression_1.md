@@ -650,8 +650,8 @@ number of **absences** also seems to improve the grades a bit.
 Let us check the model assumptions. Similarly to logistic regression,
 the ordered logit directly models the class probabilities. The
 assumption concerning the probabilities is *proportional odds
-assumption*: $\mathrm{logit}\; P(Y <=j|X_1)$ -
-$\mathrm{logit}\; P(Y <=j|X_2)} = (X_2-X_1)\beta$, i.e, the effect of
+assumption*: $\mathrm{logit} P(Y <=j|X_1)$ -
+$\mathrm{logit} P(Y <=j|X_2) = (X_2-X_1)\beta$, i.e, the effect of
 $X$ on relative odds does not depend on class $j$ since $\beta$s are
 independent of class.
 
