@@ -652,7 +652,7 @@ the ordered logit directly models the class probabilities. The
 assumption concerning the probabilities is *proportional odds
 assumption*: $\mathrm{logit} P(Y <=j|X_1)$ -
 $\mathrm{logit} P(Y <=j|X_2) = (X_2-X_1)\beta$, i.e, the effect of
-$X$ on relative odds does not depend on class $j$ since $\beta$s are
+$X$ on relative odds does not depend on class $j$ since $\beta$ are
 independent of class.
 
 Let us check the reasonability of the proportional odds assumption.
