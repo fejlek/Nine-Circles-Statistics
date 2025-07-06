@@ -390,7 +390,7 @@ plot_model(full_model_clm, type = "pred", terms = c('teacher'))
 <br/>
 From the plots, we see that **males** and students from small **famsize** seem to perform slightly better in math. In addition, the probability of F increases for **schoolsup** and decreases for **higher**. Moreover, the probability of F increases noticeably with **failures** and **age**. **studytime**, good **health**, and a low number of **absences** also seems to improve the grades a bit. 
 
-Let us check the model assumptions. Similarly to logistic regression, the ordered logit directly models the class probabilities. The assumption concerning the probabilities is *proportional odds assumption*:  $\mathrm{logit}\; P(Y <=j|X_1)$ - $\mathrm{logit}\; P(Y <=j|X_2)} = (X_2-X_1)\beta$, i.e, the effect of $X$ on relative odds does not depend on class $j$ since $\beta$s are independent of class.
+Let us check the model assumptions. Similarly to logistic regression, the ordered logit directly models the class probabilities. The assumption concerning the probabilities is *proportional odds assumption*:  $\mathrm{logit}\; P(Y <=j|X_1)$ - $\mathrm{logit}\; P(Y <=j|X_2) = (X_2-X_1)\beta$, i.e, the effect of $X$ on relative odds does not depend on class $j$ since $\beta$ are independent of class.
 
 Let us check the reasonability of the proportional odds assumption. First, we use the function *plot.xmean.ordinaly* from the *rms* package, which plots the observed means of predictors versus levels of Y and the estimated expected means of predictors under the proportional odds assumption. For simplicity's sake, let us treat all ordinal variables as numeric, i.e., we approximate their effect as linear, rather than treating them as categorical (i.e., treating each class separately).
 <br/>
