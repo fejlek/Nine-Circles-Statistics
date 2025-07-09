@@ -392,12 +392,12 @@ From the plots, we see that **males** and students from small **famsize** seem t
 
 Let us check the model assumptions. Similarly to logistic regression, the ordered logit directly models the class probabilities. The assumption concerning the probabilities is *proportional odds assumption*:  $\mathrm{logit}\; P(Y <=j|X_1)$ - $\mathrm{logit}\; P(Y <=j|X_2) = (X_2-X_1)\beta$, i.e, the effect of $X$ on relative odds does not depend on class $j$ since $\beta$ are independent of class.
 
-Let us check the reasonability of the proportional odds assumption. First, we use the function *plot.xmean.ordinaly* from the *rms* package, which plots the observed means of predictors versus levels of Y and the estimated expected means of predictors under the proportional odds assumption. For simplicity's sake, let us treat all ordinal variables as numeric, i.e., we approximate their effect as linear, rather than treating them as categorical (i.e., treating each class separately).
+Let us check the reasonability of the proportional odds assumption. First, we use the function *plot.xmean.ordinaly* from the *rms* package, which plots the observed means of predictors versus levels of Y and the estimated expected means of predictors under the proportional odds assumption.
 <br/>
 
 ```{r,message = FALSE,warning=FALSE}
 library(rms)
-plot.xmean.ordinaly(grade ~ school + sex + age + address + famsize + Pstatus + as.numeric(traveltime) + as.numeric(studytime) + failures + schoolsup + activities + nursery  + higher  + internet  + romantic + as.numeric(famrel) + as.numeric(goout) + as.numeric(health) + absences + as.numeric(edu) + as.numeric(alc) +  extrasup + at_home + services + teacher, student_mat_final,cr=TRUE )
+plot.xmean.ordinaly(grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery  + higher  + internet  + romantic + famrel + goout + health + absences + edu + alc +  extrasup + at_home + services + teacher, student_mat_final,cr=TRUE )
 ```
 
 <br/>
@@ -405,32 +405,104 @@ We see that the proportional odds assumption may be violated for some predictors
 <br/>
 
 ```{r,message = FALSE,warning=FALSE}
-full_model_lrm <- lrm(grade ~ school + sex + age + address + famsize + Pstatus + as.numeric(traveltime) + as.numeric(studytime) + failures + schoolsup + activities + nursery  + higher  + internet  + romantic + as.numeric(famrel) + as.numeric(goout) + as.numeric(health) + absences + as.numeric(edu) + as.numeric(alc) +  extrasup + at_home + services + teacher, data = student_mat_final, x=TRUE , y=TRUE )
+full_model_lrm <- lrm(grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery  + higher  + internet  + romantic + famrel + goout + health + absences + edu + alc +  extrasup + at_home + services + teacher, data = student_mat_final, x=TRUE , y=TRUE )
 
 resid(full_model_lrm , 'score.binary' , pl=TRUE)
 ```
 
 <br/>
-A confidence interval that lies outside of the zero line provides strong evidence against the proportional odds assumption. Thus, we have not found strong evidence against the proportional odds assumption. 
+A confidence interval that lies outside of the zero line provides strong evidence against the proportional odds assumption. We observe that **alc** and **traveltime** are borderline. Otherwise, we have not found strong evidence against the proportional odds assumption. 
 
-Lastly, we should mention that violating the proportional odds assumption might not be detrimental. The proportional odds model, even when the proportional odds assumption is not met, still retains meaning: it essentially estimates an average odds ratio across the outcome levels, i.e., it provides a general trend. Where a serious departure can occur is when investigating the effect on individual outcome levels; see https://www.fharrell.com/post/po/ for more details. 
+An alternative to the ordered logit is a model where we allow $\beta$s to vary: $P[Y \leq k ] = \mathrm{ilogit}\, (\theta_k - X\beta_k)$. This model no longer assumes the proportional odds assumption. The price for the generalization is a much larger number of parameters. Thus, it is advisable to relax the proportional odds assumption only for some variables forming the so-called *partial proportional odds model*. The package *ordinal* provides the *nominal_test* function that fits the partial proportional odds model for each variable separately and compares it with the proportional odds model.
+<br/>
 
-An alternative to the ordered logit is a model where we allow $\beta$s to vary: $P[Y \leq k ] = \mathrm{ilogit}\, (\theta_k - X\beta_k)$. This model no longer assumes the proportional odds assumption. The price for the generalization is a much larger number of parameters. In addition, the model might no longer be consistent in the sense that $P[Y \leq k ] = \mathrm{ilogit}\, (\theta_k - X\beta_k) <  \mathrm{ilogit}\, (\theta_j - X\beta_j) = P[Y \leq j ]$ for all $k < j$ and all reasonable values of $X$, since the slopes are no longer parallel. The reverse inequality $P[Y \leq k ] > P[Y \leq j ]$ leads to negative predicted class probabilities, which are obviously wrong. 
+```{r,message = FALSE,warning=FALSE}
+full_model_clm <- clm(grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery + higher + internet + romantic + famrel + goout + health + absences + edu + alc + extrasup + at_home + services + teacher, data = student_mat_final)
+nominal_test(full_model_clm)
+```
 
-Such a model can be fitted using the *VGAM* package
+<br/>
+We observe that none of the partial proportional odds models seem significant in comparison to the proportional odds model. However, we notice that models for variables **traveltime**,**higher**, **famrel**, and **edu** are omitted. This is because the fit failed to converge to a valid solution. For example, we get for **traveltime** 
+<br/>
+
+```{r,message = FALSE,warning=FALSE}
+partial_traveltime_model <- clm(grade ~ school + sex + age + address + famsize + Pstatus  + studytime + failures + schoolsup + activities + nursery + higher + internet + romantic + famrel + goout + health + absences + edu + alc + extrasup + at_home + services + teacher, nominal = ~traveltime, data = student_mat_final)
+
+partial_traveltime_model$convergence
+```
+
+<br/>
+an invalid fit since the thresholds are not increasing (i.e., the model would predict negative class probabilities). We observe similar problems for the other fits.
+<br/>
+
+```{r,message = FALSE,warning=FALSE}
+partial_higher_model <- clm(grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery + internet + romantic + famrel + goout + health + absences + edu + alc + extrasup + at_home + services + teacher,nominal = ~ higher, data = student_mat_final)
+partial_higher_model$convergence
+
+
+partial_famrel_model <- clm(grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery + higher + internet + romantic + goout + health + absences + edu + alc + extrasup + at_home + services + teacher,nominal = ~ famrel, data = student_mat_final)
+partial_traveltime_model$convergence
+
+
+partial_alc_model <- clm(grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery + higher + internet + romantic + famrel + goout + health + absences + edu  + extrasup + at_home + services + teacher,nominal = ~ alc, data = student_mat_final)
+partial_alc_model$convergence
+```
+
+<br/>
+We can try to make the fit more stable for **traveltime**, **famrel**, and **edu** by considering only the linear part to be different at each level of **grade**. We observe that all these models indeed converged successfully.
+<br/>
+
+```{r,message = FALSE,warning=FALSE}
+partial_lin_traveltime_model <- clm(grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery + higher + internet + romantic + famrel + goout + health + absences + edu + alc + extrasup + at_home + services + teacher, nominal = ~poly(traveltime,1), data = student_mat_final)
+partial_lin_traveltime_model$convergence
+
+anova(partial_lin_traveltime_model,full_model_clm)
+
+
+partial_lin_famrel_model <- clm(grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery + higher + internet + romantic + famrel + goout + health + absences + edu + alc + extrasup + at_home + services + teacher, nominal = ~poly(famrel,1), data = student_mat_final)
+partial_lin_famrel_model$convergence
+
+anova(partial_lin_famrel_model,full_model_clm)
+
+
+partial_lin_alc_model <- clm(grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery + higher + internet + romantic + famrel + goout + health + absences + edu + alc + extrasup + at_home + services + teacher, nominal = ~poly(alc,1), data = student_mat_final)
+partial_lin_alc_model$convergence
+anova(partial_lin_alc_model,full_model_clm)
+```
+
+<br/>
+The last model that included an **alc** effect as nominal (i.e., varying for levels of **grade**) is of interest. The difference between the partial proportional odds model and the proportional odds model is the only one that is significant. Moreover, variable **alc** was not significant in the proportional odds model
 <br/>
 
 
 ```{r,message = FALSE,warning=FALSE}
-library(VGAM)
-```
+no_alc_model_clm <- clm(grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery + higher + internet + romantic + famrel + goout + health + absences + edu  + extrasup + at_home + services + teacher, data = student_mat_final)
 
-```{r,error=TRUE}
-full_model_vglm <- vglm(grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery  + higher  + internet  + romantic + famrel + goout + health + absences + edu + alc +  extrasup + at_home + services + teacher, data = student_mat_final, family=cumulative(parallel=FALSE))
+anova(no_alc_model_clm,full_model_clm)
 ```
 
 <br/>
-We observe that in our case, the fit failed to converge for this generalized model; therefore, we will stick to the proportional odds model. 
+However, it is significant in the partial proportional odds model.
+<br/>
+
+```{r,message = FALSE,warning=FALSE}
+anova(no_alc_model_clm,partial_lin_alc_model)
+```
+
+<br/>
+This suggests that the **alc** effect varies noticeably by the level of **grade**. 
+<br/>
+
+```{r,message = FALSE,warning=FALSE}
+coefficients(partial_lin_alc_model)[5:8]
+plot_model(partial_lin_alc_model, type = "pred", terms = c('alc'),title = 'Predicted probabilities of grade - PPO model')
+plot_model(full_model_clm, type = "pred", terms = c('alc'),title = 'Predicted probabilities of grade - PO model')
+```
+
+<br/>
+However, we should keep in mind that we probably do not have enough data to make this claim (we clearly do not have enough data to make the fit reliably), and hence, this might be just the effect of the noise in the data.
+
+Lastly, we should mention that violating the proportional odds assumption might not be detrimental. The proportional odds model, even when the proportional odds assumption is not met, still retains meaning: it essentially estimates an average odds ratio across the outcome levels, i.e., it provides a general trend. Where a serious departure can occur is when investigating the effect on individual outcome levels; see https://www.fharrell.com/post/po/ for more details (and our **alc** example). 
 
 The last thing that we evaluate is residuals. Similarly to the logistic regression, it is not straightforward to define residuals that help to assess the model. For this purpose, we will use *surrogate residuals* proposed by  *D. Liu and H. Zhang. Residuals and diagnostics for ordinal regression models: a surrogate approach." Journal of the American Statistical Association 113.522 (2018): 845-854.* specifically for ordinal models (see https://koalaverse.github.io/sure/articles/sure.html for more details). Under a well-specified model, the surrogate residuals have a zero mean and are homoskedastic (i.e., have constant variance independent of $X$).  
 
@@ -593,6 +665,7 @@ We see that the predicted classes are the same in 85% (~334/395) of all cases. W
 <br/>
 
 ```{r}
+library(VGAM)
 cr_vglm <- vglm(grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery  + higher  + internet  + romantic + famrel + goout + health + absences + edu + alc +  extrasup + at_home + services + teacher, data = student_mat_final, family=cratio(parallel = TRUE))
 
 # same coefficients (just opposite signs)
@@ -615,7 +688,7 @@ anova(cr_model,cr_model_inter)
 ```
 
 <br/>
-We observe that the difference between the two CR models is not significant, which suggests that the proportional assumption is justified.
+We observe that the difference between the two CR models is not significant, which suggests that the proportional assumption in the CR model is justified.
 
 With this observation, we conclude Part One. In the second part of this demonstration, we examine the predictive performance of our models and discuss the results. 
 <br/>

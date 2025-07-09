@@ -240,7 +240,7 @@ redun(~.- grade ,data = student_mat,nk = 0, r2 = 0.95)
     ##     failures + schoolsup + famsup + paid + activities + nursery + 
     ##     higher + internet + romantic + famrel + freetime + goout + 
     ##     Dalc + Walc + health + absences
-    ## <environment: 0x00000251a347eaf0>
+    ## <environment: 0x00000200854ad2a0>
     ## 
     ## n: 395   p: 30   nk: 0 
     ## 
@@ -650,23 +650,20 @@ number of **absences** also seems to improve the grades a bit.
 Let us check the model assumptions. Similarly to logistic regression,
 the ordered logit directly models the class probabilities. The
 assumption concerning the probabilities is *proportional odds
-assumption*: $\mathrm{logit} P(Y <=j|X_1)$ -
-$\mathrm{logit} P(Y <=j|X_2) = (X_2-X_1)\beta$, i.e, the effect of
-$X$ on relative odds does not depend on class $j$ since $\beta$ are
+assumption*: $\mathrm{logit}\; P(Y <=j|X_1)$ -
+$\mathrm{logit}\; P(Y <=j|X_2) = (X_2-X_1)\beta$, i.e, the effect of $X$
+on relative odds does not depend on class $j$ since $\beta$ are
 independent of class.
 
 Let us check the reasonability of the proportional odds assumption.
 First, we use the function *plot.xmean.ordinaly* from the *rms* package,
 which plots the observed means of predictors versus levels of Y and the
 estimated expected means of predictors under the proportional odds
-assumption. For simplicity’s sake, let us treat all ordinal variables as
-numeric, i.e., we approximate their effect as linear, rather than
-treating them as categorical (i.e., treating each class separately).
-<br/>
+assumption. <br/>
 
 ``` r
 library(rms)
-plot.xmean.ordinaly(grade ~ school + sex + age + address + famsize + Pstatus + as.numeric(traveltime) + as.numeric(studytime) + failures + schoolsup + activities + nursery  + higher  + internet  + romantic + as.numeric(famrel) + as.numeric(goout) + as.numeric(health) + absences + as.numeric(edu) + as.numeric(alc) +  extrasup + at_home + services + teacher, student_mat_final,cr=TRUE )
+plot.xmean.ordinaly(grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery  + higher  + internet  + romantic + famrel + goout + health + absences + edu + alc +  extrasup + at_home + services + teacher, student_mat_final,cr=TRUE )
 ```
 
 ![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-20-1.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-20-2.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-20-3.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-20-4.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-20-5.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-20-6.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-20-7.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-20-8.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-20-9.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-20-10.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-20-11.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-20-12.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-20-13.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-20-14.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-20-15.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-20-16.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-20-17.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-20-18.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-20-19.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-20-20.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-20-21.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-20-22.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-20-23.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-20-24.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-20-25.png)<!-- -->
@@ -678,16 +675,306 @@ regression, and survival analysis. Vol. 608. New York: springer, 2001.*
 involves *score residual* plots. <br/>
 
 ``` r
-full_model_lrm <- lrm(grade ~ school + sex + age + address + famsize + Pstatus + as.numeric(traveltime) + as.numeric(studytime) + failures + schoolsup + activities + nursery  + higher  + internet  + romantic + as.numeric(famrel) + as.numeric(goout) + as.numeric(health) + absences + as.numeric(edu) + as.numeric(alc) +  extrasup + at_home + services + teacher, data = student_mat_final, x=TRUE , y=TRUE )
+full_model_lrm <- lrm(grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery  + higher  + internet  + romantic + famrel + goout + health + absences + edu + alc +  extrasup + at_home + services + teacher, data = student_mat_final, x=TRUE , y=TRUE )
 
 resid(full_model_lrm , 'score.binary' , pl=TRUE)
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-1.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-2.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-3.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-4.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-5.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-6.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-7.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-8.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-9.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-10.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-11.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-12.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-13.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-14.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-15.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-16.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-17.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-18.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-19.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-20.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-21.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-22.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-23.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-24.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-25.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-1.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-2.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-3.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-4.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-5.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-6.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-7.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-8.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-9.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-10.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-11.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-12.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-13.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-14.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-15.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-16.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-17.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-18.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-19.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-20.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-21.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-22.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-23.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-24.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-25.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-26.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-27.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-28.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-29.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-30.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-31.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-32.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-33.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-34.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-35.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-36.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-37.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-38.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-39.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-40.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-41.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-42.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-43.png)<!-- -->
 
 <br/> A confidence interval that lies outside of the zero line provides
-strong evidence against the proportional odds assumption. Thus, we have
-not found strong evidence against the proportional odds assumption.
+strong evidence against the proportional odds assumption. We observe
+that **alc** and **traveltime** are borderline. Otherwise, we have not
+found strong evidence against the proportional odds assumption.
+
+An alternative to the ordered logit is a model where we allow $\beta$s
+to vary: $P[Y \leq k ] = \mathrm{ilogit}\, (\theta_k - X\beta_k)$. This
+model no longer assumes the proportional odds assumption. The price for
+the generalization is a much larger number of parameters. Thus, it is
+advisable to relax the proportional odds assumption only for some
+variables forming the so-called *partial proportional odds model*. The
+package *ordinal* provides the *nominal_test* function that fits the
+partial proportional odds model for each variable separately and
+compares it with the proportional odds model. <br/>
+
+``` r
+full_model_clm <- clm(grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery + higher + internet + romantic + famrel + goout + health + absences + edu + alc + extrasup + at_home + services + teacher, data = student_mat_final)
+nominal_test(full_model_clm)
+```
+
+    ## Tests of nominal effects
+    ## 
+    ## formula: grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery + higher + internet + romantic + famrel + goout + health + absences + edu + alc + extrasup + at_home + services + teacher
+    ##            Df  logLik    AIC     LRT Pr(>Chi)  
+    ## <none>        -535.25 1164.5                   
+    ## school      3 -534.90 1169.8  0.7017  0.87280  
+    ## sex         3 -534.72 1169.4  1.0672  0.78501  
+    ## age         3 -534.21 1168.4  2.0874  0.55446  
+    ## address     3 -533.23 1166.5  4.0519  0.25591  
+    ## famsize     3 -533.64 1167.3  3.2263  0.35803  
+    ## Pstatus     3 -533.99 1168.0  2.5359  0.46883  
+    ## traveltime                                     
+    ## studytime   9 -531.98 1176.0  6.5494  0.68392  
+    ## failures    3 -533.43 1166.8  3.6567  0.30100  
+    ## schoolsup   3 -533.62 1167.2  3.2599  0.35327  
+    ## activities  3 -534.51 1169.0  1.4860  0.68550  
+    ## nursery     3 -533.46 1166.9  3.5988  0.30817  
+    ## higher                                         
+    ## internet    3 -534.58 1169.2  1.3469  0.71803  
+    ## romantic    3 -532.10 1164.2  6.3182  0.09712 .
+    ## famrel                                         
+    ## goout      12 -527.42 1172.8 15.6785  0.20641  
+    ## health     12 -531.46 1180.9  7.5856  0.81662  
+    ## absences    3 -532.41 1164.8  5.6838  0.12805  
+    ## edu         9 -533.13 1178.3  4.2493  0.89425  
+    ## alc                                            
+    ## extrasup    3 -534.39 1168.8  1.7274  0.63087  
+    ## at_home     3 -534.75 1169.5  1.0139  0.79790  
+    ## services    3 -534.04 1168.1  2.4260  0.48881  
+    ## teacher     3 -531.40 1162.8  7.7024  0.05258 .
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+<br/> We observe that none of the partial proportional odds models seem
+significant in comparison to the proportional odds model. However, we
+notice that models for variables **traveltime**,**higher**, **famrel**,
+and **edu** are omitted. This is because the fit failed to converge to a
+valid solution. For example, we get for **traveltime** <br/>
+
+``` r
+partial_traveltime_model <- clm(grade ~ school + sex + age + address + famsize + Pstatus  + studytime + failures + schoolsup + activities + nursery + higher + internet + romantic + famrel + goout + health + absences + edu + alc + extrasup + at_home + services + teacher, nominal = ~traveltime, data = student_mat_final)
+
+partial_traveltime_model$convergence
+```
+
+    ## $code
+    ## [1] -3
+    ## 
+    ## $messages
+    ## [1] "not all thresholds are increasing: fit is invalid"
+    ## 
+    ## $alg.message
+    ## [1] "Absolute convergence criterion was met, but relative criterion was not met"
+
+<br/> an invalid fit since the thresholds are not increasing (i.e., the
+model would predict negative class probabilities). We observe similar
+problems for the other fits. <br/>
+
+``` r
+partial_higher_model <- clm(grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery + internet + romantic + famrel + goout + health + absences + edu + alc + extrasup + at_home + services + teacher,nominal = ~ higher, data = student_mat_final)
+partial_higher_model$convergence
+```
+
+    ## $code
+    ## [1] -1
+    ## 
+    ## $messages
+    ## [1] "Model failed to converge with max|grad| = 0.346159 (tol = 1e-06)"
+    ## 
+    ## $alg.message
+    ## [1] "maximum number of consecutive Newton modifications reached"
+
+``` r
+partial_famrel_model <- clm(grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery + higher + internet + romantic + goout + health + absences + edu + alc + extrasup + at_home + services + teacher,nominal = ~ famrel, data = student_mat_final)
+partial_traveltime_model$convergence
+```
+
+    ## $code
+    ## [1] -3
+    ## 
+    ## $messages
+    ## [1] "not all thresholds are increasing: fit is invalid"
+    ## 
+    ## $alg.message
+    ## [1] "Absolute convergence criterion was met, but relative criterion was not met"
+
+``` r
+partial_alc_model <- clm(grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery + higher + internet + romantic + famrel + goout + health + absences + edu  + extrasup + at_home + services + teacher,nominal = ~ alc, data = student_mat_final)
+partial_alc_model$convergence
+```
+
+    ## $code
+    ## [1] -1
+    ## 
+    ## $messages
+    ## [1] "Model failed to converge with max|grad| = 1.37916e-05 (tol = 1e-06)"
+    ## 
+    ## $alg.message
+    ## [1] "maximum number of consecutive Newton modifications reached"
+
+<br/> We can try to make the fit more stable for **traveltime**,
+**famrel**, and **edu** by considering only the linear part to be
+different at each level of **grade**. We observe that all these models
+indeed converged successfully. <br/>
+
+``` r
+partial_lin_traveltime_model <- clm(grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery + higher + internet + romantic + famrel + goout + health + absences + edu + alc + extrasup + at_home + services + teacher, nominal = ~poly(traveltime,1), data = student_mat_final)
+partial_lin_traveltime_model$convergence
+```
+
+    ## $code
+    ## [1] 0
+    ## 
+    ## $messages
+    ## [1] "successful convergence"
+    ## 
+    ## $alg.message
+    ## [1] "Absolute and relative convergence criteria were met"
+
+``` r
+anova(partial_lin_traveltime_model,full_model_clm)
+```
+
+    ## Likelihood ratio tests of cumulative link models:
+    ##  
+    ##                              formula:                                                                                                                                                                                                                                                 
+    ## full_model_clm               grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery + higher + internet + romantic + famrel + goout + health + absences + edu + alc + extrasup + at_home + services + teacher
+    ## partial_lin_traveltime_model grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery + higher + internet + romantic + famrel + goout + health + absences + edu + alc + extrasup + at_home + services + teacher
+    ##                              nominal:             link: threshold:
+    ## full_model_clm               ~1                   logit flexible  
+    ## partial_lin_traveltime_model ~poly(traveltime, 1) logit flexible  
+    ## 
+    ##                              no.par    AIC  logLik LR.stat df Pr(>Chisq)
+    ## full_model_clm                   47 1164.5 -535.25                      
+    ## partial_lin_traveltime_model     50 1165.5 -532.75  5.0033  3     0.1716
+
+``` r
+partial_lin_famrel_model <- clm(grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery + higher + internet + romantic + famrel + goout + health + absences + edu + alc + extrasup + at_home + services + teacher, nominal = ~poly(famrel,1), data = student_mat_final)
+partial_lin_famrel_model$convergence
+```
+
+    ## $code
+    ## [1] 0
+    ## 
+    ## $messages
+    ## [1] "successful convergence"
+    ## 
+    ## $alg.message
+    ## [1] "Absolute and relative convergence criteria were met"
+
+``` r
+anova(partial_lin_famrel_model,full_model_clm)
+```
+
+    ## Likelihood ratio tests of cumulative link models:
+    ##  
+    ##                          formula:                                                                                                                                                                                                                                                 
+    ## full_model_clm           grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery + higher + internet + romantic + famrel + goout + health + absences + edu + alc + extrasup + at_home + services + teacher
+    ## partial_lin_famrel_model grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery + higher + internet + romantic + famrel + goout + health + absences + edu + alc + extrasup + at_home + services + teacher
+    ##                          nominal:         link: threshold:
+    ## full_model_clm           ~1               logit flexible  
+    ## partial_lin_famrel_model ~poly(famrel, 1) logit flexible  
+    ## 
+    ##                          no.par    AIC  logLik LR.stat df Pr(>Chisq)
+    ## full_model_clm               47 1164.5 -535.25                      
+    ## partial_lin_famrel_model     50 1168.4 -534.22  2.0789  3     0.5562
+
+``` r
+partial_lin_alc_model <- clm(grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery + higher + internet + romantic + famrel + goout + health + absences + edu + alc + extrasup + at_home + services + teacher, nominal = ~poly(alc,1), data = student_mat_final)
+partial_lin_alc_model$convergence
+```
+
+    ## $code
+    ## [1] 0
+    ## 
+    ## $messages
+    ## [1] "successful convergence"
+    ## 
+    ## $alg.message
+    ## [1] "Absolute and relative convergence criteria were met"
+
+``` r
+anova(partial_lin_alc_model,full_model_clm)
+```
+
+    ## Likelihood ratio tests of cumulative link models:
+    ##  
+    ##                       formula:                                                                                                                                                                                                                                                 
+    ## full_model_clm        grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery + higher + internet + romantic + famrel + goout + health + absences + edu + alc + extrasup + at_home + services + teacher
+    ## partial_lin_alc_model grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery + higher + internet + romantic + famrel + goout + health + absences + edu + alc + extrasup + at_home + services + teacher
+    ##                       nominal:      link: threshold:
+    ## full_model_clm        ~1            logit flexible  
+    ## partial_lin_alc_model ~poly(alc, 1) logit flexible  
+    ## 
+    ##                       no.par    AIC  logLik LR.stat df Pr(>Chisq)   
+    ## full_model_clm            47 1164.5 -535.25                         
+    ## partial_lin_alc_model     50 1158.2 -529.12  12.279  3   0.006487 **
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+<br/> The last model that included an **alc** effect as nominal (i.e.,
+varying for levels of **grade**) is of interest. The difference between
+the partial proportional odds model and the proportional odds model is
+the only one that is significant. Moreover, variable **alc** was not
+significant in the proportional odds model <br/>
+
+``` r
+no_alc_model_clm <- clm(grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery + higher + internet + romantic + famrel + goout + health + absences + edu  + extrasup + at_home + services + teacher, data = student_mat_final)
+
+anova(no_alc_model_clm,full_model_clm)
+```
+
+    ## Likelihood ratio tests of cumulative link models:
+    ##  
+    ##                  formula:                                                                                                                                                                                                                                                 
+    ## no_alc_model_clm grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery + higher + internet + romantic + famrel + goout + health + absences + edu + extrasup + at_home + services + teacher      
+    ## full_model_clm   grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery + higher + internet + romantic + famrel + goout + health + absences + edu + alc + extrasup + at_home + services + teacher
+    ##                  link: threshold:
+    ## no_alc_model_clm logit flexible  
+    ## full_model_clm   logit flexible  
+    ## 
+    ##                  no.par    AIC  logLik LR.stat df Pr(>Chisq)
+    ## no_alc_model_clm     43 1159.2 -536.60                      
+    ## full_model_clm       47 1164.5 -535.25  2.6953  4       0.61
+
+<br/> However, it is significant in the partial proportional odds model.
+<br/>
+
+``` r
+anova(no_alc_model_clm,partial_lin_alc_model)
+```
+
+    ## Likelihood ratio tests of cumulative link models:
+    ##  
+    ##                       formula:                                                                                                                                                                                                                                                 
+    ## no_alc_model_clm      grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery + higher + internet + romantic + famrel + goout + health + absences + edu + extrasup + at_home + services + teacher      
+    ## partial_lin_alc_model grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery + higher + internet + romantic + famrel + goout + health + absences + edu + alc + extrasup + at_home + services + teacher
+    ##                       nominal:      link: threshold:
+    ## no_alc_model_clm      ~1            logit flexible  
+    ## partial_lin_alc_model ~poly(alc, 1) logit flexible  
+    ## 
+    ##                       no.par    AIC  logLik LR.stat df Pr(>Chisq)  
+    ## no_alc_model_clm          43 1159.2 -536.60                        
+    ## partial_lin_alc_model     50 1158.2 -529.12  14.974  7    0.03634 *
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+<br/> This suggests that the **alc** effect varies noticeably by the
+level of **grade**. <br/>
+
+``` r
+coefficients(partial_lin_alc_model)[5:8]
+```
+
+    ## F|D.poly(alc, 1) D|C.poly(alc, 1) C|B.poly(alc, 1) B|A.poly(alc, 1) 
+    ##       -4.6563884        0.4534775        6.2812452        1.0165864
+
+``` r
+plot_model(partial_lin_alc_model, type = "pred", terms = c('alc'),title = 'Predicted probabilities of grade - PPO model')
+```
+
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-28-1.png)<!-- -->
+
+``` r
+plot_model(full_model_clm, type = "pred", terms = c('alc'),title = 'Predicted probabilities of grade - PO model')
+```
+
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-28-2.png)<!-- -->
+
+<br/> However, we should keep in mind that we probably do not have
+enough data to make this claim (we clearly do not have enough data to
+make the fit reliably), and hence, this might be just the effect of the
+noise in the data.
 
 Lastly, we should mention that violating the proportional odds
 assumption might not be detrimental. The proportional odds model, even
@@ -695,42 +982,8 @@ when the proportional odds assumption is not met, still retains meaning:
 it essentially estimates an average odds ratio across the outcome
 levels, i.e., it provides a general trend. Where a serious departure can
 occur is when investigating the effect on individual outcome levels; see
-<https://www.fharrell.com/post/po/> for more details.
-
-An alternative to the ordered logit is a model where we allow $\beta$s
-to vary: $P[Y \leq k ] = \mathrm{ilogit}\, (\theta_k - X\beta_k)$. This
-model no longer assumes the proportional odds assumption. The price for
-the generalization is a much larger number of parameters. In addition,
-the model might no longer be consistent in the sense that
-$P[Y \leq k ] = \mathrm{ilogit}\, (\theta_k - X\beta_k) <  \mathrm{ilogit}\, (\theta_j - X\beta_j) = P[Y \leq j ]$
-for all $k < j$ and all reasonable values of $X$, since the slopes are
-no longer parallel. The reverse inequality $P[Y \leq k ] > P[Y \leq j ]$
-leads to negative predicted class probabilities, which are obviously
-wrong.
-
-Such a model can be fitted using the *VGAM* package <br/>
-
-``` r
-library(VGAM)
-```
-
-``` r
-full_model_vglm <- vglm(grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery  + higher  + internet  + romantic + famrel + goout + health + absences + edu + alc +  extrasup + at_home + services + teacher, data = student_mat_final, family=cumulative(parallel=FALSE))
-```
-
-    ## Warning in Deviance.categorical.data.vgam(mu = mu, y = y, w = w, residuals =
-    ## residuals, : fitted values close to 0 or 1
-
-    ## Warning in eval(slot(family, "deriv")): some probabilities are very close to 0
-
-    ## Warning in Deviance.categorical.data.vgam(mu = mu, y = y, w = w, residuals =
-    ## residuals, : fitted values close to 0 or 1
-
-    ## Error in tapplymat1(cump, "diff"): NA/NaN/Inf in foreign function call (arg 1)
-
-<br/> We observe that in our case, the fit failed to converge for this
-generalized model; therefore, we will stick to the proportional odds
-model.
+<https://www.fharrell.com/post/po/> for more details (and our **alc**
+example).
 
 The last thing that we evaluate is residuals. Similarly to the logistic
 regression, it is not straightforward to define residuals that help to
@@ -756,231 +1009,231 @@ sres <- resids(full_model)
 autoplot.resid(sres, what = 'qq') 
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-24-1.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-1.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'fitted',fit = full_model) 
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-24-2.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-2.png)<!-- -->
 
 ``` r
 # residuals vs variables in the model
 autoplot.resid(sres, what = 'covariate',x = student_mat_final$school) 
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-24-3.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-3.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat_final$sex) 
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-24-4.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-4.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat_final$age) 
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-24-5.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-5.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat_final$address) 
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-24-6.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-6.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat_final$famsize) 
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-24-7.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-7.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat_final$Pstatus) 
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-24-8.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-8.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat_final$traveltime) 
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-24-9.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-9.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat_final$studytime) 
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-24-10.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-10.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = as.factor(student_mat_final$failures))  
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-24-11.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-11.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat_final$schoolsup) 
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-24-12.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-12.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat_final$activities) 
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-24-13.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-13.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat_final$nursery) 
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-24-14.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-14.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat_final$higher) 
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-24-15.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-15.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat_final$internet) 
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-24-16.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-16.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat_final$romantic)
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-24-17.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-17.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat_final$famrel)
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-24-18.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-18.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat_final$goout)
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-24-19.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-19.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat_final$health)
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-24-20.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-20.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat_final$absences)
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-24-21.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-21.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat_final$edu)
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-24-22.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-22.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat_final$alc)
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-24-23.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-23.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat_final$extrasup)
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-24-24.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-24.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat_final$at_home)
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-24-25.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-25.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat_final$services)
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-24-26.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-26.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat_final$teacher)
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-24-27.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-27.png)<!-- -->
 
 ``` r
 # residuals vs omitted variables
 autoplot.resid(sres, what = 'covariate',x = student_mat$Medu)
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-24-28.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-28.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat$Fedu)
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-24-29.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-29.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat$Mjob)
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-24-30.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-30.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat$Fjob)
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-24-31.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-31.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat$Dalc)
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-24-32.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-32.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat$Walc)
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-24-33.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-33.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat$famsup)
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-24-34.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-34.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat$paid)
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-24-35.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-35.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat$guardian)
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-24-36.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-36.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat$freetime)
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-24-37.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-37.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat$reason)
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-24-38.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-38.png)<!-- -->
 
 <br/> We see no apparent trends in the residuals. However, the question
 always is how much obvious trends in the residuals are “obvious.” For
@@ -993,55 +1246,55 @@ sres_null <- resids(null_model)
 autoplot.resid(sres_null, what = 'qq') 
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-25-1.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-30-1.png)<!-- -->
 
 ``` r
 autoplot.resid(sres_null, what = 'fitted',fit = full_model) 
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-25-2.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-30-2.png)<!-- -->
 
 ``` r
 autoplot.resid(sres_null, what = 'covariate',x = student_mat_final$sex) 
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-25-3.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-30-3.png)<!-- -->
 
 ``` r
 autoplot.resid(sres_null, what = 'covariate',x = student_mat_final$age) 
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-25-4.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-30-4.png)<!-- -->
 
 ``` r
 autoplot.resid(sres_null, what = 'covariate',x = student_mat_final$famsize) 
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-25-5.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-30-5.png)<!-- -->
 
 ``` r
 autoplot.resid(sres_null, what = 'covariate',x = student_mat_final$edu)
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-25-6.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-30-6.png)<!-- -->
 
 ``` r
 autoplot.resid(sres_null, what = 'covariate',x = as.factor(student_mat_final$failures)) 
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-25-7.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-30-7.png)<!-- -->
 
 ``` r
 autoplot.resid(sres_null, what = 'covariate',x = student_mat_final$studytime)
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-25-8.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-30-8.png)<!-- -->
 
 ``` r
 autoplot.resid(sres_null, what = 'covariate',x = student_mat_final$health)
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-25-9.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-30-9.png)<!-- -->
 
 <br/> We observe that some trends (e.g., for **failures** and **edu**)
 are quite noticeable, suggesting that these variables should be included
@@ -1272,6 +1525,37 @@ of all cases. We should note that an alternative method for fitting the
 CR model is available via the *VGAM* package. <br/>
 
 ``` r
+library(VGAM)
+```
+
+    ## Loading required package: stats4
+
+    ## Loading required package: splines
+
+    ## 
+    ## Attaching package: 'VGAM'
+
+    ## The following objects are masked from 'package:rms':
+    ## 
+    ##     calibrate, lrtest
+
+    ## The following objects are masked from 'package:ordinal':
+    ## 
+    ##     dgumbel, dlgamma, pgumbel, plgamma, qgumbel, rgumbel, wine
+
+    ## The following objects are masked from 'package:faraway':
+    ## 
+    ##     hormone, logit, pneumo, prplot
+
+    ## The following object is masked from 'package:car':
+    ## 
+    ##     logit
+
+    ## The following object is masked from 'package:lmtest':
+    ## 
+    ##     lrtest
+
+``` r
 cr_vglm <- vglm(grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery  + higher  + internet  + romantic + famrel + goout + health + absences + edu + alc +  extrasup + at_home + services + teacher, data = student_mat_final, family=cratio(parallel = TRUE))
 
 # same coefficients (just opposite signs)
@@ -1402,8 +1686,8 @@ anova(cr_model,cr_model_inter)
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
 <br/> We observe that the difference between the two CR models is not
-significant, which suggests that the proportional assumption is
-justified.
+significant, which suggests that the proportional assumption in the CR
+model is justified.
 
 With this observation, we conclude Part One. In the second part of this
 demonstration, we examine the predictive performance of our models and
