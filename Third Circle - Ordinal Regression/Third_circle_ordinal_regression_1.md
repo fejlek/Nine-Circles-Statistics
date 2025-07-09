@@ -3,7 +3,7 @@
 <br/>
 Jiří Fejlek
 
-2025-06-7
+2025-07-06
 <br/>
 
 <br/> In this project, we will model an ordinal outcome, i.e.,
