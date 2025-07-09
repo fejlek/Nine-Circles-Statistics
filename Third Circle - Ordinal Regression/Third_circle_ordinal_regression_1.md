@@ -240,7 +240,7 @@ redun(~.- grade ,data = student_mat,nk = 0, r2 = 0.95)
     ##     failures + schoolsup + famsup + paid + activities + nursery + 
     ##     higher + internet + romantic + famrel + freetime + goout + 
     ##     Dalc + Walc + health + absences
-    ## <environment: 0x00000200854ad2a0>
+    ## <environment: 0x0000022a9e4b92a0>
     ## 
     ## n: 395   p: 30   nk: 0 
     ## 
@@ -687,8 +687,8 @@ strong evidence against the proportional odds assumption. We observe
 that **alc** and **traveltime** are borderline. Otherwise, we have not
 found strong evidence against the proportional odds assumption.
 
-An alternative to the ordered logit is a model where we allow $\beta$s
-to vary: $P[Y \leq k ] = \mathrm{ilogit}\, (\theta_k - X\beta_k)$. This
+An alternative to the ordered logit is a model where we allow $\beta$ to
+vary: $P[Y \leq k ] = \mathrm{ilogit}\, (\theta_k - X\beta_k)$. This
 model no longer assumes the proportional odds assumption. The price for
 the generalization is a much larger number of parameters. Thus, it is
 advisable to relax the proportional odds assumption only for some
@@ -738,7 +738,7 @@ nominal_test(full_model_clm)
 <br/> We observe that none of the partial proportional odds models seem
 significant in comparison to the proportional odds model. However, we
 notice that models for variables **traveltime**,**higher**, **famrel**,
-and **edu** are omitted. This is because the fit failed to converge to a
+and **alc** are omitted. This is because the fit failed to converge to a
 valid solution. For example, we get for **traveltime** <br/>
 
 ``` r
@@ -803,7 +803,7 @@ partial_alc_model$convergence
     ## [1] "maximum number of consecutive Newton modifications reached"
 
 <br/> We can try to make the fit more stable for **traveltime**,
-**famrel**, and **edu** by considering only the linear part to be
+**famrel**, and **alc** by considering only the linear part to be
 different at each level of **grade**. We observe that all these models
 indeed converged successfully. <br/>
 
