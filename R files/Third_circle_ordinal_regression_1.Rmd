@@ -201,7 +201,7 @@ Now, if we were interested in testing only a specific hypothesis, the model's pa
 Let us look for redundant variables first.
 <br/>
 
-```{r}
+```{r,message=FALSE,warning=FALSE,echo=FALSE}
 library(Hmisc)
 redun(~.- G1 - G2 - G3 ,data = student_mat,nk = 0, r2 = 0.95)
 ```

@@ -231,25 +231,6 @@ poor generalization of the resulting model on new data).
 
 Let us look for redundant variables first. <br/>
 
-``` r
-library(Hmisc)
-```
-
-    ## 
-    ## Attaching package: 'Hmisc'
-
-    ## The following objects are masked from 'package:dplyr':
-    ## 
-    ##     src, summarize
-
-    ## The following objects are masked from 'package:base':
-    ## 
-    ##     format.pval, units
-
-``` r
-redun(~.- G1 - G2 - G3 ,data = student_mat,nk = 0, r2 = 0.95)
-```
-
     ## 
     ## Redundancy Analysis
     ## 
@@ -258,7 +239,7 @@ redun(~.- G1 - G2 - G3 ,data = student_mat,nk = 0, r2 = 0.95)
     ##     failures + schoolsup + famsup + paid + activities + nursery + 
     ##     higher + internet + romantic + famrel + freetime + goout + 
     ##     Dalc + Walc + health + absences
-    ## <environment: 0x000001f8f8279158>
+    ## <environment: 0x000001c71b3c0820>
     ## 
     ## n: 395   p: 30   nk: 0 
     ## 
