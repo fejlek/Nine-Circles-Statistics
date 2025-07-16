@@ -103,21 +103,34 @@ head(student_mat)
 <br/> We have 395 observations, 30 predictors, and three outcomes: the
 first-period grade, the second-period grade, and the final grade. In
 this project, we will model the final grade using 30 predictors
-(excluding the period grades in the model). First, we convert the final
-grade via the Erasmus grade conversion system to obtain an ordinal
-outcome (and thus, we can demonstrate the models for ordinal outcomes).
-<br/>
+(excluding the period grades in the model).
+
+First, we convert the final grade via the Erasmus grade conversion
+system. Then, we will split the grade into three categories (A and B, C
+and D, and F) obtaining **grade** to obtain the final ordinal outcomes.
+We will assume just three ordinal categories mostly for simplicity’s
+sake. However, another reason is to get more observations in each
+category, which allows us to more easily fit “partial” ordinal models as
+we will see later. <br/>
 
 ``` r
 library(tibble)
 library(dplyr)
 
 G3 <- student_mat$G3
-student_mat$G3 <- factor(case_when(G3 > 15 ~ 'A', G3 > 13 & G3 < 16 ~ 'B',  G3 > 11 & G3 < 14 ~ 'C',  G3 > 9 & G3 < 12 ~ 'D' , G3 < 10 ~ 'F'))
+erasmus_grade <- factor(case_when(G3 > 15 ~ 'A', G3 > 13 & G3 < 16 ~ 'B',  G3 > 11 & G3 < 14 ~ 'C',  G3 > 9 & G3 < 12 ~ 'D' , G3 < 10 ~ 'F'))
+erasmus_grade <- factor(erasmus_grade, ordered = TRUE, levels=rev(levels(erasmus_grade)))
 
-student_mat <- student_mat %>% rename(grade = G3)
-student_mat <- subset(student_mat,select =  -c(G1,G2))
+
+grade <- factor(case_when(G3 > 13 ~ 'A/B',  G3 > 9 & G3 < 14 ~ 'C/D', G3 < 10 ~ 'F'))
+grade <- factor(grade, ordered = TRUE, levels=rev(levels(grade)))
+
+par(mfrow = c(1, 2))
+plot(erasmus_grade)
+plot(grade)
 ```
+
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-2-1.png)<!-- -->
 
 <br/> Let’s check if any data is missing. <br/>
 
@@ -136,7 +149,6 @@ any(is.na(student_mat))
 <br/> Next, we convert the variables to the correct types. <br/>
 
 ``` r
-student_mat$grade  <- factor(student_mat$grade, ordered = TRUE, levels=rev(levels(student_mat$grade)))
 student_mat$school  <- factor(student_mat$school)
 student_mat$sex  <- factor(student_mat$sex)
 student_mat$address  <- factor(student_mat$address)
@@ -172,44 +184,50 @@ student_mat$health <- factor(student_mat$health, ordered = TRUE)
 
 <br/> Let us check the predictors. <br/>
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-5-1.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-5-2.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-5-3.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-5-4.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-5-5.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-5-6.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-5-7.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-5-8.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-5-9.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-5-10.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-5-11.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-5-12.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-5-13.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-5-14.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-5-15.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-5-16.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-5-17.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-5-18.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-5-19.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-5-20.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-5-21.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-5-22.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-5-23.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-5-24.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-5-25.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-5-26.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-5-27.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-5-1.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-5-2.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-5-3.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-5-4.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-5-5.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-5-6.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-5-7.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-5-8.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-5-9.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-5-10.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-5-11.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-5-12.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-5-13.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-5-14.png)<!-- -->
 
-<br/> All predictors seem reasonable enough. However, even though we
-have merely 30 predictors, almost all of them are categorical (nominal
-or ordinal). Thus, the number of parameters in the model is much
-greater. <br/>
+<br/> All predictors seem reasonable enough. However even though we have
+merely 30 predictors, almost all of them are categorical (nominal or
+ordinal). Thus, the number of parameters in the model is much greater.
+<br/>
 
 ``` r
-dim(model.matrix(grade ~ . , data = student_mat))
+dim(model.matrix(erasmus_grade ~. - G1 - G2 - G3 , data = student_mat))
 ```
 
     ## [1] 395  68
 
-<br/> We see that our model would have 68 parameters (plus intercepts).
-The effective sample size for the ordinal response is
+<br/> We see that our model would have 68 parameters (plus thresholds
+and possible non-parallel terms as we will see later). The effective
+sample size for the ordinal response under proportional odds assumption
+(which states in short that the effect of variables is independent of
+the response level, i.e., no non-parallel terms in the model) is
 $n - \frac{1}{n^2}\sum_i n_i^3$ (*F. E. Harrell. Regression modeling
 strategies: with applications to linear models, logistic regression, and
 survival analysis. Vol. 608. New York: springer, 2001.*). <br/>
 
 ``` r
-summary(student_mat$grade)
+summary(grade)
 ```
 
-    ##   F   D   C   B   A 
-    ## 130 103  62  60  40
+    ##   F C/D A/B 
+    ## 130 165 100
 
 ``` r
-395 - 1/395^2*(40^3+60^3+62^3+103^3+130^3)
+395 - 1/395^2*(130^3+165^3+100^3)
 ```
 
-    ## [1] 370.5933
+    ## [1] 345.7186
 
-<br/> Our rule of thumb suggests that our model could support about 19
-to 37 parameters. Now, if we were interested in testing only a specific
-hypothesis, the model’s parsimony is not as important. However, since we
-are also interested in the predictive performance of our model, 68
-parameters are way too much (we have a significant risk of overfitting
-and subsequent poor generalization of the resulting model on new data).
+<br/> We see that under under proportional odds assumption , our rule of
+thumb suggests that a model for **grade** could support about 17 to 34
+parameters.
+
+Now, if we were interested in testing only a specific hypothesis, the
+model’s parsimony is not as important. However, since we are also
+interested in the predictive performance of our model, 68 parameters are
+way too much (we have a significant risk of overfitting and subsequent
+poor generalization of the resulting model on new data).
 
 Let us look for redundant variables first. <br/>
 
@@ -229,7 +247,7 @@ library(Hmisc)
     ##     format.pval, units
 
 ``` r
-redun(~.- grade ,data = student_mat,nk = 0, r2 = 0.95)
+redun(~.- G1 - G2 - G3 ,data = student_mat,nk = 0, r2 = 0.95)
 ```
 
     ## 
@@ -240,7 +258,7 @@ redun(~.- grade ,data = student_mat,nk = 0, r2 = 0.95)
     ##     failures + schoolsup + famsup + paid + activities + nursery + 
     ##     higher + internet + romantic + famrel + freetime + goout + 
     ##     Dalc + Walc + health + absences
-    ## <environment: 0x0000022a9e4b92a0>
+    ## <environment: 0x000001f8f8279158>
     ## 
     ## n: 395   p: 30   nk: 0 
     ## 
@@ -266,7 +284,7 @@ redun(~.- grade ,data = student_mat,nk = 0, r2 = 0.95)
     ## No redundant variables
 
 <br/> No variable seems redundant. Thus, we will need to perform the
-data reduction the hard way. Ideally, creating summarizing variables
+data reduction another way. Ideally, creating summarizing variables
 would be done with the help of experts in the particular field. In this
 project, we will have to do. Let’s take a look at cluster analysis,
 which groups the predictors based on Spearman’s rank correlation
@@ -275,6 +293,7 @@ numerical (by considering only linear polynomial contrasts *poly(.,1)*).
 <br/>
 
 ``` r
+par(mfrow = c(1, 1))
 clus <- varclus(~ school + sex + age + address + famsize + Pstatus + poly(Fedu ,1) + poly(Medu ,1) + Mjob + Fjob + reason + guardian + poly(traveltime,1) + poly(studytime,1) + failures + schoolsup + famsup + paid + activities  + nursery  + higher  + internet  + romantic + poly(famrel ,1) + poly(freetime,1) + poly(goout ,1) + poly(Dalc ,1) + poly(Walc ,1) +  poly(health ,1) + absences,data = student_mat)
 plot(clus)
 ```
@@ -314,22 +333,25 @@ levels(teacher) <- c('no','yes')
 ```
 
 <br/> Lastly, we choose to remove the variables *guardian* and *reason*
-from the model (we think these variables are probably not that important
-for predicting the final grades) and the variable *freetime* (we think
-its effect is covered in the model by variables *studytime*,*traveltime*
-and *goout*). <br/>
+from the model (we suppose these variables are probably not that
+important for predicting the final grades) and the variable *freetime*
+(we think its effect is covered in the model by variables
+*studytime*,*traveltime* and *goout*). <br/>
 
 ``` r
 student_mat_final <- student_mat
-student_mat_final <- subset(student_mat_final,select = -c(Medu,Fedu,Mjob,Fjob,reason,guardian,famsup,paid,freetime,Dalc,Walc))
 
-student_mat_final <- student_mat_final %>% mutate(edu = edu) %>% mutate(alc = alc) %>% mutate(extrasup = extrasup) %>% mutate(at_home = at_home) %>% mutate(health = health) %>% mutate(services = services) %>% mutate(teacher = teacher)  
+student_mat_final <- subset(student_mat_final,select = -c(G1,G2,G3, Medu,Fedu,Mjob,Fjob,reason,guardian,famsup,paid,freetime,Dalc,Walc))
+
+student_mat_final <- student_mat_final %>% mutate(edu = edu) %>% mutate(alc = alc) %>% mutate(extrasup = extrasup) %>% mutate(at_home = at_home) %>% mutate(health = health) %>% mutate(services = services) %>% mutate(teacher = teacher) %>% mutate(grade = grade)
 ```
 
 <br/> Thus, our final full model has 44 parameters corresponding to the
-prediction variables (we will consider no interactions). We should note
-that there will also be four intercepts in the model, as we will see
-shortly. <br/>
+prediction variables (we will consider no interactions) and we can
+consider further parameter reduction by lowering the maximum degrees of
+polynomial contrasts. We should note that there will also be additional
+parameters corresponding to thresholds and non-parallel terms, as we
+will see shortly. <br/>
 
 ``` r
 dim(model.matrix(grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery  + higher  + internet  + romantic + famrel  + goout + health + absences + edu + alc +  extrasup + at_home + services + teacher, data = student_mat_final))
@@ -362,50 +384,50 @@ coeftest(full_model)
     ## 
     ## t test of coefficients:
     ## 
-    ##                Estimate Std. Error t value  Pr(>|t|)    
-    ## schoolMS      -0.074950   0.354249 -0.2116 0.8325636    
-    ## sexM           0.594577   0.225960  2.6313 0.0088834 ** 
-    ## age           -0.197427   0.100954 -1.9556 0.0513092 .  
-    ## addressU       0.241439   0.270893  0.8913 0.3733996    
-    ## famsizeLE3     0.394558   0.221998  1.7773 0.0763912 .  
-    ## PstatusT      -0.155846   0.326272 -0.4777 0.6331940    
-    ## traveltime.L  -0.229040   0.510575 -0.4486 0.6540048    
-    ## traveltime.Q  -0.216588   0.432559 -0.5007 0.6168894    
-    ## traveltime.C  -0.406040   0.341469 -1.1891 0.2352125    
-    ## studytime.L    0.599845   0.317801  1.8875 0.0599269 .  
-    ## studytime.Q   -0.073818   0.260350 -0.2835 0.7769348    
-    ## studytime.C   -0.466215   0.216062 -2.1578 0.0316281 *  
-    ## failures      -0.782643   0.177723 -4.4037 1.418e-05 ***
-    ## schoolsupyes  -1.265133   0.329537 -3.8391 0.0001467 ***
-    ## activitiesyes -0.088770   0.206277 -0.4303 0.6672132    
-    ## nurseryyes    -0.114864   0.249064 -0.4612 0.6449566    
-    ## higheryes      0.682926   0.553512  1.2338 0.2181082    
-    ## internetyes    0.045745   0.283724  0.1612 0.8720057    
-    ## romanticyes   -0.195604   0.221892 -0.8815 0.3786410    
-    ## famrel.L       0.248851   0.462591  0.5380 0.5909550    
-    ## famrel.Q      -0.155900   0.414188 -0.3764 0.7068506    
-    ## famrel.C       0.235133   0.372757  0.6308 0.5285883    
-    ## famrel^4      -0.245763   0.299373 -0.8209 0.4122492    
-    ## goout.L       -0.493846   0.358846 -1.3762 0.1696429    
-    ## goout.Q       -0.035810   0.307916 -0.1163 0.9074825    
-    ## goout.C        0.331183   0.253336  1.3073 0.1919795    
-    ## goout^4        0.015784   0.195111  0.0809 0.9355700    
-    ## health.L      -0.593804   0.237493 -2.5003 0.0128683 *  
-    ## health.Q       0.360295   0.237031  1.5200 0.1294111    
-    ## health.C      -0.165758   0.259700 -0.6383 0.5237184    
-    ## health^4      -0.156958   0.242163 -0.6482 0.5173140    
-    ## absences      -0.013525   0.013760 -0.9829 0.3263442    
-    ## edu.L          0.712425   0.269090  2.6475 0.0084770 ** 
-    ## edu.Q          0.450814   0.222457  2.0265 0.0434736 *  
-    ## edu.C         -0.129461   0.207759 -0.6231 0.5336048    
-    ## alc.L          0.019520   0.474482  0.0411 0.9672087    
-    ## alc.Q          0.570236   0.429035  1.3291 0.1846814    
-    ## alc.C          0.297228   0.330838  0.8984 0.3695883    
-    ## alc^4         -0.091181   0.320665 -0.2843 0.7763121    
-    ## extrasupyes   -0.373708   0.235006 -1.5902 0.1126971    
-    ## at_homeyes    -0.100482   0.293728 -0.3421 0.7324886    
-    ## servicesyes    0.210992   0.206154  1.0235 0.3067964    
-    ## teacheryes    -0.510211   0.296106 -1.7231 0.0857646 .  
+    ##                 Estimate Std. Error t value  Pr(>|t|)    
+    ## schoolMS      -0.0358848  0.3722399 -0.0964 0.9232562    
+    ## sexM           0.5419914  0.2410643  2.2483 0.0251771 *  
+    ## age           -0.2174880  0.1044705 -2.0818 0.0380856 *  
+    ## addressU       0.3509980  0.2840427  1.2357 0.2173903    
+    ## famsizeLE3     0.2534106  0.2343587  1.0813 0.2803110    
+    ## PstatusT      -0.1859338  0.3447187 -0.5394 0.5899689    
+    ## traveltime.L   0.0529510  0.5415957  0.0978 0.9221721    
+    ## traveltime.Q   0.0049423  0.4582362  0.0108 0.9914008    
+    ## traveltime.C  -0.3077657  0.3614374 -0.8515 0.3950712    
+    ## studytime.L    0.6102128  0.3334411  1.8300 0.0680933 .  
+    ## studytime.Q   -0.1789694  0.2784313 -0.6428 0.5207894    
+    ## studytime.C   -0.5353297  0.2306980 -2.3205 0.0208893 *  
+    ## failures      -0.8007194  0.1848087 -4.3327 1.927e-05 ***
+    ## schoolsupyes  -1.2743961  0.3391753 -3.7573 0.0002011 ***
+    ## activitiesyes  0.0048695  0.2164363  0.0225 0.9820632    
+    ## nurseryyes    -0.2100897  0.2677991 -0.7845 0.4332745    
+    ## higheryes      0.7657825  0.5665521  1.3517 0.1773589    
+    ## internetyes    0.0476574  0.2984135  0.1597 0.8732074    
+    ## romanticyes   -0.3303764  0.2336798 -1.4138 0.1583096    
+    ## famrel.L       0.6092385  0.4999895  1.2185 0.2238537    
+    ## famrel.Q      -0.5052096  0.4464340 -1.1317 0.2585539    
+    ## famrel.C       0.4373141  0.4008381  1.0910 0.2760237    
+    ## famrel^4      -0.3859728  0.3202428 -1.2053 0.2289209    
+    ## goout.L       -0.6860155  0.3674402 -1.8670 0.0627356 .  
+    ## goout.Q       -0.0070818  0.3142714 -0.0225 0.9820347    
+    ## goout.C        0.2540270  0.2653453  0.9573 0.3390540    
+    ## goout^4        0.0785835  0.2075767  0.3786 0.7052325    
+    ## health.L      -0.7340511  0.2592175 -2.8318 0.0048965 ** 
+    ## health.Q       0.4649659  0.2537041  1.8327 0.0676951 .  
+    ## health.C      -0.1568891  0.2785610 -0.5632 0.5736506    
+    ## health^4      -0.1107913  0.2559799 -0.4328 0.6654177    
+    ## absences      -0.0150582  0.0144088 -1.0451 0.2967126    
+    ## edu.L          0.7823652  0.2934492  2.6661 0.0080296 ** 
+    ## edu.Q          0.4232825  0.2355902  1.7967 0.0732470 .  
+    ## edu.C         -0.0673883  0.2165838 -0.3111 0.7558780    
+    ## alc.L         -0.0698644  0.5030853 -0.1389 0.8896312    
+    ## alc.Q          0.4078647  0.4499721  0.9064 0.3653360    
+    ## alc.C          0.2885623  0.3435102  0.8400 0.4014594    
+    ## alc^4         -0.2082599  0.3400904 -0.6124 0.5406931    
+    ## extrasupyes   -0.3288710  0.2506905 -1.3119 0.1904268    
+    ## at_homeyes    -0.1668150  0.3057067 -0.5457 0.5856404    
+    ## servicesyes    0.1343947  0.2182915  0.6157 0.5385149    
+    ## teacheryes    -0.6067032  0.3157868 -1.9212 0.0555130 .  
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
@@ -414,82 +436,53 @@ coeftest(full_model)
 confint(full_model)
 ```
 
-    ##                     2.5 %        97.5 %
-    ## schoolMS      -0.77397949  0.6175077497
-    ## sexM           0.15311429  1.0397992648
-    ## age           -0.39674679 -0.0005634016
-    ## addressU      -0.28861705  0.7749052032
-    ## famsizeLE3    -0.04034971  0.8307906618
-    ## PstatusT      -0.79362641  0.4890447028
-    ## traveltime.L  -1.25819836  0.7669932200
-    ## traveltime.Q  -1.07853048  0.6309188538
-    ## traveltime.C  -1.07555919  0.2676499198
-    ## studytime.L   -0.02274582  1.2258096602
-    ## studytime.Q   -0.58741940  0.4352150748
-    ## studytime.C   -0.89106466 -0.0431258734
-    ## failures      -1.14681164 -0.4464691525
-    ## schoolsupyes  -1.92119233 -0.6264813642
-    ## activitiesyes -0.49389585  0.3153855979
-    ## nurseryyes    -0.60263891  0.3750324155
-    ## higheryes     -0.36979551  1.8207396562
-    ## internetyes   -0.50852710  0.6056834182
-    ## romanticyes   -0.63182176  0.2387845022
-    ## famrel.L      -0.65035417  1.1842875440
-    ## famrel.Q      -0.98669510  0.6525998908
-    ## famrel.C      -0.50142866  0.9669300055
-    ## famrel^4      -0.83300763  0.3442359593
-    ## goout.L       -1.19909184  0.2108922221
-    ## goout.Q       -0.64099045  0.5686907654
-    ## goout.C       -0.16425247  0.8300901284
-    ## goout^4       -0.36675018  0.3986955383
-    ## health.L      -1.06095337 -0.1288227599
-    ## health.Q      -0.10428712  0.8258498405
-    ## health.C      -0.67587174  0.3435754421
-    ## health^4      -0.63248049  0.3177840884
-    ## absences      -0.04114847  0.0132317243
-    ## edu.L          0.18688330  1.2431550283
-    ## edu.Q          0.01605217  0.8889738115
-    ## edu.C         -0.53852607  0.2769429729
-    ## alc.L         -0.92115969  0.9532786984
-    ## alc.Q         -0.27936313  1.4113319168
-    ## alc.C         -0.35018189  0.9511927675
-    ## alc^4         -0.72529053  0.5353200270
-    ## extrasupyes   -0.83508041  0.0871622283
-    ## at_homeyes    -0.67814092  0.4749887419
-    ## servicesyes   -0.19271339  0.6160627703
-    ## teacheryes    -1.09347239  0.0691331384
+    ##                     2.5 %      97.5 %
+    ## schoolMS      -0.76910324  0.69303490
+    ## sexM           0.07155894  1.01779694
+    ## age           -0.42370432 -0.01345584
+    ## addressU      -0.20381537  0.91134439
+    ## famsizeLE3    -0.20531873  0.71452470
+    ## PstatusT      -0.86443273  0.49086134
+    ## traveltime.L  -1.03816062  1.10998572
+    ## traveltime.Q  -0.90861954  0.90217432
+    ## traveltime.C  -1.01907931  0.40324539
+    ## studytime.L   -0.04043352  1.27037631
+    ## studytime.Q   -0.72637419  0.36739596
+    ## studytime.C   -0.99085767 -0.08514861
+    ## failures      -1.17942886 -0.45131974
+    ## schoolsupyes  -1.94965741 -0.61712948
+    ## activitiesyes -0.42002419  0.42930601
+    ## nurseryyes    -0.73656616  0.31489316
+    ## higheryes     -0.31643560  1.92393633
+    ## internetyes   -0.53740294  0.63460224
+    ## romanticyes   -0.78999920  0.12706975
+    ## famrel.L      -0.35791618  1.61987440
+    ## famrel.Q      -1.40339634  0.36041874
+    ## famrel.C      -0.34858739  1.22999567
+    ## famrel^4      -1.01717453  0.24204010
+    ## goout.L       -1.41064654  0.03372574
+    ## goout.Q       -0.62368914  0.61180389
+    ## goout.C       -0.26546313  0.77621335
+    ## goout^4       -0.32838547  0.48614240
+    ## health.L      -1.24687411 -0.22914325
+    ## health.Q      -0.03071332  0.96513507
+    ## health.C      -0.70383001  0.38988345
+    ## health^4      -0.61379784  0.39091106
+    ## absences      -0.04401321  0.01292166
+    ## edu.L          0.21089538  1.36307447
+    ## edu.Q         -0.03660196  0.88805987
+    ## edu.C         -0.49350338  0.35677021
+    ## alc.L         -1.06221960  0.92064247
+    ## alc.Q         -0.48010569  1.29182832
+    ## alc.C         -0.38421009  0.96679788
+    ## alc^4         -0.88076302  0.45634638
+    ## extrasupyes   -0.82220889  0.16193116
+    ## at_homeyes    -0.76799454  0.43248826
+    ## servicesyes   -0.29284016  0.56376483
+    ## teacheryes    -1.22919423  0.01085067
 
-<br/> For ordinal variables, similar to numerical variables, we can
-consider altering the complexity of the fit in terms of nonlinearity. By
-default, R uses orthonormal polynomial contrast up to order $n-1$, where
-$n$ is a number of levels of the ordinal variable. Let us compare the
-full model with a model that includes only linear polynomial contrasts
-for all ordinal predictors. <br/>
-
-``` r
-lin_model <- polr(grade ~ school + sex + age + address + famsize + Pstatus + poly(traveltime,1) + poly(studytime,1) + failures + schoolsup + activities + nursery  + higher  + internet  + romantic + poly(famrel ,1) + poly(goout ,1) + poly(health ,1) + absences + poly(edu ,1) + poly(alc ,1) +  extrasup + at_home + services + teacher, data = student_mat_final)
-
-anova(full_model,lin_model)
-```
-
-    ## Likelihood ratio tests of ordinal regression models
-    ## 
-    ## Response: grade
-    ##                                                                                                                                                                                                                                                                                                              Model
-    ## 1 school + sex + age + address + famsize + Pstatus + poly(traveltime, 1) + poly(studytime, 1) + failures + schoolsup + activities + nursery + higher + internet + romantic + poly(famrel, 1) + poly(goout, 1) + poly(health, 1) + absences + poly(edu, 1) + poly(alc, 1) + extrasup + at_home + services + teacher
-    ## 2                                                                school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery + higher + internet + romantic + famrel + goout + health + absences + edu + alc + extrasup + at_home + services + teacher
-    ##   Resid. df Resid. Dev   Test    Df LR stat.   Pr(Chi)
-    ## 1       366   1088.833                                
-    ## 2       348   1070.510 1 vs 2    18  18.3233 0.4345532
-
-<br/> We observe that the difference is not significant, i.e., ordinal
-variables in the model seem to influence the outcome linearly, or in
-other words, evenly per their levels. We will retain the full model for
-hypothesis testing, although we can consider this simplification when
-constructing the predictive model.
-
-Since we assume no significant interactions, we can use type II ANOVA to
-test the main effects in the model. <br/>
+<br/> Since we assume no significant interactions, we can use type II
+ANOVA to test the main effects in the model. <br/>
 
 ``` r
 library(car)
@@ -500,95 +493,93 @@ Anova(full_model)
     ## 
     ## Response: grade
     ##            LR Chisq Df Pr(>Chisq)    
-    ## school       0.0445  1   0.832931    
-    ## sex          6.9800  1   0.008243 ** 
-    ## age          3.8635  1   0.049348 *  
-    ## address      0.7958  1   0.372349    
-    ## famsize      3.1622  1   0.075359 .  
-    ## Pstatus      0.2271  1   0.633680    
-    ## traveltime   1.9908  3   0.574316    
-    ## studytime   10.3839  3   0.015569 *  
-    ## failures    22.2694  1  2.370e-06 ***
-    ## schoolsup   15.2745  1  9.296e-05 ***
-    ## activities   0.1854  1   0.666812    
-    ## nursery      0.2217  1   0.637716    
-    ## higher       1.5869  1   0.207767    
-    ## internet     0.0259  1   0.872052    
-    ## romantic     0.7784  1   0.377621    
-    ## famrel       1.0297  4   0.905265    
-    ## goout        6.3420  4   0.175019    
-    ## health       8.3570  4   0.079341 .  
-    ## absences     0.9775  1   0.322808    
-    ## edu          9.8047  3   0.020301 *  
-    ## alc          2.6953  4   0.610032    
-    ## extrasup     2.5273  1   0.111891    
-    ## at_home      0.1173  1   0.732004    
-    ## services     1.0480  1   0.305978    
-    ## teacher      2.9798  1   0.084309 .  
+    ## school       0.0093  1  0.9231245    
+    ## sex          5.1034  1  0.0238789 *  
+    ## age          4.3662  1  0.0366580 *  
+    ## address      1.5364  1  0.2151564    
+    ## famsize      1.1714  1  0.2791081    
+    ## Pstatus      0.2909  1  0.5896529    
+    ## traveltime   1.5057  3  0.6809628    
+    ## studytime   10.8915  3  0.0123270 *  
+    ## failures    21.5725  1  3.407e-06 ***
+    ## schoolsup   14.6469  1  0.0001296 ***
+    ## activities   0.0005  1  0.9818698    
+    ## nursery      0.6156  1  0.4326836    
+    ## higher       1.9007  1  0.1679962    
+    ## internet     0.0253  1  0.8736138    
+    ## romantic     2.0033  1  0.1569600    
+    ## famrel       2.9138  4  0.5723578    
+    ## goout        6.9009  4  0.1412201    
+    ## health      10.1089  4  0.0386334 *  
+    ## absences     1.1075  1  0.2926192    
+    ## edu          9.1181  3  0.0277611 *  
+    ## alc          2.3569  4  0.6704232    
+    ## extrasup     1.7249  1  0.1890689    
+    ## at_home      0.2971  1  0.5857131    
+    ## services     0.3803  1  0.5374447    
+    ## teacher      3.7076  1  0.0541639 .  
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
 <br/> We see that somewhat significant predictors in the full model
-(p-value \< 0.1) are **sex**, **age**, **famsize**, **studytime**,
-**failures**, **schoolsup**, **health**, and **edu**.
+(p-value \< 0.1) are **sex**, **age**, **studytime**, **failures**,
+**schoolsup**, **health**, **edu**, and **teacher**.
 
-Now, let us take a look at the predictions of the ordered logit model.
-We first compute the linear predictor and then obtain the cumulative
-probability (distribution function). Class probabilities are derived
-from cumulative probabilities quite straightforwardly. <br/>
+Now, let us take a look at the predictions. We first compute the linear
+predictor and then obtain the cumulative probability (distribution
+function). Class probabilities are derived from cumulative probabilities
+quite straightforwardly. <br/>
 
 ``` r
 library(faraway)
 
 # linear predictor (i.e., Xbeta)
-model.matrix(full_model)[1:5,2:44] %*% (coefficients(full_model))
+model.matrix(full_model)[1:3,2:44] %*% (coefficients(full_model))
 ```
 
     ##        [,1]
-    ## 1 -4.941673
-    ## 2 -3.535749
-    ## 3 -6.362681
-    ## 4 -1.887321
-    ## 5 -2.910422
+    ## 1 -5.411375
+    ## 2 -3.857494
+    ## 3 -6.787019
 
 ``` r
 # or simply
-full_model$lp[1:5]
+full_model$lp[1:3]
 ```
 
-    ##         1         2         3         4         5 
-    ## -4.941673 -3.535749 -6.362681 -1.887321 -2.910422
+    ##         1         2         3 
+    ## -5.411375 -3.857494 -6.787019
 
 ``` r
 # compute the cumulative probability
-prob <- matrix(NA,5,5)
+prob <- matrix(NA,5,2)
 for(i in 1:5){
-prob[i,1:4] <- ilogit(full_model$zeta - full_model$lp[i])
+prob[i,1:2] <- ilogit(full_model$zeta - full_model$lp[i])
 }
 # compute class probabilities
-prob <- cbind(prob[,1],prob[,2]-prob[,1],prob[,3]-prob[,2],prob[,4]-prob[,3],1-prob[,4])
-colnames(prob) <- c('A', 'B', 'C', 'D', ' F')
+prob <- cbind(prob[,1],prob[,2]-prob[,1],1-prob[,2])
+colnames(prob) <- c('F', 'C/D', 'A/B')
 prob
 ```
 
-    ##               A          B          C           D           F
-    ## [1,] 0.68510247 0.21065556 0.05970608 0.031955575 0.012580315
-    ## [2,] 0.34782754 0.33026772 0.16213985 0.110359985 0.049404905
-    ## [3,] 0.90009937 0.07256807 0.01620246 0.008063055 0.003067042
-    ## [4,] 0.09304325 0.19530987 0.21453443 0.284392978 0.212719473
-    ## [5,] 0.22202075 0.30786990 0.20792607 0.173652833 0.088530444
+    ##               F        C/D        A/B
+    ## [1,] 0.70241401 0.25830494 0.03928104
+    ## [2,] 0.33290819 0.50504258 0.16204923
+    ## [3,] 0.90330195 0.08647246 0.01022559
+    ## [4,] 0.08782228 0.41157785 0.50059987
+    ## [5,] 0.17701050 0.51326032 0.30972918
 
 ``` r
 # or simply
 predict(full_model, type = 'probs')[1:5,]
 ```
 
-    ##            F          D          C           B           A
-    ## 1 0.68510247 0.21065556 0.05970608 0.031955575 0.012580315
-    ## 2 0.34782754 0.33026772 0.16213985 0.110359985 0.049404905
-    ## 3 0.90009937 0.07256807 0.01620246 0.008063055 0.003067042
-    ## 4 0.09304325 0.19530987 0.21453443 0.284392978 0.212719473
-    ## 5 0.22202075 0.30786990 0.20792607 0.173652833 0.088530444
+    ##            F        C/D        A/B
+    ## 1 0.70241401 0.25830494 0.03928104
+    ## 2 0.33290819 0.50504258 0.16204923
+    ## 3 0.90330195 0.08647246 0.01022559
+    ## 4 0.08782228 0.41157785 0.50059987
+    ## 5 0.17701050 0.51326032 0.30972918
 
 <br/> Unfortunately, the function *predict* for the *polr* model does
 not provide confidence intervals. Probably the most straightforward way
@@ -600,9 +591,9 @@ for predicted probabilities for the first observation are as follows.
 ``` r
 set.seed(123) # for reproducibility
 nb <- 2500
-probmat <- matrix(NA,nb,5)
+probmat <- matrix(NA,nb,3)
 
-colnames(probmat) <- c('A', 'B',' C', 'D',' F')
+colnames(probmat) <- c('F', 'C/D', 'A/B')
 
 for(i in 1:nb){
 
@@ -619,12 +610,10 @@ boot_ci <- t(apply(probmat,2,function(x) quantile(x[!is.na(x)],c(0.025,0.975))))
 boot_ci
 ```
 
-    ##           2.5%      97.5%
-    ## A  0.260584511 0.93448285
-    ## B  0.049957830 0.37256763
-    ##  C 0.009351432 0.19929176
-    ## D  0.004235143 0.12999960
-    ##  F 0.001291785 0.05501338
+    ##            2.5%     97.5%
+    ## F   0.273016464 0.9471436
+    ## C/D 0.048682710 0.5503159
+    ## A/B 0.004129889 0.1681113
 
 <br/> Next, let us plot the predicted probabilities vs. individual
 predictors using *sjPlot*. We recomputed the model using the *ordinal*
@@ -638,14 +627,13 @@ library(ordinal)
 full_model_clm <- clm(grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery + higher + internet + romantic + famrel + goout + health + absences + edu + alc + extrasup + at_home + services + teacher, data = student_mat_final)
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-19-1.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-19-2.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-19-3.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-19-4.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-19-5.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-19-6.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-19-7.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-19-8.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-19-9.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-19-10.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-19-11.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-19-12.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-19-13.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-19-14.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-19-15.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-19-16.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-19-17.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-19-18.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-19-19.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-19-20.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-19-21.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-19-22.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-19-23.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-19-24.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-18-1.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-18-2.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-18-3.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-18-4.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-18-5.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-18-6.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-18-7.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-18-8.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-18-9.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-18-10.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-18-11.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-18-12.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-18-13.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-18-14.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-18-15.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-18-16.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-18-17.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-18-18.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-18-19.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-18-20.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-18-21.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-18-22.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-18-23.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-18-24.png)<!-- -->
 
-<br/> From the plots, we see that **males** and students from small
-**famsize** seem to perform slightly better in math. In addition, the
-probability of F increases for **schoolsup** and decreases for
-**higher**. Moreover, the probability of F increases noticeably with
-**failures** and **age**. **studytime**, good **health**, and a low
-number of **absences** also seems to improve the grades a bit.
+<br/> From the plots, we see that the model predicts that **males**
+perform slightly better. In addition, the predicted probabilities of the
+F grade increases increases with **schoolsup**, **failures**, and
+**age**. **studytime**, and a low number of **absences** also seems to
+improve the grades a bit.
 
 Let us check the model assumptions. Similarly to logistic regression,
 the ordered logit directly models the class probabilities. The
@@ -655,37 +643,108 @@ $\mathrm{logit}\; P(Y <=j|X_2) = (X_2-X_1)\beta$, i.e, the effect of $X$
 on relative odds does not depend on class $j$ since $\beta$ are
 independent of class.
 
-Let us check the reasonability of the proportional odds assumption.
-First, we use the function *plot.xmean.ordinaly* from the *rms* package,
-which plots the observed means of predictors versus levels of Y and the
-estimated expected means of predictors under the proportional odds
-assumption. <br/>
+Let us check the reasonability of the proportional odds
+assumption.First, we use the function *plot.xmean.ordinaly* from the
+*rms* package, which plots the observed means of predictors versus
+levels of Y and the estimated expected means of predictors under the
+proportional odds assumption. <br/>
 
 ``` r
 library(rms)
-plot.xmean.ordinaly(grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery  + higher  + internet  + romantic + famrel + goout + health + absences + edu + alc +  extrasup + at_home + services + teacher, student_mat_final,cr=TRUE )
+par(mfrow = c(1, 2))
+plot.xmean.ordinaly(grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery  + higher  + internet  + romantic + famrel + goout + health + absences + edu + alc +  extrasup + at_home + services + teacher, student_mat_final,cr=FALSE)
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-20-1.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-20-2.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-20-3.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-20-4.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-20-5.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-20-6.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-20-7.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-20-8.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-20-9.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-20-10.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-20-11.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-20-12.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-20-13.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-20-14.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-20-15.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-20-16.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-20-17.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-20-18.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-20-19.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-20-20.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-20-21.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-20-22.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-20-23.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-20-24.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-20-25.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-19-1.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-19-2.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-19-3.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-19-4.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-19-5.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-19-6.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-19-7.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-19-8.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-19-9.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-19-10.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-19-11.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-19-12.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-19-13.png)<!-- -->
 
-<br/> We see that the proportional odds assumption may be violated for
-some predictors. A more formal test from *F. E. Harrell. Regression
-modeling strategies: with applications to linear models, logistic
-regression, and survival analysis. Vol. 608. New York: springer, 2001.*
-involves *score residual* plots. <br/>
+<br/> We see that the proportional odds assumption seem reasonable for
+many predictors but it also may be violated for some others. Another
+quick test is to look at coefficients logistic regression for events
+$Y \leq k$, where $Y$ is the ordinal outcome. Provided that the
+proportional odds assumptions holds these coefficients should be
+similar. <br/>
+
+``` r
+logit1 <- glm(grade <= 'F' ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery + higher + internet + romantic + famrel + goout + health + absences + edu + alc + extrasup + at_home + services + teacher, family = binomial ,data = student_mat_final)
+logit2 <- glm(grade <= 'C/D' ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery + higher + internet + romantic + famrel + goout + health + absences + edu + alc + extrasup + at_home + services + teacher, family = binomial ,data = student_mat_final)
+
+
+logitmodels <- cbind(coefficients(logit1),sqrt(diag(vcov(logit1))),coefficients(logit2),sqrt(diag(vcov(logit2))))
+colnames(logitmodels) <- c('<=F', 'Std. Error', '<= C/D', 'Std. Error')
+round(logitmodels,4)
+```
+
+    ##                   <=F Std. Error   <= C/D Std. Error
+    ## (Intercept)   -6.6105     2.4370  22.2287  1324.2642
+    ## schoolMS      -0.0736     0.4474   0.4538     0.5892
+    ## sexM          -0.6153     0.3112  -0.7608     0.3284
+    ## age            0.2765     0.1257   0.1649     0.1480
+    ## addressU      -0.2128     0.3381  -0.3759     0.4340
+    ## famsizeLE3    -0.2971     0.2994  -0.1031     0.3298
+    ## PstatusT       0.5128     0.4541   0.0022     0.5265
+    ## traveltime.L  -0.1609     0.6941  11.1594  1183.3231
+    ## traveltime.Q   0.0693     0.5919   8.0664   881.9971
+    ## traveltime.C   0.3540     0.4612   3.9262   394.4414
+    ## studytime.L   -0.5509     0.4217  -0.7998     0.4551
+    ## studytime.Q    0.3311     0.3505  -0.1896     0.3708
+    ## studytime.C    0.3748     0.2923   0.6833     0.3018
+    ## failures       0.8095     0.1925   1.1065     0.4801
+    ## schoolsupyes   0.9227     0.3859   2.4742     0.6820
+    ## activitiesyes  0.0856     0.2639   0.1944     0.3079
+    ## nurseryyes     0.2834     0.3354   0.1736     0.3865
+    ## higheryes     -0.6385     0.6192 -16.6407  1190.3627
+    ## internetyes   -0.1505     0.3527  -0.0335     0.4596
+    ## romanticyes    0.4343     0.2848   0.1115     0.3362
+    ## famrel.L      -0.2905     0.6815  -0.5143     0.9140
+    ## famrel.Q      -0.1555     0.5996   0.9834     0.8097
+    ## famrel.C       0.1009     0.5025  -0.8719     0.6350
+    ## famrel^4       0.2175     0.3807   0.5041     0.4622
+    ## goout.L        1.3703     0.4826  -0.0919     0.5326
+    ## goout.Q       -0.1171     0.4046   0.1656     0.4489
+    ## goout.C       -0.1834     0.3327  -0.4094     0.3836
+    ## goout^4       -0.0054     0.2549   0.0578     0.2896
+    ## health.L       0.6174     0.3338   1.0418     0.3513
+    ## health.Q      -0.2002     0.3227  -0.7209     0.3525
+    ## health.C       0.2369     0.3387   0.1193     0.3777
+    ## health^4      -0.1510     0.3127   0.5215     0.3569
+    ## absences       0.0119     0.0156   0.0487     0.0290
+    ## edu.L         -0.8932     0.3919  -0.9659     0.4024
+    ## edu.Q         -0.5586     0.3036  -0.2690     0.3433
+    ## edu.C          0.0574     0.2649   0.0813     0.3197
+    ## alc.L         -1.1939     0.7786  11.0781  1192.5839
+    ## alc.Q         -0.7552     0.6567   7.9822  1007.9174
+    ## alc.C         -0.7099     0.4715   5.1294   596.2920
+    ## alc^4          0.0139     0.4094   2.7167   225.3780
+    ## extrasupyes    0.4010     0.3156   0.2723     0.3549
+    ## at_homeyes     0.0829     0.3575   0.3874     0.4741
+    ## servicesyes   -0.0768     0.2709  -0.2654     0.3114
+    ## teacheryes     1.0299     0.4033   0.3324     0.3989
+
+<br/> One thing to notice is that some coefficients such as **higher**
+are very hard to estimate since almost all values of **higher** for the
+A/B grade are *yes*. Consequently, we cannot really decide from the data
+whether the proportional odds assumption is met for **higher**. We
+observe a similar problem for **alc** and **traveltime**. <br/>
+
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-1.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-2.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-3.png)<!-- -->
+
+<br/> Another more formal test from *F. E. Harrell. Regression modeling
+strategies: with applications to linear models, logistic regression, and
+survival analysis. Vol. 608. New York: springer, 2001.* involves *score
+residual* plots. <br/>
 
 ``` r
 full_model_lrm <- lrm(grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery  + higher  + internet  + romantic + famrel + goout + health + absences + edu + alc +  extrasup + at_home + services + teacher, data = student_mat_final, x=TRUE , y=TRUE )
 
+par(mfrow = c(1, 2))
 resid(full_model_lrm , 'score.binary' , pl=TRUE)
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-1.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-2.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-3.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-4.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-5.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-6.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-7.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-8.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-9.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-10.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-11.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-12.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-13.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-14.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-15.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-16.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-17.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-18.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-19.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-20.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-21.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-22.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-23.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-24.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-25.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-26.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-27.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-28.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-29.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-30.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-31.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-32.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-33.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-34.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-35.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-36.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-37.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-38.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-39.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-40.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-41.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-42.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-21-43.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-22-1.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-22-2.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-22-3.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-22-4.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-22-5.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-22-6.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-22-7.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-22-8.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-22-9.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-22-10.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-22-11.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-22-12.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-22-13.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-22-14.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-22-15.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-22-16.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-22-17.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-22-18.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-22-19.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-22-20.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-22-21.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-22-22.png)<!-- -->
 
 <br/> A confidence interval that lies outside of the zero line provides
 strong evidence against the proportional odds assumption. We observe
-that **alc** and **traveltime** are borderline. Otherwise, we have not
-found strong evidence against the proportional odds assumption.
+that **alc** and **traveltime** are borderline.
 
 An alternative to the ordered logit is a model where we allow $\beta$ to
 vary: $P[Y \leq k ] = \mathrm{ilogit}\, (\theta_k - X\beta_k)$. This
@@ -706,59 +765,55 @@ nominal_test(full_model_clm)
     ## 
     ## formula: grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery + higher + internet + romantic + famrel + goout + health + absences + edu + alc + extrasup + at_home + services + teacher
     ##            Df  logLik    AIC     LRT Pr(>Chi)  
-    ## <none>        -535.25 1164.5                   
-    ## school      3 -534.90 1169.8  0.7017  0.87280  
-    ## sex         3 -534.72 1169.4  1.0672  0.78501  
-    ## age         3 -534.21 1168.4  2.0874  0.55446  
-    ## address     3 -533.23 1166.5  4.0519  0.25591  
-    ## famsize     3 -533.64 1167.3  3.2263  0.35803  
-    ## Pstatus     3 -533.99 1168.0  2.5359  0.46883  
-    ## traveltime                                     
-    ## studytime   9 -531.98 1176.0  6.5494  0.68392  
-    ## failures    3 -533.43 1166.8  3.6567  0.30100  
-    ## schoolsup   3 -533.62 1167.2  3.2599  0.35327  
-    ## activities  3 -534.51 1169.0  1.4860  0.68550  
-    ## nursery     3 -533.46 1166.9  3.5988  0.30817  
-    ## higher                                         
-    ## internet    3 -534.58 1169.2  1.3469  0.71803  
-    ## romantic    3 -532.10 1164.2  6.3182  0.09712 .
-    ## famrel                                         
-    ## goout      12 -527.42 1172.8 15.6785  0.20641  
-    ## health     12 -531.46 1180.9  7.5856  0.81662  
-    ## absences    3 -532.41 1164.8  5.6838  0.12805  
-    ## edu         9 -533.13 1178.3  4.2493  0.89425  
-    ## alc                                            
-    ## extrasup    3 -534.39 1168.8  1.7274  0.63087  
-    ## at_home     3 -534.75 1169.5  1.0139  0.79790  
-    ## services    3 -534.04 1168.1  2.4260  0.48881  
-    ## teacher     3 -531.40 1162.8  7.7024  0.05258 .
+    ## <none>        -358.39 806.78                   
+    ## school      1 -357.81 807.62  1.1637  0.28069  
+    ## sex         1 -358.29 808.57  0.2131  0.64432  
+    ## age         1 -358.37 808.75  0.0345  0.85258  
+    ## address     1 -357.32 806.64  2.1479  0.14276  
+    ## famsize     1 -358.11 808.22  0.5672  0.45137  
+    ## Pstatus     1 -357.74 807.49  1.2948  0.25517  
+    ## traveltime  3 -355.07 806.13  6.6530  0.08382 .
+    ## studytime   3 -356.81 809.63  3.1575  0.36797  
+    ## failures    1 -357.72 807.43  1.3511  0.24509  
+    ## schoolsup   1 -356.66 805.33  3.4575  0.06296 .
+    ## activities  1 -357.94 807.87  0.9143  0.33896  
+    ## nursery     1 -358.05 808.10  0.6844  0.40807  
+    ## higher      1 -356.84 805.67  3.1134  0.07765 .
+    ## internet    1 -358.15 808.29  0.4899  0.48396  
+    ## romantic    1 -358.36 808.73  0.0579  0.80977  
+    ## famrel      4 -356.91 811.81  2.9708  0.56272  
+    ## goout       4 -356.53 811.06  3.7231  0.44477  
+    ## health      4 -356.80 811.59  3.1936  0.52596  
+    ## absences    1 -357.28 806.56  2.2222  0.13604  
+    ## edu         3 -356.96 809.93  2.8571  0.41419  
+    ## alc         4 -352.15 802.30 12.4841  0.01409 *
+    ## extrasup    1 -358.25 808.49  0.2922  0.58879  
+    ## at_home     1 -357.85 807.70  1.0857  0.29744  
+    ## services    1 -358.39 808.78  0.0001  0.99258  
+    ## teacher     1 -356.54 805.07  3.7126  0.05400 .
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
-<br/> We observe that none of the partial proportional odds models seem
+<br/> We observe that partial proportional odds models **traveltime**,
+**schoolsup**, and **higher** are almost significant and **alc** is
 significant in comparison to the proportional odds model. However, we
-notice that models for variables **traveltime**,**higher**, **famrel**,
-and **alc** are omitted. This is because the fit failed to converge to a
-valid solution. For example, we get for **traveltime** <br/>
+have to keep in mind our previous observation that coefficients for
+**traveltime**, **higher**, and **alc** were hard to estimate. We can
+confirm this fact by checking the convergence of the fits. <br/>
 
 ``` r
 partial_traveltime_model <- clm(grade ~ school + sex + age + address + famsize + Pstatus  + studytime + failures + schoolsup + activities + nursery + higher + internet + romantic + famrel + goout + health + absences + edu + alc + extrasup + at_home + services + teacher, nominal = ~traveltime, data = student_mat_final)
-
 partial_traveltime_model$convergence
 ```
 
     ## $code
-    ## [1] -3
+    ## [1] 1
     ## 
     ## $messages
-    ## [1] "not all thresholds are increasing: fit is invalid"
+    ## [1] "Hessian is numerically singular: parameters are not uniquely determined"
     ## 
     ## $alg.message
     ## [1] "Absolute convergence criterion was met, but relative criterion was not met"
-
-<br/> an invalid fit since the thresholds are not increasing (i.e., the
-model would predict negative class probabilities). We observe similar
-problems for the other fits. <br/>
 
 ``` r
 partial_higher_model <- clm(grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery + internet + romantic + famrel + goout + health + absences + edu + alc + extrasup + at_home + services + teacher,nominal = ~ higher, data = student_mat_final)
@@ -766,24 +821,10 @@ partial_higher_model$convergence
 ```
 
     ## $code
-    ## [1] -1
+    ## [1] 1
     ## 
     ## $messages
-    ## [1] "Model failed to converge with max|grad| = 0.346159 (tol = 1e-06)"
-    ## 
-    ## $alg.message
-    ## [1] "maximum number of consecutive Newton modifications reached"
-
-``` r
-partial_famrel_model <- clm(grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery + higher + internet + romantic + goout + health + absences + edu + alc + extrasup + at_home + services + teacher,nominal = ~ famrel, data = student_mat_final)
-partial_traveltime_model$convergence
-```
-
-    ## $code
-    ## [1] -3
-    ## 
-    ## $messages
-    ## [1] "not all thresholds are increasing: fit is invalid"
+    ## [1] "Hessian is numerically singular: parameters are not uniquely determined"
     ## 
     ## $alg.message
     ## [1] "Absolute convergence criterion was met, but relative criterion was not met"
@@ -794,21 +835,20 @@ partial_alc_model$convergence
 ```
 
     ## $code
-    ## [1] -1
+    ## [1] 1
     ## 
     ## $messages
-    ## [1] "Model failed to converge with max|grad| = 1.37916e-05 (tol = 1e-06)"
+    ## [1] "Hessian is numerically singular: parameters are not uniquely determined"
     ## 
     ## $alg.message
-    ## [1] "maximum number of consecutive Newton modifications reached"
+    ## [1] "Absolute convergence criterion was met, but relative criterion was not met"
 
-<br/> We can try to make the fit more stable for **traveltime**,
-**famrel**, and **alc** by considering only the linear part to be
-different at each level of **grade**. We observe that all these models
-indeed converged successfully. <br/>
+<br/> Since **traveltime** and **alc** are ordinal variables, we can
+make the fit more stable by considering only polynomial contrasts of
+limited order. <br/>
 
 ``` r
-partial_lin_traveltime_model <- clm(grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery + higher + internet + romantic + famrel + goout + health + absences + edu + alc + extrasup + at_home + services + teacher, nominal = ~poly(traveltime,1), data = student_mat_final)
+partial_lin_traveltime_model <- clm(grade ~ school + sex + age + address + famsize + Pstatus  + studytime + failures + schoolsup + activities + nursery + higher + internet + romantic + famrel + goout + health + absences + edu + alc + extrasup + at_home + services + teacher, nominal = ~poly(traveltime,2), data = student_mat_final)
 partial_lin_traveltime_model$convergence
 ```
 
@@ -829,48 +869,19 @@ anova(partial_lin_traveltime_model,full_model_clm)
     ##  
     ##                              formula:                                                                                                                                                                                                                                                 
     ## full_model_clm               grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery + higher + internet + romantic + famrel + goout + health + absences + edu + alc + extrasup + at_home + services + teacher
-    ## partial_lin_traveltime_model grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery + higher + internet + romantic + famrel + goout + health + absences + edu + alc + extrasup + at_home + services + teacher
+    ## partial_lin_traveltime_model grade ~ school + sex + age + address + famsize + Pstatus + studytime + failures + schoolsup + activities + nursery + higher + internet + romantic + famrel + goout + health + absences + edu + alc + extrasup + at_home + services + teacher             
     ##                              nominal:             link: threshold:
     ## full_model_clm               ~1                   logit flexible  
-    ## partial_lin_traveltime_model ~poly(traveltime, 1) logit flexible  
+    ## partial_lin_traveltime_model ~poly(traveltime, 2) logit flexible  
     ## 
-    ##                              no.par    AIC  logLik LR.stat df Pr(>Chisq)
-    ## full_model_clm                   47 1164.5 -535.25                      
-    ## partial_lin_traveltime_model     50 1165.5 -532.75  5.0033  3     0.1716
+    ##                              no.par    AIC  logLik LR.stat df Pr(>Chisq)  
+    ## full_model_clm                   45 806.78 -358.39                        
+    ## partial_lin_traveltime_model     46 803.66 -355.83   5.123  1    0.02361 *
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
 ``` r
-partial_lin_famrel_model <- clm(grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery + higher + internet + romantic + famrel + goout + health + absences + edu + alc + extrasup + at_home + services + teacher, nominal = ~poly(famrel,1), data = student_mat_final)
-partial_lin_famrel_model$convergence
-```
-
-    ## $code
-    ## [1] 0
-    ## 
-    ## $messages
-    ## [1] "successful convergence"
-    ## 
-    ## $alg.message
-    ## [1] "Absolute and relative convergence criteria were met"
-
-``` r
-anova(partial_lin_famrel_model,full_model_clm)
-```
-
-    ## Likelihood ratio tests of cumulative link models:
-    ##  
-    ##                          formula:                                                                                                                                                                                                                                                 
-    ## full_model_clm           grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery + higher + internet + romantic + famrel + goout + health + absences + edu + alc + extrasup + at_home + services + teacher
-    ## partial_lin_famrel_model grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery + higher + internet + romantic + famrel + goout + health + absences + edu + alc + extrasup + at_home + services + teacher
-    ##                          nominal:         link: threshold:
-    ## full_model_clm           ~1               logit flexible  
-    ## partial_lin_famrel_model ~poly(famrel, 1) logit flexible  
-    ## 
-    ##                          no.par    AIC  logLik LR.stat df Pr(>Chisq)
-    ## full_model_clm               47 1164.5 -535.25                      
-    ## partial_lin_famrel_model     50 1168.4 -534.22  2.0789  3     0.5562
-
-``` r
-partial_lin_alc_model <- clm(grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery + higher + internet + romantic + famrel + goout + health + absences + edu + alc + extrasup + at_home + services + teacher, nominal = ~poly(alc,1), data = student_mat_final)
+partial_lin_alc_model <- clm(grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery + higher + internet + romantic + famrel + goout + health + absences + edu + extrasup + at_home + services + teacher, nominal = ~poly(alc,3), data = student_mat_final)
 partial_lin_alc_model$convergence
 ```
 
@@ -891,22 +902,144 @@ anova(partial_lin_alc_model,full_model_clm)
     ##  
     ##                       formula:                                                                                                                                                                                                                                                 
     ## full_model_clm        grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery + higher + internet + romantic + famrel + goout + health + absences + edu + alc + extrasup + at_home + services + teacher
-    ## partial_lin_alc_model grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery + higher + internet + romantic + famrel + goout + health + absences + edu + alc + extrasup + at_home + services + teacher
+    ## partial_lin_alc_model grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery + higher + internet + romantic + famrel + goout + health + absences + edu + extrasup + at_home + services + teacher      
     ##                       nominal:      link: threshold:
     ## full_model_clm        ~1            logit flexible  
-    ## partial_lin_alc_model ~poly(alc, 1) logit flexible  
+    ## partial_lin_alc_model ~poly(alc, 3) logit flexible  
     ## 
     ##                       no.par    AIC  logLik LR.stat df Pr(>Chisq)   
-    ## full_model_clm            47 1164.5 -535.25                         
-    ## partial_lin_alc_model     50 1158.2 -529.12  12.279  3   0.006487 **
+    ## full_model_clm            45 806.78 -358.39                         
+    ## partial_lin_alc_model     47 800.83 -353.41  9.9586  2   0.006879 **
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
-<br/> The last model that included an **alc** effect as nominal (i.e.,
-varying for levels of **grade**) is of interest. The difference between
-the partial proportional odds model and the proportional odds model is
-the only one that is significant. Moreover, variable **alc** was not
-significant in the proportional odds model <br/>
+<br/> We observe that non-parallel slopes for **traveltime** and
+especially **alc** are significant.
+
+Since some “non-parallel” terms seem significant, let us fit a partial
+proportion model and check whether are conclusion about important
+predictors would change. Our full model includes significant
+non-parallel terms (P \< 0.1) with **higher** assumed to be proportional
+and polynomial contrasts of a limited order for **traveltime** and
+**alc** due to the aforementioned issues. <br/>
+
+``` r
+full_model_clm_PP <- clm(grade ~ higher + school + sex + age + address + famsize + Pstatus  + studytime + failures  + activities + nursery  + internet + romantic + famrel + goout + health + absences + edu + extrasup + at_home + services, nominal = ~ poly(traveltime,2) + schoolsup + poly(alc,3) + teacher,data = student_mat_final)
+full_model_clm_PP$convergence
+```
+
+    ## $code
+    ## [1] 0
+    ## 
+    ## $messages
+    ## [1] "successful convergence"
+    ## 
+    ## $alg.message
+    ## [1] "Absolute and relative convergence criteria were met"
+
+``` r
+summary(full_model_clm_PP)
+```
+
+    ## formula: 
+    ## grade ~ higher + school + sex + age + address + famsize + Pstatus + studytime + failures + activities + nursery + internet + romantic + famrel + goout + health + absences + edu + extrasup + at_home + services
+    ## nominal: ~poly(traveltime, 2) + schoolsup + poly(alc, 3) + teacher
+    ## data:    student_mat_final
+    ## 
+    ##  link  threshold nobs logLik  AIC    niter max.grad cond.H 
+    ##  logit flexible  395  -347.89 795.77 7(0)  9.03e-12 9.3e+05
+    ## 
+    ## Coefficients:
+    ##                 Estimate Std. Error z value Pr(>|z|)    
+    ## higheryes      0.7847666  0.5665136   1.385  0.16597    
+    ## schoolMS      -0.0424919  0.3793975  -0.112  0.91082    
+    ## sexM           0.4874273  0.2444788   1.994  0.04618 *  
+    ## age           -0.2210323  0.1049204  -2.107  0.03515 *  
+    ## addressU       0.3049173  0.2879298   1.059  0.28960    
+    ## famsizeLE3     0.2342215  0.2360744   0.992  0.32112    
+    ## PstatusT      -0.2259965  0.3547549  -0.637  0.52409    
+    ## studytime.L    0.6266085  0.3438510   1.822  0.06841 .  
+    ## studytime.Q   -0.1674845  0.2823172  -0.593  0.55301    
+    ## studytime.C   -0.5286737  0.2324245  -2.275  0.02293 *  
+    ## failures      -0.8550114  0.1891938  -4.519 6.21e-06 ***
+    ## activitiesyes  0.0003662  0.2189887   0.002  0.99867    
+    ## nurseryyes    -0.3085901  0.2768627  -1.115  0.26502    
+    ## internetyes    0.0594471  0.3010852   0.197  0.84348    
+    ## romanticyes   -0.2881676  0.2374502  -1.214  0.22490    
+    ## famrel.L       0.4294599  0.5216541   0.823  0.41036    
+    ## famrel.Q      -0.3101260  0.4644896  -0.668  0.50434    
+    ## famrel.C       0.3236668  0.4171395   0.776  0.43780    
+    ## famrel^4      -0.3573955  0.3302233  -1.082  0.27913    
+    ## goout.L       -0.7960055  0.3776003  -2.108  0.03503 *  
+    ## goout.Q        0.0408315  0.3226049   0.127  0.89928    
+    ## goout.C        0.1878241  0.2697094   0.696  0.48618    
+    ## goout^4        0.0541678  0.2098781   0.258  0.79634    
+    ## health.L      -0.7371911  0.2625634  -2.808  0.00499 ** 
+    ## health.Q       0.3791513  0.2549668   1.487  0.13700    
+    ## health.C      -0.1921157  0.2842597  -0.676  0.49914    
+    ## health^4      -0.1205668  0.2583565  -0.467  0.64074    
+    ## absences      -0.0166085  0.0144153  -1.152  0.24926    
+    ## edu.L          0.7879556  0.2966603   2.656  0.00791 ** 
+    ## edu.Q          0.3729642  0.2405210   1.551  0.12099    
+    ## edu.C         -0.0722234  0.2198860  -0.328  0.74257    
+    ## extrasupyes   -0.3478726  0.2543151  -1.368  0.17135    
+    ## at_homeyes    -0.1469422  0.3086843  -0.476  0.63405    
+    ## servicesyes    0.1570651  0.2207288   0.712  0.47673    
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## Threshold coefficients:
+    ##                              Estimate Std. Error z value
+    ## F|C/D.(Intercept)             -4.9179     1.9737  -2.492
+    ## C/D|A/B.(Intercept)           -2.4770     1.9604  -1.264
+    ## F|C/D.poly(traveltime, 2)1    -1.2629     2.6925  -0.469
+    ## C/D|A/B.poly(traveltime, 2)1   6.3988     4.0750   1.570
+    ## F|C/D.poly(traveltime, 2)2    -1.8995     2.6257  -0.723
+    ## C/D|A/B.poly(traveltime, 2)2   0.8797     4.2342   0.208
+    ## F|C/D.schoolsupyes             0.9946     0.3738   2.661
+    ## C/D|A/B.schoolsupyes           2.2375     0.6522   3.431
+    ## F|C/D.poly(alc, 3)1           -2.4044     2.9981  -0.802
+    ## C/D|A/B.poly(alc, 3)1          8.0840     3.8993   2.073
+    ## F|C/D.poly(alc, 3)2            0.5684     2.7059   0.210
+    ## C/D|A/B.poly(alc, 3)2          2.3778     3.9924   0.596
+    ## F|C/D.poly(alc, 3)3           -3.9679     2.6864  -1.477
+    ## C/D|A/B.poly(alc, 3)3          1.4587     4.0139   0.363
+    ## F|C/D.teacheryes               0.9173     0.3586   2.558
+    ## C/D|A/B.teacheryes             0.3098     0.3589   0.863
+
+    ##                 LR_stat        
+    ## school     1.254728e-02 0.91081
+    ## sex        4.001015e+00 0.04547
+    ## age        4.466825e+00 0.03456
+    ## address    1.124500e+00 0.28895
+    ## famsize    9.869907e-01 0.32048
+    ## Pstatus    4.067273e-01 0.52364
+    ## traveltime 4.775246e+00 0.31115
+    ## studytime  1.074150e+01 0.01321
+    ## failures   2.374526e+01 0.00000
+    ## schoolsup  1.951217e+01 0.00006
+    ## activities 2.796637e-06 0.99867
+    ## nursery    1.246693e+00 0.26419
+    ## higher     1.986453e+00 0.15871
+    ## internet   3.899261e-02 0.84346
+    ## romantic   1.474104e+00 0.22470
+    ## famrel     1.867318e+00 0.76015
+    ## goout      7.264941e+00 0.12253
+    ## health     9.704210e+00 0.04572
+    ## absences   1.341522e+00 0.24677
+    ## edu        8.432981e+00 0.03786
+    ## alc        1.148299e+01 0.07455
+    ## extrasup   1.878919e+00 0.17046
+    ## at_home    2.266611e-01 0.63401
+    ## services   5.071091e-01 0.47639
+    ## teacher    6.659750e+00 0.03580
+
+**sex**,
+**age**,**studytime**,**failures**,**schoolsup**,**health**,**edu**,**alc**,
+and **teacher** are significant with P \<0.1. An interesting observation
+is the following fact: variable **alc** was clearly not significant in
+the proportional odds model, but it is significant in partial
+proportional odds model. <br/>
 
 ``` r
 no_alc_model_clm <- clm(grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery + higher + internet + romantic + famrel + goout + health + absences + edu  + extrasup + at_home + services + teacher, data = student_mat_final)
@@ -924,66 +1057,52 @@ anova(no_alc_model_clm,full_model_clm)
     ## full_model_clm   logit flexible  
     ## 
     ##                  no.par    AIC  logLik LR.stat df Pr(>Chisq)
-    ## no_alc_model_clm     43 1159.2 -536.60                      
-    ## full_model_clm       47 1164.5 -535.25  2.6953  4       0.61
+    ## no_alc_model_clm     41 801.14 -359.57                      
+    ## full_model_clm       45 806.78 -358.39  2.3569  4     0.6704
 
-<br/> However, it is significant in the partial proportional odds model.
-<br/>
-
-``` r
-anova(no_alc_model_clm,partial_lin_alc_model)
-```
-
-    ## Likelihood ratio tests of cumulative link models:
-    ##  
-    ##                       formula:                                                                                                                                                                                                                                                 
-    ## no_alc_model_clm      grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery + higher + internet + romantic + famrel + goout + health + absences + edu + extrasup + at_home + services + teacher      
-    ## partial_lin_alc_model grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery + higher + internet + romantic + famrel + goout + health + absences + edu + alc + extrasup + at_home + services + teacher
-    ##                       nominal:      link: threshold:
-    ## no_alc_model_clm      ~1            logit flexible  
-    ## partial_lin_alc_model ~poly(alc, 1) logit flexible  
-    ## 
-    ##                       no.par    AIC  logLik LR.stat df Pr(>Chisq)  
-    ## no_alc_model_clm          43 1159.2 -536.60                        
-    ## partial_lin_alc_model     50 1158.2 -529.12  14.974  7    0.03634 *
-    ## ---
-    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-
-<br/> This suggests that the **alc** effect varies noticeably by the
-level of **grade**. <br/>
-
-``` r
-coefficients(partial_lin_alc_model)[5:8]
-```
-
-    ## F|D.poly(alc, 1) D|C.poly(alc, 1) C|B.poly(alc, 1) B|A.poly(alc, 1) 
-    ##       -4.6563884        0.4534775        6.2812452        1.0165864
-
-``` r
-plot_model(partial_lin_alc_model, type = "pred", terms = c('alc'),title = 'Predicted probabilities of grade - PPO model')
-```
-
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-28-1.png)<!-- -->
-
-``` r
-plot_model(full_model_clm, type = "pred", terms = c('alc'),title = 'Predicted probabilities of grade - PO model')
-```
-
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-28-2.png)<!-- -->
-
-<br/> However, we should keep in mind that we probably do not have
-enough data to make this claim (we clearly do not have enough data to
-make the fit reliably), and hence, this might be just the effect of the
-noise in the data.
-
-Lastly, we should mention that violating the proportional odds
-assumption might not be detrimental. The proportional odds model, even
-when the proportional odds assumption is not met, still retains meaning:
-it essentially estimates an average odds ratio across the outcome
-levels, i.e., it provides a general trend. Where a serious departure can
-occur is when investigating the effect on individual outcome levels; see
+<br/> We should mention that violating the proportional odds assumption
+might not be detrimental. The proportional odds model, even when the
+proportional odds assumption is not met, still retains meaning: it
+essentially estimates an average odds ratio across the outcome levels,
+i.e., it provides a general trend. Where a serious departure can occur
+is when investigating the effect on individual outcome levels; see
 <https://www.fharrell.com/post/po/> for more details (and our **alc**
 example).
+
+Let us compare the predicted probabilities of proportional odds and
+partial proportional odds model. We will refit the partial proportional
+odds model using the package *VGAM*, since its *predict* provides all
+class probabilities. <br/>
+
+``` r
+library(VGAM)
+full_model_PP <- vglm(grade ~ higher + school + sex + age + address + famsize + Pstatus  + studytime + failures  + activities + nursery  + internet + romantic + famrel + goout + health + absences + edu + extrasup + at_home + services + poly(traveltime,2) + schoolsup + poly(alc,3) + teacher, family = cumulative(parallel = FALSE ~ poly(traveltime,2) + schoolsup + poly(alc,3) + teacher), data = student_mat_final)
+
+# class probabilities
+cbind(predict(full_model,type='probs')[1:10,], predict(full_model_PP,type = 'response')[1:10,])
+```
+
+    ##             F        C/D        A/B          F       C/D         A/B
+    ## 1  0.70241401 0.25830494 0.03928104 0.71797878 0.2560436 0.025977657
+    ## 2  0.33290819 0.50504258 0.16204923 0.38556510 0.3928113 0.221623623
+    ## 3  0.90330195 0.08647246 0.01022559 0.89245346 0.1043636 0.003182983
+    ## 4  0.08782228 0.41157785 0.50059987 0.11778642 0.3098898 0.572323813
+    ## 5  0.17701050 0.51326032 0.30972918 0.18392356 0.5265873 0.289489140
+    ## 6  0.08313396 0.40127410 0.51559194 0.09033974 0.4292404 0.480419880
+    ## 7  0.18620005 0.51713441 0.29666553 0.23663988 0.3977351 0.365624975
+    ## 8  0.43198436 0.45540629 0.11260935 0.47750934 0.4533340 0.069156679
+    ## 9  0.01877129 0.14666034 0.83456837 0.02603058 0.1040909 0.869878534
+    ## 10 0.08715309 0.41015147 0.50269544 0.11200408 0.3018127 0.586183258
+
+``` r
+# classified in the same category
+sum(max.col(predict(full_model_PP,type = 'response')) == as.numeric(predict(full_model)))
+```
+
+    ## [1] 340
+
+<br/> We observe that 86% (~340/395) of observations would be classified
+in the same category.
 
 The last thing that we evaluate is residuals. Similarly to the logistic
 regression, it is not straightforward to define residuals that help to
@@ -997,243 +1116,244 @@ details). Under a well-specified model, the surrogate residuals have a
 zero mean and are homoskedastic (i.e., have constant variance
 independent of $X$).
 
-Let us compute the surrogate residuals for our model using the *sure
-package* and plot them vs the linear predictor and our regressors (both
-those we included in the model and those we choose to omit) <br/>
+Let us compute the surrogate residuals for our partial proportional odds
+model model using the *sure package* and plot them vs the linear
+predictor and variables we choose to omit. <br/>
 
 ``` r
 library(sure)
-sres <- resids(full_model)
+
+sres <- resids(full_model_clm_PP)
 
 # QQ plot and residuals vs linear predictor
 autoplot.resid(sres, what = 'qq') 
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-1.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-30-1.png)<!-- -->
 
 ``` r
-autoplot.resid(sres, what = 'fitted',fit = full_model) 
+autoplot.resid(sres, what = 'fitted',fit = full_model_clm_PP) 
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-2.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-30-2.png)<!-- -->
 
 ``` r
 # residuals vs variables in the model
 autoplot.resid(sres, what = 'covariate',x = student_mat_final$school) 
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-3.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-30-3.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat_final$sex) 
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-4.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-30-4.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat_final$age) 
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-5.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-30-5.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat_final$address) 
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-6.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-30-6.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat_final$famsize) 
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-7.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-30-7.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat_final$Pstatus) 
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-8.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-30-8.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat_final$traveltime) 
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-9.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-30-9.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat_final$studytime) 
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-10.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-30-10.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = as.factor(student_mat_final$failures))  
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-11.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-30-11.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat_final$schoolsup) 
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-12.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-30-12.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat_final$activities) 
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-13.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-30-13.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat_final$nursery) 
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-14.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-30-14.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat_final$higher) 
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-15.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-30-15.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat_final$internet) 
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-16.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-30-16.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat_final$romantic)
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-17.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-30-17.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat_final$famrel)
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-18.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-30-18.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat_final$goout)
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-19.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-30-19.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat_final$health)
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-20.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-30-20.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat_final$absences)
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-21.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-30-21.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat_final$edu)
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-22.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-30-22.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat_final$alc)
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-23.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-30-23.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat_final$extrasup)
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-24.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-30-24.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat_final$at_home)
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-25.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-30-25.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat_final$services)
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-26.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-30-26.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat_final$teacher)
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-27.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-30-27.png)<!-- -->
 
 ``` r
 # residuals vs omitted variables
 autoplot.resid(sres, what = 'covariate',x = student_mat$Medu)
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-28.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-30-28.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat$Fedu)
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-29.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-30-29.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat$Mjob)
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-30.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-30-30.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat$Fjob)
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-31.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-30-31.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat$Dalc)
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-32.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-30-32.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat$Walc)
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-33.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-30-33.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat$famsup)
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-34.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-30-34.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat$paid)
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-35.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-30-35.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat$guardian)
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-36.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-30-36.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat$freetime)
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-37.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-30-37.png)<!-- -->
 
 ``` r
 autoplot.resid(sres, what = 'covariate',x = student_mat$reason)
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-29-38.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-30-38.png)<!-- -->
 
 <br/> We see no apparent trends in the residuals. However, the question
 always is how much obvious trends in the residuals are “obvious.” For
@@ -1246,55 +1366,55 @@ sres_null <- resids(null_model)
 autoplot.resid(sres_null, what = 'qq') 
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-30-1.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-31-1.png)<!-- -->
 
 ``` r
 autoplot.resid(sres_null, what = 'fitted',fit = full_model) 
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-30-2.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-31-2.png)<!-- -->
 
 ``` r
 autoplot.resid(sres_null, what = 'covariate',x = student_mat_final$sex) 
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-30-3.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-31-3.png)<!-- -->
 
 ``` r
 autoplot.resid(sres_null, what = 'covariate',x = student_mat_final$age) 
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-30-4.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-31-4.png)<!-- -->
 
 ``` r
 autoplot.resid(sres_null, what = 'covariate',x = student_mat_final$famsize) 
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-30-5.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-31-5.png)<!-- -->
 
 ``` r
 autoplot.resid(sres_null, what = 'covariate',x = student_mat_final$edu)
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-30-6.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-31-6.png)<!-- -->
 
 ``` r
 autoplot.resid(sres_null, what = 'covariate',x = as.factor(student_mat_final$failures)) 
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-30-7.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-31-7.png)<!-- -->
 
 ``` r
 autoplot.resid(sres_null, what = 'covariate',x = student_mat_final$studytime)
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-30-8.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-31-8.png)<!-- -->
 
 ``` r
 autoplot.resid(sres_null, what = 'covariate',x = student_mat_final$health)
 ```
 
-![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-30-9.png)<!-- -->
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-31-9.png)<!-- -->
 
 <br/> We observe that some trends (e.g., for **failures** and **edu**)
 are quite noticeable, suggesting that these variables should be included
@@ -1303,8 +1423,8 @@ in the model. <br/>
 ## Continuation ratio model
 
 <br/> Before we conclude the first part of this project, we will take a
-brief look at an alternative model of ordinal response: the
-*continuation ratio model*. Unlike the proportional odds model, the
+brief look at an alternative models of ordinal response. We start with
+the *continuation ratio model*. Unlike the proportional odds model, the
 continuation ratio (CR) model considers conditional probabilities
 $P[Y = k | Y \geq k ] = \mathrm{ilogit}\, (\theta_k + X\beta)$.
 Essentially, the CR model is a discrete version of the Cox proportional
@@ -1318,11 +1438,11 @@ York: springer, 2001.*). In R, this approach is implemented in the *rms*
 package as follows. <br/>
 
 ``` r
-u <- cr.setup(student_mat_final$grade)
+u <- cr.setup(grade)
 student_mat_expanded <- student_mat_final[u$sub , ]
 y <- u$y
 cohort <- u$cohort
-levels(cohort) <- c('>= F','>= D','>=C','>=B')
+levels(cohort) <- c('>= F','>= C/D')
 ```
 
 <br/> The CR model is then a logistic regression of *y* against the
@@ -1344,318 +1464,234 @@ anova(cr_model)
     ## 
     ## 
     ##            Df Deviance Resid. Df Resid. Dev  Pr(>Chi)    
-    ## NULL                         922     1278.2              
-    ## cohort      4   73.353       918     1204.8 4.443e-15 ***
-    ## school      1    2.183       917     1202.6 0.1395140    
-    ## sex         1    4.537       916     1198.1 0.0331734 *  
-    ## age         1    8.482       915     1189.6 0.0035859 ** 
-    ## address     1    2.561       914     1187.0 0.1095005    
-    ## famsize     1    0.955       913     1186.1 0.3283778    
-    ## Pstatus     1    0.164       912     1185.9 0.6858401    
-    ## traveltime  3    5.104       909     1180.8 0.1643138    
-    ## studytime   3   18.902       906     1161.9 0.0002865 ***
-    ## failures    1   41.241       905     1120.7 1.346e-10 ***
-    ## schoolsup   1   13.279       904     1107.4 0.0002683 ***
-    ## activities  1    0.002       903     1107.4 0.9666362    
-    ## nursery     1    0.040       902     1107.4 0.8417724    
-    ## higher      1    2.418       901     1104.9 0.1199525    
-    ## internet    1    0.405       900     1104.5 0.5244248    
-    ## romantic    1    1.004       899     1103.5 0.3162348    
-    ## famrel      4    1.282       895     1102.2 0.8644876    
-    ## goout       4    7.988       891     1094.3 0.0920343 .  
-    ## health      4    7.359       887     1086.9 0.1180875    
-    ## absences    1    1.466       886     1085.4 0.2259164    
-    ## edu         3    6.084       883     1079.3 0.1075797    
-    ## alc         4    4.912       879     1074.4 0.2964926    
-    ## extrasup    1    2.496       878     1072.0 0.1141434    
-    ## at_home     1    0.079       877     1071.9 0.7781979    
-    ## services    1    1.307       876     1070.6 0.2529707    
-    ## teacher     1    0.646       875     1069.9 0.4215271    
+    ## NULL                         660     914.95              
+    ## cohort      2   63.190       658     851.76 1.899e-14 ***
+    ## school      1    2.225       657     849.54 0.1358065    
+    ## sex         1    2.948       656     846.59 0.0860047 .  
+    ## age         1   12.405       655     834.19 0.0004282 ***
+    ## address     1    3.180       654     831.01 0.0745636 .  
+    ## famsize     1    0.149       653     830.86 0.6992970    
+    ## Pstatus     1    0.017       652     830.84 0.8950775    
+    ## traveltime  3    3.782       649     827.06 0.2860279    
+    ## studytime   3   20.021       646     807.04 0.0001681 ***
+    ## failures    1   40.820       645     766.22 1.669e-10 ***
+    ## schoolsup   1   13.381       644     752.84 0.0002542 ***
+    ## activities  1    0.099       643     752.74 0.7532160    
+    ## nursery     1    0.665       642     752.07 0.4149671    
+    ## higher      1    3.107       641     748.97 0.0779390 .  
+    ## internet    1    0.245       640     748.72 0.6209715    
+    ## romantic    1    2.226       639     746.50 0.1356934    
+    ## famrel      4    1.592       635     744.90 0.8102769    
+    ## goout       4    7.209       631     737.69 0.1252312    
+    ## health      4    9.621       627     728.07 0.0473125 *  
+    ## absences    1    1.359       626     726.71 0.2436493    
+    ## edu         3    5.745       623     720.97 0.1247045    
+    ## alc         4    2.695       619     718.27 0.6101531    
+    ## extrasup    1    1.830       618     716.45 0.1761813    
+    ## at_home     1    0.344       617     716.10 0.5576743    
+    ## services    1    0.430       616     715.67 0.5119988    
+    ## teacher     1    3.039       615     712.63 0.0812894 .  
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
 <br/> We see that predictors that appear to be significant (**sex**,
-**age**, **studytime**, **failures**, **schoolsup**, **goout**) are very
-similar to those in the proportional odds model.
+**age**, **address**,**studytime**, **failures**, **schoolsup**,
+**higher**,**health**,**teacher**) are very similar to those in the
+proportional odds model.
 
 Computing class probabilities is a bit more involved, requiring the
-derivation of unconditional probabilities from conditional ones. <br/>
+derivation of unconditional probabilities from the conditional ones.
+<br/>
 
 ``` r
 # probability of F
-prob_F <- ilogit(model.matrix(full_model)[,2:44] %*%  coefficients(cr_model)[5:47] + coefficients(cr_model)[1])
+prob_F <- ilogit(model.matrix(full_model)[,2:44] %*%  coefficients(cr_model)[3:45] + coefficients(cr_model)[1])
 resF <- cbind(prob_F,predict(full_model, type = 'probs')[,1])
 colnames(resF) <- c('CR','PO')
 resF[1:15,]
 ```
 
     ##            CR         PO
-    ## 1  0.55770478 0.68510247
-    ## 2  0.34039534 0.34782754
-    ## 3  0.88315660 0.90009937
-    ## 4  0.12462041 0.09304325
-    ## 5  0.26479702 0.22202075
-    ## 6  0.14285490 0.08629208
-    ## 7  0.18886183 0.17413009
-    ## 8  0.44540547 0.48654717
-    ## 9  0.04527478 0.02027892
-    ## 10 0.14535302 0.11668874
-    ## 11 0.18299786 0.18374119
-    ## 12 0.12585429 0.05972021
-    ## 13 0.09647813 0.04622689
-    ## 14 0.28354002 0.26870481
-    ## 15 0.10835610 0.07102542
+    ## 1  0.67316954 0.70241401
+    ## 2  0.33569682 0.33290819
+    ## 3  0.90540754 0.90330195
+    ## 4  0.09398778 0.08782228
+    ## 5  0.20227340 0.17701050
+    ## 6  0.10952104 0.08313396
+    ## 7  0.19636092 0.18620005
+    ## 8  0.42502213 0.43198436
+    ## 9  0.02762402 0.01877129
+    ## 10 0.10335120 0.08715309
+    ## 11 0.14362328 0.14377042
+    ## 12 0.07623399 0.05717500
+    ## 13 0.05286033 0.03824585
+    ## 14 0.25561085 0.24024167
+    ## 15 0.07664132 0.06227082
 
 ``` r
-# probability of D
-prob_D <- (ilogit(model.matrix(full_model)[,2:44] %*%  coefficients(cr_model)[5:47] + coefficients(cr_model)[2]))*
+# probability of C/D
+prob_CD <- (ilogit(model.matrix(full_model)[,2:44] %*%  coefficients(cr_model)[3:45] + coefficients(cr_model)[2]))*
 (1-prob_F)
-resD <- cbind(prob_D,predict(full_model, type = 'probs')[,2])
-colnames(resD) <- c('CR','PO')
-resD[1:15,]
+resCD <- cbind(prob_CD,predict(full_model, type = 'probs')[,2])
+colnames(resCD) <- c('CR','PO')
+resCD[1:15,]
 ```
 
     ##            CR         PO
-    ## 1  0.31048832 0.21065556
-    ## 2  0.32377144 0.33026772
-    ## 3  0.10911589 0.07256807
-    ## 4  0.18390180 0.19530987
-    ## 5  0.29571274 0.30786990
-    ## 6  0.20351193 0.18538333
-    ## 7  0.24587526 0.28024710
-    ## 8  0.33278850 0.30260293
-    ## 9  0.07769737 0.05529571
-    ## 10 0.20606965 0.22618064
-    ## 11 0.24101755 0.28690039
-    ## 12 0.18528175 0.14082782
-    ## 13 0.15026224 0.11444602
-    ## 14 0.30454239 0.32334135
-    ## 15 0.16497356 0.16091101
+    ## 1  0.30424184 0.25830494
+    ## 2  0.50997624 0.50504258
+    ## 3  0.09310495 0.08647246
+    ## 4  0.36619448 0.41157785
+    ## 5  0.49761557 0.51326032
+    ## 6  0.39693887 0.40127410
+    ## 7  0.49428488 0.51713441
+    ## 8  0.47641794 0.45540629
+    ## 9  0.15233967 0.14666034
+    ## 10 0.38537016 0.41015147
+    ## 11 0.44793618 0.49124619
+    ## 12 0.32378246 0.32870975
+    ## 13 0.25324322 0.25356534
+    ## 14 0.51502638 0.52592034
+    ## 15 0.32485360 0.34534069
 
 ``` r
-# probability of C
-prob_C <- (ilogit(model.matrix(full_model)[,2:44] %*%  coefficients(cr_model)[5:47] + coefficients(cr_model)[3]))*
-(1-prob_D-prob_F)
-resC <- cbind(prob_C,predict(full_model, type = 'probs')[,3])
-colnames(resC) <- c('CR','PO')
-resC[1:15,]
+# probability of A/b
+prob_AB <- (1-prob_CD-prob_F)
+resAB <- cbind(prob_AB,predict(full_model, type = 'probs')[,3])
+colnames(resAB) <- c('CR','PO')
+resAB[1:15,]
 ```
 
     ##             CR         PO
-    ## 1  0.097956821 0.05970608
-    ## 2  0.182088579 0.16213985
-    ## 3  0.007306314 0.01620246
-    ## 4  0.170284287 0.21453443
-    ## 5  0.198882918 0.20792607
-    ## 6  0.180840095 0.21053398
-    ## 7  0.196859336 0.22085499
-    ## 8  0.143792094 0.11417741
-    ## 9  0.086081138 0.09393517
-    ## 10 0.182082119 0.22285143
-    ## 11 0.195558273 0.21877162
-    ## 12 0.171084846 0.18455913
-    ## 13 0.148261131 0.16270670
-    ## 14 0.196056116 0.19165671
-    ## 15 0.158469765 0.19791365
-
-``` r
-# probability of B
-prob_B <- (ilogit(model.matrix(full_model)[,2:44] %*%  coefficients(cr_model)[5:47] + coefficients(cr_model)[4]))*
-(1-prob_C-prob_D-prob_F)
-resB <- cbind(prob_B,predict(full_model, type = 'probs')[,4])
-colnames(resB) <- c('CR','PO')
-resB[1:15,]
-```
-
-    ##              CR          PO
-    ## 1  0.0306976628 0.031955575
-    ## 2  0.1229054936 0.110359985
-    ## 3  0.0004140996 0.008063055
-    ## 4  0.2729370043 0.284392978
-    ## 5  0.1769793865 0.173652833
-    ## 6  0.2660707724 0.290885090
-    ## 7  0.2367424132 0.208576875
-    ## 8  0.0671820517 0.068252095
-    ## 9  0.2120177650 0.257993410
-    ## 10 0.2648484864 0.260843821
-    ## 11 0.2410649858 0.200948145
-    ## 12 0.2726032246 0.311064556
-    ## 13 0.2734252816 0.312789800
-    ## 14 0.1626447127 0.146150353
-    ## 15 0.2750859623 0.304068785
-
-``` r
-# probability of A
-prob_A <- (1-prob_B-prob_C-prob_D-prob_F)
-resA <- cbind(prob_A,predict(full_model, type = 'probs')[,5])
-colnames(resA) <- c('CR','PO')
-resA[1:15,]
-```
-
-    ##              CR          PO
-    ## 1  3.152421e-03 0.012580315
-    ## 2  3.083915e-02 0.049404905
-    ## 3  7.094181e-06 0.003067042
-    ## 4  2.482565e-01 0.212719473
-    ## 5  6.362793e-02 0.088530444
-    ## 6  2.067223e-01 0.226905519
-    ## 7  1.316612e-01 0.116190946
-    ## 8  1.083189e-02 0.028420388
-    ## 9  5.789289e-01 0.572496786
-    ## 10 2.016467e-01 0.173435364
-    ## 11 1.393613e-01 0.109638646
-    ## 12 2.451759e-01 0.303828277
-    ## 13 3.315732e-01 0.363830586
-    ## 14 5.321677e-02 0.070146772
-    ## 15 2.931146e-01 0.266081142
+    ## 1  0.022588621 0.03928104
+    ## 2  0.154326939 0.16204923
+    ## 3  0.001487503 0.01022559
+    ## 4  0.539817734 0.50059987
+    ## 5  0.300111032 0.30972918
+    ## 6  0.493540087 0.51559194
+    ## 7  0.309354199 0.29666553
+    ## 8  0.098559930 0.11260935
+    ## 9  0.820036313 0.83456837
+    ## 10 0.511278641 0.50269544
+    ## 11 0.408440541 0.36498338
+    ## 12 0.599983546 0.61411525
+    ## 13 0.693896448 0.70818882
+    ## 14 0.229362763 0.23383800
+    ## 15 0.598505078 0.59238848
 
 <br/> We observe that the predicted probabilities generally align with
 those provided by the ordered logit model. We can check how much the
 predicted classes differ overall. <br/>
 
 ``` r
-pred_cr <- cbind(resF[,1],resD[,1],resC[,1],resB[,1],resA[,1])
+pred_cr <- cbind(resF[,1],resCD[,1],resAB[,1])
 sum(max.col(pred_cr) == as.numeric(predict(full_model)))
 ```
 
-    ## [1] 334
+    ## [1] 369
 
-<br/> We see that the predicted classes are the same in 85% (~334/395)
+<br/> We see that the predicted classes are the same in 93% (~369/395)
 of all cases. We should note that an alternative method for fitting the
 CR model is available via the *VGAM* package. <br/>
 
 ``` r
 library(VGAM)
-```
-
-    ## Loading required package: stats4
-
-    ## Loading required package: splines
-
-    ## 
-    ## Attaching package: 'VGAM'
-
-    ## The following objects are masked from 'package:rms':
-    ## 
-    ##     calibrate, lrtest
-
-    ## The following objects are masked from 'package:ordinal':
-    ## 
-    ##     dgumbel, dlgamma, pgumbel, plgamma, qgumbel, rgumbel, wine
-
-    ## The following objects are masked from 'package:faraway':
-    ## 
-    ##     hormone, logit, pneumo, prplot
-
-    ## The following object is masked from 'package:car':
-    ## 
-    ##     logit
-
-    ## The following object is masked from 'package:lmtest':
-    ## 
-    ##     lrtest
-
-``` r
 cr_vglm <- vglm(grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery  + higher  + internet  + romantic + famrel + goout + health + absences + edu + alc +  extrasup + at_home + services + teacher, data = student_mat_final, family=cratio(parallel = TRUE))
 
 # same coefficients (just opposite signs)
 coefficients(cr_vglm)
 ```
 
-    ## (Intercept):1 (Intercept):2 (Intercept):3 (Intercept):4      schoolMS 
-    ##   1.941334969   1.316381149   1.110602257  -0.102830285  -0.111633763 
-    ##          sexM           age      addressU    famsizeLE3      PstatusT 
-    ##   0.432685249  -0.091123534   0.187782926   0.261176888  -0.099652222 
-    ##  traveltime.L  traveltime.Q  traveltime.C   studytime.L   studytime.Q 
-    ##  -0.410828879  -0.226328692  -0.284885674   0.416120306   0.035391398 
-    ##   studytime.C      failures  schoolsupyes activitiesyes    nurseryyes 
-    ##  -0.327145332  -0.691275909  -0.997655785  -0.086257728  -0.086161528 
-    ##     higheryes   internetyes   romanticyes      famrel.L      famrel.Q 
-    ##   0.746218612   0.109380885  -0.154474231   0.183546658  -0.242850690 
-    ##      famrel.C      famrel^4       goout.L       goout.Q       goout.C 
-    ##   0.226293986  -0.184585430  -0.341533936   0.124067032   0.258696207 
-    ##       goout^4      health.L      health.Q      health.C      health^4 
-    ##   0.006824546  -0.465045749   0.186982819  -0.002975332  -0.204338565 
-    ##      absences         edu.L         edu.Q         edu.C         alc.L 
-    ##  -0.014641393   0.511408785   0.217878610  -0.097514521  -0.187316835 
-    ##         alc.Q         alc.C         alc^4   extrasupyes    at_homeyes 
-    ##   0.419887288   0.032188552  -0.258246845  -0.293143990  -0.036081471 
-    ##   servicesyes    teacheryes 
-    ##   0.173768610  -0.188602497
+    ## (Intercept):1 (Intercept):2      schoolMS          sexM           age 
+    ##   3.702186790   1.824378687  -0.060638127   0.486080847  -0.180354465 
+    ##      addressU    famsizeLE3      PstatusT  traveltime.L  traveltime.Q 
+    ##   0.333038275   0.206644492  -0.139376412  -0.017139028   0.004124383 
+    ##  traveltime.C   studytime.L   studytime.Q   studytime.C      failures 
+    ##  -0.256317702   0.557619832  -0.122080609  -0.500728117  -0.751862223 
+    ##  schoolsupyes activitiesyes    nurseryyes     higheryes   internetyes 
+    ##  -1.176088908  -0.003392557  -0.224294648   0.838967551   0.061726423 
+    ##   romanticyes      famrel.L      famrel.Q      famrel.C      famrel^4 
+    ##  -0.277414425   0.556710500  -0.542914021   0.448518152  -0.335119209 
+    ##       goout.L       goout.Q       goout.C       goout^4      health.L 
+    ##  -0.571680394  -0.013434100   0.209111158   0.063413399  -0.674738993 
+    ##      health.Q      health.C      health^4      absences         edu.L 
+    ##   0.389634494  -0.110375030  -0.160299185  -0.016139295   0.720961407 
+    ##         edu.Q         edu.C         alc.L         alc.Q         alc.C 
+    ##   0.354521835  -0.081670406  -0.177940724   0.352631379   0.164589481 
+    ##         alc^4   extrasupyes    at_homeyes   servicesyes    teacheryes 
+    ##  -0.266526489  -0.303241944  -0.173641531   0.103283954  -0.504266529
 
 ``` r
 coefficients(cr_model)
 ```
 
-    ##    cohort>= F    cohort>= D     cohort>=C     cohort>=B      schoolMS 
-    ##  -1.941359540  -1.316403447  -1.110626394   0.102804202   0.111641204 
-    ##          sexM           age      addressU    famsizeLE3      PstatusT 
-    ##  -0.432688169   0.091124385  -0.187796148  -0.261176786   0.099657299 
-    ##  traveltime.L  traveltime.Q  traveltime.C   studytime.L   studytime.Q 
-    ##   0.410817179   0.226323578   0.284878324  -0.416126190  -0.035386776 
-    ##   studytime.C      failures  schoolsupyes activitiesyes    nurseryyes 
-    ##   0.327147372   0.691284733   0.997657046   0.086260042   0.086168697 
-    ##     higheryes   internetyes   romanticyes      famrel.L      famrel.Q 
-    ##  -0.746218988  -0.109370464   0.154478744  -0.183539846   0.242850138 
-    ##      famrel.C      famrel^4       goout.L       goout.Q       goout.C 
-    ##  -0.226292524   0.184589008   0.341531630  -0.124063723  -0.258690607 
-    ##       goout^4      health.L      health.Q      health.C      health^4 
-    ##  -0.006820634   0.465034822  -0.186978567   0.002984384   0.204336387 
-    ##      absences         edu.L         edu.Q         edu.C         alc.L 
-    ##   0.014640736  -0.511421058  -0.217881161   0.097523131   0.187309595 
-    ##         alc.Q         alc.C         alc^4   extrasupyes    at_homeyes 
-    ##  -0.419885815  -0.032185072   0.258245617   0.293140771   0.036060366 
-    ##   servicesyes    teacheryes 
-    ##  -0.173769731   0.188607528
+    ##    cohort>= F  cohort>= C/D      schoolMS          sexM           age 
+    ##  -3.702318768  -1.824497747   0.060631251  -0.486090770   0.180362469 
+    ##      addressU    famsizeLE3      PstatusT  traveltime.L  traveltime.Q 
+    ##  -0.333033127  -0.206641807   0.139378513   0.017142201  -0.004120884 
+    ##  traveltime.C   studytime.L   studytime.Q   studytime.C      failures 
+    ##   0.256315816  -0.557618130   0.122092850   0.500727311   0.751868830 
+    ##  schoolsupyes activitiesyes    nurseryyes     higheryes   internetyes 
+    ##   1.176082148   0.003399997   0.224285116  -0.838960961  -0.061721324 
+    ##   romanticyes      famrel.L      famrel.Q      famrel.C      famrel^4 
+    ##   0.277419250  -0.556718132   0.542911950  -0.448517518   0.335124662 
+    ##       goout.L       goout.Q       goout.C       goout^4      health.L 
+    ##   0.571686937   0.013456228  -0.209114676  -0.063415224   0.674739963 
+    ##      health.Q      health.C      health^4      absences         edu.L 
+    ##  -0.389646474   0.110386436   0.160289620   0.016137517  -0.720968053 
+    ##         edu.Q         edu.C         alc.L         alc.Q         alc.C 
+    ##  -0.354539846   0.081673394   0.177915118  -0.352637963  -0.164586579 
+    ##         alc^4   extrasupyes    at_homeyes   servicesyes    teacheryes 
+    ##   0.266535728   0.303243024   0.173635259  -0.103290755   0.504284458
 
 ``` r
 # same predicted probabilities
 predict(cr_vglm,type = 'response')[1:15,]
 ```
 
-    ##          [,1]       [,2]       [,3]         [,4]         [,5]
-    ## 1  0.55771674 0.31048420 0.09795220 0.0306948834 3.151978e-03
-    ## 2  0.34039907 0.32377197 0.18208762 0.1229033039 3.083804e-02
-    ## 3  0.88315572 0.10911664 0.00730644 0.0004141104 7.094416e-06
-    ## 4  0.12462046 0.18390152 0.17028434 0.2729373484 2.482563e-01
-    ## 5  0.26479979 0.29571375 0.19888271 0.1769774947 6.362625e-02
-    ## 6  0.14285541 0.20351210 0.18084040 0.2660708796 2.067212e-01
-    ## 7  0.18886102 0.24587421 0.19685925 0.2367433479 1.316622e-01
-    ## 8  0.44541079 0.33278787 0.14379012 0.0671799245 1.083130e-02
-    ## 9  0.04527493 0.07769745 0.08608136 0.2120184297 5.789278e-01
-    ## 10 0.14535272 0.20606899 0.18208202 0.2648489865 2.016473e-01
-    ## 11 0.18299540 0.24101509 0.19555776 0.2410671066 1.393646e-01
-    ## 12 0.12585442 0.18528157 0.17108496 0.2726035428 2.451755e-01
-    ## 13 0.09647816 0.15026200 0.14826117 0.2734256444 3.315730e-01
-    ## 14 0.28354103 0.30454243 0.19605608 0.1626442001 5.321625e-02
-    ## 15 0.10835574 0.16497281 0.15846949 0.2750863139 2.931156e-01
+    ##          [,1]       [,2]       [,3]
+    ## 1  0.67317135 0.30424006 0.02258859
+    ## 2  0.33569844 0.50997433 0.15432723
+    ## 3  0.90541005 0.09310251 0.00148744
+    ## 4  0.09398726 0.36619055 0.53982218
+    ## 5  0.20227620 0.49761465 0.30010915
+    ## 6  0.10952394 0.39694128 0.49353478
+    ## 7  0.19635925 0.49428144 0.30935931
+    ## 8  0.42502706 0.47641445 0.09855849
+    ## 9  0.02762488 0.15234201 0.82003311
+    ## 10 0.10335049 0.38536595 0.51128357
+    ## 11 0.14362198 0.44793184 0.40844617
+    ## 12 0.07623531 0.32378323 0.59998146
+    ## 13 0.05286199 0.25324654 0.69389146
+    ## 14 0.25561344 0.51502470 0.22936185
+    ## 15 0.07664154 0.32485145 0.59850701
 
 ``` r
 pred_cr[1:15,]
 ```
 
-    ##          [,1]       [,2]        [,3]         [,4]         [,5]
-    ## 1  0.55770478 0.31048832 0.097956821 0.0306976628 3.152421e-03
-    ## 2  0.34039534 0.32377144 0.182088579 0.1229054936 3.083915e-02
-    ## 3  0.88315660 0.10911589 0.007306314 0.0004140996 7.094181e-06
-    ## 4  0.12462041 0.18390180 0.170284287 0.2729370043 2.482565e-01
-    ## 5  0.26479702 0.29571274 0.198882918 0.1769793865 6.362793e-02
-    ## 6  0.14285490 0.20351193 0.180840095 0.2660707724 2.067223e-01
-    ## 7  0.18886183 0.24587526 0.196859336 0.2367424132 1.316612e-01
-    ## 8  0.44540547 0.33278850 0.143792094 0.0671820517 1.083189e-02
-    ## 9  0.04527478 0.07769737 0.086081138 0.2120177650 5.789289e-01
-    ## 10 0.14535302 0.20606965 0.182082119 0.2648484864 2.016467e-01
-    ## 11 0.18299786 0.24101755 0.195558273 0.2410649858 1.393613e-01
-    ## 12 0.12585429 0.18528175 0.171084846 0.2726032246 2.451759e-01
-    ## 13 0.09647813 0.15026224 0.148261131 0.2734252816 3.315732e-01
-    ## 14 0.28354002 0.30454239 0.196056116 0.1626447127 5.321677e-02
-    ## 15 0.10835610 0.16497356 0.158469765 0.2750859623 2.931146e-01
+    ##          [,1]       [,2]        [,3]
+    ## 1  0.67316954 0.30424184 0.022588621
+    ## 2  0.33569682 0.50997624 0.154326939
+    ## 3  0.90540754 0.09310495 0.001487503
+    ## 4  0.09398778 0.36619448 0.539817734
+    ## 5  0.20227340 0.49761557 0.300111032
+    ## 6  0.10952104 0.39693887 0.493540087
+    ## 7  0.19636092 0.49428488 0.309354199
+    ## 8  0.42502213 0.47641794 0.098559930
+    ## 9  0.02762402 0.15233967 0.820036313
+    ## 10 0.10335120 0.38537016 0.511278641
+    ## 11 0.14362328 0.44793618 0.408440541
+    ## 12 0.07623399 0.32378246 0.599983546
+    ## 13 0.05286033 0.25324322 0.693896448
+    ## 14 0.25561085 0.51502638 0.229362763
+    ## 15 0.07664132 0.32485360 0.598505078
 
 <br/> The CR model is not inherently better than the proportional odds
 model. However, its main advantage over the proportional odds model is
-the fact that its “proportional assumption” ($\beta$ does not depend on
-class) is much more easily relaxed than in the proportional odds model
-(which requires specialized software). One just needs to include
+the fact that its “parallel slopes assumption” ($\beta$ does not depend
+on class) is much more easily relaxed than in the proportional odds
+model (which requires specialized software). One just needs to include
 interaction terms with the *cohort* in the logit model (*F. E. Harrell.
 Regression modeling strategies: with applications to linear models,
 logistic regression, and survival analysis. Vol. 608. New York:
@@ -1679,16 +1715,254 @@ anova(cr_model,cr_model_inter)
     ##     nursery + higher + internet + romantic + famrel + goout + 
     ##     health + absences + edu + alc + extrasup + at_home + services + 
     ##     teacher) - 1
-    ##   Resid. Df Resid. Dev  Df Deviance Pr(>Chi)  
-    ## 1       875    1069.91                        
-    ## 2       749     921.64 126   148.28   0.0854 .
+    ##   Resid. Df Resid. Dev Df Deviance Pr(>Chi)
+    ## 1       615     712.63                     
+    ## 2       572     660.35 43   52.283   0.1568
+
+<br/> We observe that the difference between the two CR models is not
+significant, which suggests that the parallel slopes assumption in the
+CR model is overall somewhat justified. <br/>
+
+## Adjacent categories model
+
+<br/> The next ordinal response model we will discuss here is an
+adjacent categories model. The probabilities in the model are given as
+$\mathrm{log} \; \frac{p_k}{p_{k+1}} = \theta_k + X\beta$. The adjacent
+categories mode can be fitted via the *VGAM* package. <br/>
+
+``` r
+ac_vglm <- vglm(grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery  + higher  + internet  + romantic + famrel + goout + health + absences + edu + alc +  extrasup + at_home + services + teacher, data = student_mat_final, family=acat(parallel = TRUE))
+```
+
+<br/> Let us check the significant predictors. <br/>
+
+``` r
+Anova(ac_vglm)
+```
+
+    ## Analysis of Deviance Table (Type II tests)
+    ## 
+    ## Response: grade
+    ##            Df   Chisq Pr(>Chisq)    
+    ## school      1  0.0067  0.9347141    
+    ## sex         1  6.0981  0.0135329 *  
+    ## age         1  4.1778  0.0409571 *  
+    ## address     1  1.4127  0.2346130    
+    ## famsize     1  0.8622  0.3531366    
+    ## Pstatus     1  0.4344  0.5098373    
+    ## traveltime  3  1.1248  0.7711024    
+    ## studytime   3 10.2915  0.0162439 *  
+    ## failures    1 17.6053  2.718e-05 ***
+    ## schoolsup   1 14.1769  0.0001664 ***
+    ## activities  1  0.0754  0.7836929    
+    ## nursery     1  0.5552  0.4561823    
+    ## higher      1  2.2105  0.1370748    
+    ## internet    1  0.0904  0.7636747    
+    ## romantic    1  1.9378  0.1639073    
+    ## famrel      4  2.4213  0.6587789    
+    ## goout       4  6.8334  0.1449593    
+    ## health      4 10.0202  0.0400886 *  
+    ## absences    1  1.3720  0.2414737    
+    ## edu         3  8.8955  0.0307127 *  
+    ## alc         4  2.0944  0.7183958    
+    ## extrasup    1  1.9196  0.1659052    
+    ## at_home     1  0.3749  0.5403265    
+    ## services    1  0.4214  0.5162565    
+    ## teacher     1  4.0203  0.0449551 *  
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
-<br/> We observe that the difference between the two CR models is not
-significant, which suggests that the proportional assumption in the CR
-model is justified.
+<br/> The significant predictors are **sex**,**age**, **studytime**,
+**failures**, **schoolsup**, **health**, **edu**, and **teacher**, which
+is similar to the proportional odds model and the continual ratio model.
+We can again compare the predictions of the model <br/>
 
-With this observation, we conclude Part One. In the second part of this
-demonstration, we examine the predictive performance of our models and
-discuss the results. <br/>
+``` r
+sum(max.col(predict(ac_vglm ,type='response')) == as.numeric(predict(full_model)))
+```
+
+    ## [1] 380
+
+<br/> We see that about 96% (~380/395) of the observations has the same
+predicted class as in the proportional odds model. Again, we could
+consider the model with non-parallel slopes. We could suspect based on
+our observations for the proportional odds model that **alc** violates
+the parallel slopes condition. <br/>
+
+``` r
+ac_vglm_alc_PP <- vglm(grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery  + higher  + internet  + romantic + famrel + goout + health + absences + edu + alc +  extrasup + at_home + services + teacher, data = student_mat_final, family=acat(parallel = FALSE ~ alc))
+anova(ac_vglm,ac_vglm_alc_PP,type = 'I')
+```
+
+    ## Analysis of Deviance Table
+    ## 
+    ## Model 1: grade ~ school + sex + age + address + famsize + Pstatus + traveltime + 
+    ##     studytime + failures + schoolsup + activities + nursery + 
+    ##     higher + internet + romantic + famrel + goout + health + 
+    ##     absences + edu + alc + extrasup + at_home + services + teacher
+    ## Model 2: grade ~ school + sex + age + address + famsize + Pstatus + traveltime + 
+    ##     studytime + failures + schoolsup + activities + nursery + 
+    ##     higher + internet + romantic + famrel + goout + health + 
+    ##     absences + edu + alc + extrasup + at_home + services + teacher
+    ##   Resid. Df Resid. Dev Df Deviance Pr(>Chi)  
+    ## 1       745     711.94                       
+    ## 2       741     699.97  4   11.975  0.01754 *
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+<br/> Indeed, it seems that it does. Again, we could then observe that
+in the non-parallel model **alc** is somewhat significant whereas in the
+plain adjacent categories model it was not. <br/>
+
+``` r
+ac_vglm_noalc <- vglm(grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery  + higher  + internet  + romantic + famrel + goout + health + absences + edu +  extrasup + at_home + services + teacher, data = student_mat_final, family=acat(parallel = TRUE))
+anova(ac_vglm_noalc,ac_vglm_alc_PP,type = 'I')
+```
+
+    ## Analysis of Deviance Table
+    ## 
+    ## Model 1: grade ~ school + sex + age + address + famsize + Pstatus + traveltime + 
+    ##     studytime + failures + schoolsup + activities + nursery + 
+    ##     higher + internet + romantic + famrel + goout + health + 
+    ##     absences + edu + extrasup + at_home + services + teacher
+    ## Model 2: grade ~ school + sex + age + address + famsize + Pstatus + traveltime + 
+    ##     studytime + failures + schoolsup + activities + nursery + 
+    ##     higher + internet + romantic + famrel + goout + health + 
+    ##     absences + edu + alc + extrasup + at_home + services + teacher
+    ##   Resid. Df Resid. Dev Df Deviance Pr(>Chi)  
+    ## 1       749     714.08                       
+    ## 2       741     699.97  8   14.109  0.07898 .
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+<br/> Overall, we could repeat all the steps for the adjacent categories
+model as we did for the proportional odds model. <br/>
+
+## Multinomial logistic regression
+
+<br/> The last model that should be mentioned here is the multinomial
+logit model. This model assumes nominal categorical response, i.e, it
+assumes that there is no particular order for resposne categories. In
+other words, it corresponds to the model in which there are no
+“parallel” terms. Thus, this model has the largest number of parameters.
+The model is described by the equations
+$\mathrm{log}\; \frac{p_i}{p_1} = X\beta_i$, where $i = 2,3,\ldots$.
+<br/>
+
+``` r
+multi_model <- vglm(grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery + higher + internet + romantic + famrel + goout + health + absences + edu + alc + extrasup + at_home + services + teacher, family=multinomial,data = student_mat_final)
+multi_model
+```
+
+    ## 
+    ## Call:
+    ## vglm(formula = grade ~ school + sex + age + address + famsize + 
+    ##     Pstatus + traveltime + studytime + failures + schoolsup + 
+    ##     activities + nursery + higher + internet + romantic + famrel + 
+    ##     goout + health + absences + edu + alc + extrasup + at_home + 
+    ##     services + teacher, family = multinomial, data = student_mat_final)
+    ## 
+    ## 
+    ## Coefficients:
+    ##   (Intercept):1   (Intercept):2      schoolMS:1      schoolMS:2          sexM:1 
+    ##    17.231120132    23.362959869     0.383036313     0.496704407    -1.052384727 
+    ##          sexM:2           age:1           age:2      addressU:1      addressU:2 
+    ##    -0.622961766     0.329687789     0.077392147    -0.423604504    -0.354865464 
+    ##    famsizeLE3:1    famsizeLE3:2      PstatusT:1      PstatusT:2  traveltime.L:1 
+    ##    -0.250748342    -0.015547885     0.399649929    -0.183318848    10.925779312 
+    ##  traveltime.L:2  traveltime.Q:1  traveltime.Q:2  traveltime.C:1  traveltime.C:2 
+    ##    11.145383912     8.076678564     7.985593671     4.124506223     3.826192000 
+    ##   studytime.L:1   studytime.L:2   studytime.Q:1   studytime.Q:2   studytime.C:1 
+    ##    -0.970066909    -0.736840070     0.070155662    -0.324144301     0.809584277 
+    ##   studytime.C:2      failures:1      failures:2  schoolsupyes:1  schoolsupyes:2 
+    ##     0.618363749     1.478336496     0.781494992     2.817121480     2.324779744 
+    ## activitiesyes:1 activitiesyes:2    nurseryyes:1    nurseryyes:2     higheryes:1 
+    ##     0.268500056     0.162303005     0.339761174     0.115265442   -16.756184365 
+    ##     higheryes:2   internetyes:1   internetyes:2   romanticyes:1   romanticyes:2 
+    ##   -16.393743787    -0.113475716     0.008938607     0.373953794    -0.026633209 
+    ##      famrel.L:1      famrel.L:2      famrel.Q:1      famrel.Q:2      famrel.C:1 
+    ##    -0.634656165    -0.473249509     0.705769970     1.102894193    -0.631596239 
+    ##      famrel.C:2      famrel^4:1      famrel^4:2       goout.L:1       goout.L:2 
+    ##    -0.982340746     0.566177726     0.473194125     0.876826160    -0.550243759 
+    ##       goout.Q:1       goout.Q:2       goout.C:1       goout.C:2       goout^4:1 
+    ##     0.036814293     0.129120458    -0.498456189    -0.349857376     0.108531339 
+    ##       goout^4:2      health.L:1      health.L:2      health.Q:1      health.Q:2 
+    ##     0.055331110     1.297853242     0.921849409    -0.719118568    -0.728417034 
+    ##      health.C:1      health.C:2      health^4:1      health^4:2      absences:1 
+    ##     0.271353654     0.066726182     0.315839052     0.606845534     0.052822366 
+    ##      absences:2         edu.L:1         edu.L:2         edu.Q:1         edu.Q:2 
+    ##     0.046782639    -1.442140252    -0.764507745    -0.592421125    -0.105202891 
+    ##         edu.C:1         edu.C:2         alc.L:1         alc.L:2         alc.Q:1 
+    ##     0.095247090     0.034489301     9.819600182    11.412917721     7.352346941 
+    ##         alc.Q:2         alc.C:1         alc.C:2         alc^4:1         alc^4:2 
+    ##     8.037465354     4.528400705     5.297745528     2.624313697     2.715122251 
+    ##   extrasupyes:1   extrasupyes:2    at_homeyes:1    at_homeyes:2   servicesyes:1 
+    ##     0.487578330     0.151368452     0.372499585     0.393094441    -0.291619453 
+    ##   servicesyes:2    teacheryes:1    teacheryes:2 
+    ##    -0.261345557     1.032891356    -0.007409919 
+    ## 
+    ## Degrees of Freedom: 790 Total; 702 Residual
+    ## Residual deviance: 659.2147 
+    ## Log-likelihood: -329.6073 
+    ## 
+    ## This is a multinomial logit model with 3 levels
+
+<br/> We can again check the significant predictors. <br/>
+
+``` r
+Anova(multi_model)
+```
+
+    ## Analysis of Deviance Table (Type II tests)
+    ## 
+    ## Response: grade
+    ##            Df   Chisq Pr(>Chisq)    
+    ## school      2  0.6498  0.7226058    
+    ## sex         2  6.9861  0.0304073 *  
+    ## age         2  4.8192  0.0898492 .  
+    ## address     2  0.7961  0.6716324    
+    ## famsize     2  0.6327  0.7288097    
+    ## Pstatus     2  1.5302  0.4652813    
+    ## traveltime  6  2.2825  0.8919740    
+    ## studytime   6 13.0124  0.0428401 *  
+    ## failures    2 18.2066  0.0001113 ***
+    ## schoolsup   2 14.7969  0.0006122 ***
+    ## activities  2  0.5601  0.7557492    
+    ## nursery     2  0.6442  0.7246373    
+    ## higher      2  0.3476  0.8404667    
+    ## internet    2  0.1173  0.9430297    
+    ## romantic    2  1.9140  0.3840341    
+    ## famrel      8  4.3280  0.8263850    
+    ## goout       8 12.7327  0.1213834    
+    ## health      8 15.7916  0.0454617 *  
+    ## absences    2  2.9605  0.2275802    
+    ## edu         6  9.8658  0.1304191    
+    ## alc         8 11.7321  0.1635639    
+    ## extrasup    2  1.5445  0.4619770    
+    ## at_home     2  0.6656  0.7169179    
+    ## services    2  0.7668  0.6815465    
+    ## teacher     2  6.3796  0.0411797 *  
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+<br/> The significant predictors (P \<0.1) are **sex**,**age**,
+**studytime**, **failures**, **schoolsup**,**health**, and **teacher**,
+which is similar to the other models we have considered. We can also
+compare the predictions of the model <br/>
+
+``` r
+sum(max.col(predict(multi_model ,type='response')) == as.numeric(predict(full_model)))
+```
+
+    ## [1] 289
+
+<br/> We see that about 73% (~289/395) of the observations has the same
+predicted class as in the proportional odds model. Thus, these models
+are quite different. The multinomial logit is the most flexible model we
+have considered but it has about two times the number of parameters than
+the proportional odds model and thus, there is the greatest risk of
+overfitting and the greatest risk of poor generalization to new data.
+
+We will conclude Part One here. In the second part of this
+demonstration, we examine the predictive performance of our four models
+and discuss the results. <br/>

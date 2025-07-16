@@ -72,7 +72,9 @@ head(student_mat)
 ```
 
 <br/>
-We have 395 observations, 30 predictors, and three outcomes: the first-period grade, the second-period grade, and the final grade. In this project, we will model the final grade using 30 predictors (excluding the period grades in the model). First, we convert the final grade via the Erasmus grade conversion system to obtain an ordinal outcome (and thus, we can demonstrate the models for ordinal outcomes). 
+We have 395 observations, 30 predictors, and three outcomes: the first-period grade, the second-period grade, and the final grade. In this project, we will model the final grade using 30 predictors (excluding the period grades in the model). 
+
+First, we convert the final grade via the Erasmus grade conversion system. Then, we will split the grade into three categories (A and B, C and D, and F) obtaining **grade** to obtain the final ordinal outcomes. We will assume just three ordinal categories mostly for simplicity's sake. However, another reason is to get more observations in each category, which allows us to more easily fit "partial" ordinal models as we will see later. 
 <br/>
 
 ```{r, message=FALSE}
@@ -80,10 +82,16 @@ library(tibble)
 library(dplyr)
 
 G3 <- student_mat$G3
-student_mat$G3 <- factor(case_when(G3 > 15 ~ 'A', G3 > 13 & G3 < 16 ~ 'B',  G3 > 11 & G3 < 14 ~ 'C',  G3 > 9 & G3 < 12 ~ 'D' , G3 < 10 ~ 'F'))
+erasmus_grade <- factor(case_when(G3 > 15 ~ 'A', G3 > 13 & G3 < 16 ~ 'B',  G3 > 11 & G3 < 14 ~ 'C',  G3 > 9 & G3 < 12 ~ 'D' , G3 < 10 ~ 'F'))
+erasmus_grade <- factor(erasmus_grade, ordered = TRUE, levels=rev(levels(erasmus_grade)))
 
-student_mat <- student_mat %>% rename(grade = G3)
-student_mat <- subset(student_mat,select =  -c(G1,G2))
+
+grade <- factor(case_when(G3 > 13 ~ 'A/B',  G3 > 9 & G3 < 14 ~ 'C/D', G3 < 10 ~ 'F'))
+grade <- factor(grade, ordered = TRUE, levels=rev(levels(grade)))
+
+par(mfrow = c(1, 2))
+plot(erasmus_grade)
+plot(grade)
 ```
 
 <br/>
@@ -100,7 +108,6 @@ Next, we convert the variables to the correct types.
 <br/>
 
 ```{r}
-student_mat$grade  <- factor(student_mat$grade, ordered = TRUE, levels=rev(levels(student_mat$grade)))
 student_mat$school  <- factor(student_mat$school)
 student_mat$sex  <- factor(student_mat$sex)
 student_mat$address  <- factor(student_mat$address)
@@ -139,6 +146,7 @@ Let us check the predictors.
 <br/>
 
 ```{r,echo=FALSE}
+par(mfrow = c(1, 2))
 plot(student_mat$school,xlab = 'school')
 plot(student_mat$sex,xlab = 'sex')
 plot(student_mat$address,xlab = 'address')
@@ -169,38 +177,41 @@ plot(student_mat$health,xlab = 'health')
 ```
 
 <br/>
-All predictors seem reasonable enough. However, even though we have merely 30 predictors, almost all of them are categorical (nominal or ordinal). Thus, the number of parameters in the model is much greater.
+All predictors seem reasonable enough. However even though we have merely 30 predictors, almost all of them are categorical (nominal or ordinal). Thus, the number of parameters in the model is much greater.
 <br/>
 
 ```{r}
-dim(model.matrix(grade ~ . , data = student_mat))
+dim(model.matrix(erasmus_grade ~. - G1 - G2 - G3 , data = student_mat))
 ```
 
 <br/>
-We see that our model would have 68 parameters (plus intercepts). The effective sample size for the ordinal response is $n - \frac{1}{n^2}\sum_i n_i^3$ (*F. E. Harrell. Regression modeling strategies: with applications to linear models, logistic regression, and survival analysis. Vol. 608. New York: springer, 2001.*).
+We see that our model would have 68 parameters (plus thresholds and possible non-parallel terms as we will see later). The effective sample size for the ordinal response under proportional odds assumption (which states in short that the effect of variables is independent of the response level, i.e., no non-parallel terms in the model) is $n - \frac{1}{n^2}\sum_i n_i^3$ (*F. E. Harrell. Regression modeling strategies: with applications to linear models, logistic regression, and survival analysis. Vol. 608. New York: springer, 2001.*).
 <br/>
 
 ```{r}
-summary(student_mat$grade)
-395 - 1/395^2*(40^3+60^3+62^3+103^3+130^3)
+summary(grade)
+395 - 1/395^2*(130^3+165^3+100^3)
 ```
 
 <br/>
-Our rule of thumb suggests that our model could support about 19 to 37 parameters. Now, if we were interested in testing only a specific hypothesis, the model's parsimony is not as important. However, since we are also interested in the predictive performance of our model, 68 parameters are way too much (we have a significant risk of overfitting and subsequent poor generalization of the resulting model on new data). 
+We see that under under proportional odds assumption , our rule of thumb suggests that a model for **grade**  could support about 17 to 34 parameters.
+
+Now, if we were interested in testing only a specific hypothesis, the model's parsimony is not as important. However, since we are also interested in the predictive performance of our model, 68 parameters are way too much (we have a significant risk of overfitting and subsequent poor generalization of the resulting model on new data). 
 
 Let us look for redundant variables first.
 <br/>
 
 ```{r}
 library(Hmisc)
-redun(~.- grade ,data = student_mat,nk = 0, r2 = 0.95)
+redun(~.- G1 - G2 - G3 ,data = student_mat,nk = 0, r2 = 0.95)
 ```
 
 <br/>
-No variable seems redundant. Thus, we will need to perform the data reduction the hard way. Ideally, creating summarizing variables would be done with the help of experts in the particular field. In this project, we will have to do. Let's take a look at cluster analysis, which groups the predictors based on Spearman's rank correlation coefficients. For simplicity's sake, we treat the ordinal variables as numerical (by considering only linear polynomial contrasts *poly(.,1)*). 
+No variable seems redundant. Thus, we will need to perform the data reduction another way. Ideally, creating summarizing variables would be done with the help of experts in the particular field. In this project, we will have to do. Let's take a look at cluster analysis, which groups the predictors based on Spearman's rank correlation coefficients. For simplicity's sake, we treat the ordinal variables as numerical (by considering only linear polynomial contrasts *poly(.,1)*).
 <br/>
 
 ```{r}
+par(mfrow = c(1, 1))
 clus <- varclus(~ school + sex + age + address + famsize + Pstatus + poly(Fedu ,1) + poly(Medu ,1) + Mjob + Fjob + reason + guardian + poly(traveltime,1) + poly(studytime,1) + failures + schoolsup + famsup + paid + activities  + nursery  + higher  + internet  + romantic + poly(famrel ,1) + poly(freetime,1) + poly(goout ,1) + poly(Dalc ,1) + poly(Walc ,1) +  poly(health ,1) + absences,data = student_mat)
 plot(clus)
 ```
@@ -235,18 +246,19 @@ levels(teacher) <- c('no','yes')
 ```
 
 <br/>
-Lastly, we choose to remove the variables *guardian* and *reason* from the model (we think these variables are probably not that important for predicting the final grades) and the variable *freetime* (we think its effect is covered in the model by variables *studytime*,*traveltime* and *goout*).
+Lastly, we choose to remove the variables *guardian* and *reason* from the model (we suppose these variables are probably not that important for predicting the final grades) and the variable *freetime* (we think its effect is covered in the model by variables *studytime*,*traveltime* and *goout*).
 <br/>
 
 ```{r}
 student_mat_final <- student_mat
-student_mat_final <- subset(student_mat_final,select = -c(Medu,Fedu,Mjob,Fjob,reason,guardian,famsup,paid,freetime,Dalc,Walc))
 
-student_mat_final <- student_mat_final %>% mutate(edu = edu) %>% mutate(alc = alc) %>% mutate(extrasup = extrasup) %>% mutate(at_home = at_home) %>% mutate(health = health) %>% mutate(services = services) %>% mutate(teacher = teacher)  
+student_mat_final <- subset(student_mat_final,select = -c(G1,G2,G3, Medu,Fedu,Mjob,Fjob,reason,guardian,famsup,paid,freetime,Dalc,Walc))
+
+student_mat_final <- student_mat_final %>% mutate(edu = edu) %>% mutate(alc = alc) %>% mutate(extrasup = extrasup) %>% mutate(at_home = at_home) %>% mutate(health = health) %>% mutate(services = services) %>% mutate(teacher = teacher) %>% mutate(grade = grade)
 ```
 
 <br/>
-Thus, our final full model has 44 parameters corresponding to the prediction variables (we will consider no interactions). We should note that there will also be four intercepts in the model, as we will see shortly. 
+Thus, our final full model has 44 parameters corresponding to the prediction variables (we will consider no interactions) and we can consider further parameter reduction by lowering the maximum degrees of polynomial contrasts. We should note that there will also be additional parameters corresponding to thresholds and non-parallel terms, as we will see shortly. 
 <br/>
 
 ```{r}
@@ -275,18 +287,6 @@ confint(full_model)
 ```
 
 <br/>
-For ordinal variables, similar to numerical variables, we can consider altering the complexity of the fit in terms of nonlinearity. By default, R uses orthonormal polynomial contrast up to order $n-1$, where $n$ is a number of levels of the ordinal variable. Let us compare the full model with a model that includes only linear polynomial contrasts for all ordinal predictors.
-<br/>
-
-```{r,message = FALSE,warning=FALSE}
-lin_model <- polr(grade ~ school + sex + age + address + famsize + Pstatus + poly(traveltime,1) + poly(studytime,1) + failures + schoolsup + activities + nursery  + higher  + internet  + romantic + poly(famrel ,1) + poly(goout ,1) + poly(health ,1) + absences + poly(edu ,1) + poly(alc ,1) +  extrasup + at_home + services + teacher, data = student_mat_final)
-
-anova(full_model,lin_model)
-```
-
-<br/>
-We observe that the difference is not significant, i.e., ordinal variables in the model seem to influence the outcome linearly, or in other words, evenly per their levels. We will retain the full model for hypothesis testing, although we can consider this simplification when constructing the predictive model. 
-
 Since we assume no significant interactions, we can use type II ANOVA to test the main effects in the model.
 <br/>
 
@@ -296,27 +296,27 @@ Anova(full_model)
 ```
 
 <br/>
-We see that somewhat significant predictors in the full model (p-value < 0.1) are **sex**, **age**, **famsize**, **studytime**, **failures**, **schoolsup**, **health**, and **edu**. 
+We see that somewhat significant predictors in the full model (p-value < 0.1) are **sex**, **age**, **studytime**, **failures**, **schoolsup**, **health**, **edu**, and **teacher**.
 
-Now, let us take a look at the predictions of the ordered logit model. We first compute the linear predictor and then obtain the cumulative probability (distribution function). Class probabilities are derived from cumulative probabilities quite straightforwardly.
+Now, let us take a look at the predictions. We first compute the linear predictor and then obtain the cumulative probability (distribution function). Class probabilities are derived from cumulative probabilities quite straightforwardly.
 <br/>
 
 ```{r,message = FALSE,warning=FALSE}
 library(faraway)
 
 # linear predictor (i.e., Xbeta)
-model.matrix(full_model)[1:5,2:44] %*% (coefficients(full_model))
+model.matrix(full_model)[1:3,2:44] %*% (coefficients(full_model))
 # or simply
-full_model$lp[1:5]
+full_model$lp[1:3]
 
 # compute the cumulative probability
-prob <- matrix(NA,5,5)
+prob <- matrix(NA,5,2)
 for(i in 1:5){
-prob[i,1:4] <- ilogit(full_model$zeta - full_model$lp[i])
+prob[i,1:2] <- ilogit(full_model$zeta - full_model$lp[i])
 }
 # compute class probabilities
-prob <- cbind(prob[,1],prob[,2]-prob[,1],prob[,3]-prob[,2],prob[,4]-prob[,3],1-prob[,4])
-colnames(prob) <- c('A', 'B', 'C', 'D', ' F')
+prob <- cbind(prob[,1],prob[,2]-prob[,1],1-prob[,2])
+colnames(prob) <- c('F', 'C/D', 'A/B')
 prob
 
 # or simply
@@ -330,9 +330,9 @@ Unfortunately, the function *predict* for the *polr* model does not provide conf
 ```{r,message = FALSE,warning=FALSE}
 set.seed(123) # for reproducibility
 nb <- 2500
-probmat <- matrix(NA,nb,5)
+probmat <- matrix(NA,nb,3)
 
-colnames(probmat) <- c('A', 'B',' C', 'D',' F')
+colnames(probmat) <- c('F', 'C/D', 'A/B')
 
 for(i in 1:nb){
 
@@ -388,30 +388,57 @@ plot_model(full_model_clm, type = "pred", terms = c('teacher'))
 ```
 
 <br/>
-From the plots, we see that **males** and students from small **famsize** seem to perform slightly better in math. In addition, the probability of F increases for **schoolsup** and decreases for **higher**. Moreover, the probability of F increases noticeably with **failures** and **age**. **studytime**, good **health**, and a low number of **absences** also seems to improve the grades a bit. 
+From the plots, we see that the model predicts that **males** perform slightly better. In addition, the predicted probabilities of the F grade increases increases with **schoolsup**, **failures**, and **age**. **studytime**, and a low number of **absences** also seems to improve the grades a bit. 
 
 Let us check the model assumptions. Similarly to logistic regression, the ordered logit directly models the class probabilities. The assumption concerning the probabilities is *proportional odds assumption*:  $\mathrm{logit}\; P(Y <=j|X_1)$ - $\mathrm{logit}\; P(Y <=j|X_2) = (X_2-X_1)\beta$, i.e, the effect of $X$ on relative odds does not depend on class $j$ since $\beta$ are independent of class.
 
-Let us check the reasonability of the proportional odds assumption. First, we use the function *plot.xmean.ordinaly* from the *rms* package, which plots the observed means of predictors versus levels of Y and the estimated expected means of predictors under the proportional odds assumption.
+Let us check the reasonability of the proportional odds assumption.First, we use the function *plot.xmean.ordinaly* from the *rms* package, which plots the observed means of predictors versus levels of Y and the estimated expected means of predictors under the proportional odds assumption.
 <br/>
 
 ```{r,message = FALSE,warning=FALSE}
 library(rms)
-plot.xmean.ordinaly(grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery  + higher  + internet  + romantic + famrel + goout + health + absences + edu + alc +  extrasup + at_home + services + teacher, student_mat_final,cr=TRUE )
+par(mfrow = c(1, 2))
+plot.xmean.ordinaly(grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery  + higher  + internet  + romantic + famrel + goout + health + absences + edu + alc +  extrasup + at_home + services + teacher, student_mat_final,cr=FALSE)
 ```
 
 <br/>
-We see that the proportional odds assumption may be violated for some predictors. A more formal test from *F. E. Harrell. Regression modeling strategies: with applications to linear models, logistic regression, and survival analysis. Vol. 608. New York: springer, 2001.* involves *score residual* plots.
+We see that the proportional odds assumption seem reasonable for many predictors but it also may be violated for some others. Another quick test is to look at coefficients logistic regression for events $Y \leq k$, where $Y$ is the ordinal outcome. Provided that the proportional odds assumptions holds these coefficients should be similar. 
+<br/>
+
+```{r,message = FALSE,warning=FALSE}
+logit1 <- glm(grade <= 'F' ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery + higher + internet + romantic + famrel + goout + health + absences + edu + alc + extrasup + at_home + services + teacher, family = binomial ,data = student_mat_final)
+logit2 <- glm(grade <= 'C/D' ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery + higher + internet + romantic + famrel + goout + health + absences + edu + alc + extrasup + at_home + services + teacher, family = binomial ,data = student_mat_final)
+
+
+logitmodels <- cbind(coefficients(logit1),sqrt(diag(vcov(logit1))),coefficients(logit2),sqrt(diag(vcov(logit2))))
+colnames(logitmodels) <- c('<=F', 'Std. Error', '<= C/D', 'Std. Error')
+round(logitmodels,4)
+```
+
+<br/>
+One thing to notice is that some coefficients such as **higher** are very hard to estimate since almost all values of **higher** for the A/B grade are *yes*. Consequently, we cannot really decide from the data whether the proportional odds assumption is met for **higher**. We observe a similar problem for **alc** and **traveltime**.
+<br/>
+
+```{r,message = FALSE,warning=FALSE,echo=FALSE}
+par(mfrow = c(1, 1))
+plot(student_mat_final$grade,student_mat_final$higher,xlab = 'higher')
+plot(student_mat_final$grade,student_mat_final$alc,xlab = 'alc')
+plot(student_mat_final$grade,student_mat_final$traveltime,xlab = 'traveltime')
+```
+
+<br/>
+Another more formal test from *F. E. Harrell. Regression modeling strategies: with applications to linear models, logistic regression, and survival analysis. Vol. 608. New York: springer, 2001.* involves *score residual* plots.
 <br/>
 
 ```{r,message = FALSE,warning=FALSE}
 full_model_lrm <- lrm(grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery  + higher  + internet  + romantic + famrel + goout + health + absences + edu + alc +  extrasup + at_home + services + teacher, data = student_mat_final, x=TRUE , y=TRUE )
 
+par(mfrow = c(1, 2))
 resid(full_model_lrm , 'score.binary' , pl=TRUE)
 ```
 
 <br/>
-A confidence interval that lies outside of the zero line provides strong evidence against the proportional odds assumption. We observe that **alc** and **traveltime** are borderline. Otherwise, we have not found strong evidence against the proportional odds assumption. 
+A confidence interval that lies outside of the zero line provides strong evidence against the proportional odds assumption. We observe that **alc** and **traveltime** are borderline.
 
 An alternative to the ordered logit is a model where we allow $\beta$ to vary: $P[Y \leq k ] = \mathrm{ilogit}\, (\theta_k - X\beta_k)$. This model no longer assumes the proportional odds assumption. The price for the generalization is a much larger number of parameters. Thus, it is advisable to relax the proportional odds assumption only for some variables forming the so-called *partial proportional odds model*. The package *ordinal* provides the *nominal_test* function that fits the partial proportional odds model for each variable separately and compares it with the proportional odds model.
 <br/>
@@ -422,56 +449,141 @@ nominal_test(full_model_clm)
 ```
 
 <br/>
-We observe that none of the partial proportional odds models seem significant in comparison to the proportional odds model. However, we notice that models for variables **traveltime**,**higher**, **famrel**, and **alc** are omitted. This is because the fit failed to converge to a valid solution. For example, we get for **traveltime** 
+We observe that partial proportional odds models **traveltime**, **schoolsup**, and **higher** are almost significant and **alc** is significant in comparison to the proportional odds model. However, we have to keep in mind our previous observation that coefficients for **traveltime**, **higher**, and **alc** were hard to estimate. We can confirm this fact by checking the convergence of the fits. 
 <br/>
 
 ```{r,message = FALSE,warning=FALSE}
 partial_traveltime_model <- clm(grade ~ school + sex + age + address + famsize + Pstatus  + studytime + failures + schoolsup + activities + nursery + higher + internet + romantic + famrel + goout + health + absences + edu + alc + extrasup + at_home + services + teacher, nominal = ~traveltime, data = student_mat_final)
-
 partial_traveltime_model$convergence
-```
 
-<br/>
-an invalid fit since the thresholds are not increasing (i.e., the model would predict negative class probabilities). We observe similar problems for the other fits.
-<br/>
-
-```{r,message = FALSE,warning=FALSE}
 partial_higher_model <- clm(grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery + internet + romantic + famrel + goout + health + absences + edu + alc + extrasup + at_home + services + teacher,nominal = ~ higher, data = student_mat_final)
 partial_higher_model$convergence
-
-
-partial_famrel_model <- clm(grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery + higher + internet + romantic + goout + health + absences + edu + alc + extrasup + at_home + services + teacher,nominal = ~ famrel, data = student_mat_final)
-partial_traveltime_model$convergence
-
 
 partial_alc_model <- clm(grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery + higher + internet + romantic + famrel + goout + health + absences + edu  + extrasup + at_home + services + teacher,nominal = ~ alc, data = student_mat_final)
 partial_alc_model$convergence
 ```
 
 <br/>
-We can try to make the fit more stable for **traveltime**, **famrel**, and **alc** by considering only the linear part to be different at each level of **grade**. We observe that all these models indeed converged successfully.
+Since **traveltime** and **alc** are ordinal variables, we can make the fit more stable by considering only polynomial contrasts of limited order. 
 <br/>
 
 ```{r,message = FALSE,warning=FALSE}
-partial_lin_traveltime_model <- clm(grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery + higher + internet + romantic + famrel + goout + health + absences + edu + alc + extrasup + at_home + services + teacher, nominal = ~poly(traveltime,1), data = student_mat_final)
+partial_lin_traveltime_model <- clm(grade ~ school + sex + age + address + famsize + Pstatus  + studytime + failures + schoolsup + activities + nursery + higher + internet + romantic + famrel + goout + health + absences + edu + alc + extrasup + at_home + services + teacher, nominal = ~poly(traveltime,2), data = student_mat_final)
 partial_lin_traveltime_model$convergence
-
 anova(partial_lin_traveltime_model,full_model_clm)
 
 
-partial_lin_famrel_model <- clm(grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery + higher + internet + romantic + famrel + goout + health + absences + edu + alc + extrasup + at_home + services + teacher, nominal = ~poly(famrel,1), data = student_mat_final)
-partial_lin_famrel_model$convergence
-
-anova(partial_lin_famrel_model,full_model_clm)
-
-
-partial_lin_alc_model <- clm(grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery + higher + internet + romantic + famrel + goout + health + absences + edu + alc + extrasup + at_home + services + teacher, nominal = ~poly(alc,1), data = student_mat_final)
+partial_lin_alc_model <- clm(grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery + higher + internet + romantic + famrel + goout + health + absences + edu + extrasup + at_home + services + teacher, nominal = ~poly(alc,3), data = student_mat_final)
 partial_lin_alc_model$convergence
 anova(partial_lin_alc_model,full_model_clm)
 ```
 
 <br/>
-The last model that included an **alc** effect as nominal (i.e., varying for levels of **grade**) is of interest. The difference between the partial proportional odds model and the proportional odds model is the only one that is significant. Moreover, variable **alc** was not significant in the proportional odds model
+We observe that non-parallel slopes for **traveltime** and especially **alc** are significant. 
+
+Since some "non-parallel" terms seem significant, let us fit a partial proportion model and check whether are conclusion about important predictors would change. Our full model includes significant non-parallel terms (P < 0.1) with **higher** assumed to be proportional and polynomial contrasts of a limited order for **traveltime** and **alc** due to the aforementioned issues.
+<br/>
+
+```{r,message = FALSE,warning=FALSE}
+full_model_clm_PP <- clm(grade ~ higher + school + sex + age + address + famsize + Pstatus  + studytime + failures  + activities + nursery  + internet + romantic + famrel + goout + health + absences + edu + extrasup + at_home + services, nominal = ~ poly(traveltime,2) + schoolsup + poly(alc,3) + teacher,data = student_mat_final)
+full_model_clm_PP$convergence
+summary(full_model_clm_PP)
+```
+
+
+```{r,message = FALSE,warning=FALSE,echo=FALSE}
+
+school_model_clm_PP <- clm(grade ~ higher  + sex + age + address + famsize + Pstatus  + studytime + failures  + activities + nursery  + internet + romantic + famrel + goout + health + absences + edu + extrasup + at_home + services, nominal = ~ poly(traveltime,2) + schoolsup + poly(alc,3) + teacher,data = student_mat_final)
+
+sex_model_clm_PP <- clm(grade ~ higher + school + age + address + famsize + Pstatus  + studytime + failures  + activities + nursery  + internet + romantic + famrel + goout + health + absences + edu + extrasup + at_home + services, nominal = ~ poly(traveltime,2) + schoolsup + poly(alc,3) + teacher,data = student_mat_final)
+
+age_model_clm_PP <- clm(grade ~ higher + school + sex  + address + famsize + Pstatus  + studytime + failures  + activities + nursery  + internet + romantic + famrel + goout + health + absences + edu + extrasup + at_home + services, nominal = ~ poly(traveltime,2) + schoolsup + poly(alc,3) + teacher,data = student_mat_final)
+
+address_model_clm_PP <- clm(grade ~ higher + school + sex + age  + famsize + Pstatus  + studytime + failures  + activities + nursery  + internet + romantic + famrel + goout + health + absences + edu + extrasup + at_home + services, nominal = ~ poly(traveltime,2) + schoolsup + poly(alc,3) + teacher,data = student_mat_final)
+
+famsize_model_clm_PP <- clm(grade ~ higher + school + sex + age + address  + Pstatus  + studytime + failures  + activities + nursery  + internet + romantic + famrel + goout + health + absences + edu + extrasup + at_home + services, nominal = ~ poly(traveltime,2) + schoolsup + poly(alc,3) + teacher,data = student_mat_final)
+
+Pstatus_model_clm_PP <- clm(grade ~ higher + school + sex + age + address + famsize  + studytime + failures  + activities + nursery  + internet + romantic + famrel + goout + health + absences + edu + extrasup + at_home + services, nominal = ~ poly(traveltime,2) + schoolsup + poly(alc,3) + teacher,data = student_mat_final)
+
+traveltime_model_clm_PP <- clm(grade ~ higher + school + sex + age + address + famsize + Pstatus  + studytime + failures  + activities + nursery  + internet + romantic + famrel + goout + health + absences + edu + extrasup + at_home + services, nominal = ~ schoolsup + poly(alc,3) + teacher,data = student_mat_final)
+
+studytime_model_clm_PP <- clm(grade ~ higher + school + sex + age + address + famsize + Pstatus  + failures  + activities + nursery  + internet + romantic + famrel + goout + health + absences + edu + extrasup + at_home + services, nominal = ~ poly(traveltime,2) + schoolsup + poly(alc,3) + teacher,data = student_mat_final)
+
+failures_clm_PP <- clm(grade ~ higher + school + sex + age + address + famsize + Pstatus  + studytime + activities + nursery  + internet + romantic + famrel + goout + health + absences + edu + extrasup + at_home + services, nominal = ~ poly(traveltime,2) + schoolsup + poly(alc,3) + teacher,data = student_mat_final)
+
+schoolsup_clm_PP <- clm(grade ~ higher + school + sex + age + address + famsize + Pstatus  + studytime + failures  + activities + nursery  + internet + romantic + famrel + goout + health + absences + edu + extrasup + at_home + services, nominal = ~ poly(traveltime,2)  + poly(alc,3) + teacher,data = student_mat_final)
+
+activities_model_clm_PP <- clm(grade ~ higher + school + sex + age + address + famsize + Pstatus  + studytime + failures + nursery  + internet + romantic + famrel + goout + health + absences + edu + extrasup + at_home + services, nominal = ~ poly(traveltime,2) + schoolsup + poly(alc,3) + teacher,data = student_mat_final)
+
+nursery_model_clm_PP <- clm(grade ~ higher + school + sex + age + address + famsize + Pstatus  + studytime + failures  + activities + internet + romantic + famrel + goout + health + absences + edu + extrasup + at_home + services, nominal = ~ poly(traveltime,2) + schoolsup + poly(alc,3) + teacher,data = student_mat_final)
+
+higher_clm_PP <- clm(grade ~ school + sex + age + address + famsize + Pstatus  + studytime + failures  + activities + nursery  + internet + romantic + famrel + goout + health + absences + edu + extrasup + at_home + services, nominal = ~ poly(traveltime,2) + schoolsup + poly(alc,3) + teacher,data = student_mat_final)
+
+internet_clm_PP <- clm(grade ~ higher + school + sex + age + address + famsize + Pstatus  + studytime + failures  + activities + nursery + romantic + famrel + goout + health + absences + edu + extrasup + at_home + services, nominal = ~ poly(traveltime,2) + schoolsup + poly(alc,3) + teacher,data = student_mat_final)
+
+romantic_clm_PP <- clm(grade ~ higher + school + sex + age + address + famsize + Pstatus  + studytime + failures  + activities + nursery  + internet  + famrel + goout + health + absences + edu + extrasup + at_home + services, nominal = ~ poly(traveltime,2) + schoolsup + poly(alc,3) + teacher,data = student_mat_final)
+
+famrel_clm_PP <- clm(grade ~ higher + school + sex + age + address + famsize + Pstatus  + studytime + failures  + activities + nursery  + internet + romantic  + goout + health + absences + edu + extrasup + at_home + services, nominal = ~ poly(traveltime,2) + schoolsup + poly(alc,3) + teacher,data = student_mat_final)
+
+goout_clm_PP <- clm(grade ~ higher + school + sex + age + address + famsize + Pstatus  + studytime + failures  + activities + nursery  + internet + romantic + famrel + health + absences + edu + extrasup + at_home + services, nominal = ~ poly(traveltime,2) + schoolsup + poly(alc,3) + teacher,data = student_mat_final)
+
+health_model_clm_PP <- clm(grade ~ higher + school + sex + age + address + famsize + Pstatus  + studytime + failures  + activities + nursery  + internet + romantic + famrel + goout + absences + edu + extrasup + at_home + services, nominal = ~ poly(traveltime,2) + schoolsup + poly(alc,3) + teacher,data = student_mat_final)
+
+absences_model_clm_PP <- clm(grade ~ higher + school + sex + age + address + famsize + Pstatus  + studytime + failures  + activities + nursery  + internet + romantic + famrel + goout + health + edu + extrasup + at_home + services, nominal = ~ poly(traveltime,2) + schoolsup + poly(alc,3) + teacher,data = student_mat_final)
+
+edu_clm_PP <- clm(grade ~ higher + school + sex + age + address + famsize + Pstatus  + studytime + failures  + activities + nursery  + internet + romantic + famrel + goout + health + absences  + extrasup + at_home + services, nominal = ~ poly(traveltime,2) + schoolsup + poly(alc,3) + teacher,data = student_mat_final)
+
+alc_model_clm_PP <- clm(grade ~ higher + school + sex + age + address + famsize + Pstatus  + studytime + failures  + activities + nursery  + internet + romantic + famrel + goout + health + absences + edu + extrasup + at_home + services, nominal = ~ poly(traveltime,2) + schoolsup + teacher,data = student_mat_final)
+
+extrasup_model_clm_PP <- clm(grade ~ higher + school + sex + age + address + famsize + Pstatus  + studytime + failures  + activities + nursery  + internet + romantic + famrel + goout + health + absences + edu  + at_home + services, nominal = ~ poly(traveltime,2) + schoolsup + poly(alc,3) + teacher,data = student_mat_final)
+
+at_home_model_clm_PP <- clm(grade ~ higher + school + sex + age + address + famsize + Pstatus  + studytime + failures  + activities + nursery  + internet + romantic + famrel + goout + health + absences + edu + extrasup  + services, nominal = ~ poly(traveltime,2) + schoolsup + poly(alc,3) + teacher,data = student_mat_final)
+
+services_model_clm_PP <- clm(grade ~ higher + school + sex + age + address + famsize + Pstatus  + studytime + failures  + activities + nursery  + internet + romantic + famrel + goout + health + absences + edu + extrasup + at_home, nominal = ~ poly(traveltime,2) + schoolsup + poly(alc,3) + teacher,data = student_mat_final)
+
+teacher_model_clm_PP <- clm(grade ~ higher + school + sex + age + address + famsize + Pstatus  + studytime + failures  + activities + nursery  + internet + romantic + famrel + goout + health + absences + edu + extrasup + at_home + services, nominal = ~ poly(traveltime,2) + schoolsup + poly(alc,3),data = student_mat_final)
+
+
+a1 <- anova(school_model_clm_PP,full_model_clm_PP) 
+a2 <- anova(sex_model_clm_PP,full_model_clm_PP) 
+a3 <- anova(age_model_clm_PP,full_model_clm_PP) 
+a4 <- anova(address_model_clm_PP,full_model_clm_PP) 
+a5 <- anova(famsize_model_clm_PP,full_model_clm_PP) 
+a6 <- anova(Pstatus_model_clm_PP,full_model_clm_PP) 
+a7 <- anova(traveltime_model_clm_PP,full_model_clm_PP) 
+a8 <- anova(studytime_model_clm_PP,full_model_clm_PP) 
+a9 <- anova(failures_clm_PP,full_model_clm_PP) 
+a10 <- anova(schoolsup_clm_PP,full_model_clm_PP) 
+a11 <- anova(activities_model_clm_PP,full_model_clm_PP) 
+a12<- anova(nursery_model_clm_PP,full_model_clm_PP) 
+a13 <- anova(higher_clm_PP,full_model_clm_PP) 
+a14 <- anova(internet_clm_PP,full_model_clm_PP) 
+a15 <- anova(romantic_clm_PP,full_model_clm_PP) 
+a16 <- anova(famrel_clm_PP,full_model_clm_PP) 
+a17 <- anova(goout_clm_PP,full_model_clm_PP) 
+a18 <- anova(health_model_clm_PP,full_model_clm_PP) 
+a19 <- anova(absences_model_clm_PP,full_model_clm_PP) 
+a20 <- anova(edu_clm_PP,full_model_clm_PP) 
+a21 <- anova(alc_model_clm_PP,full_model_clm_PP) 
+a22 <- anova(extrasup_model_clm_PP,full_model_clm_PP)
+a23 <- anova(at_home_model_clm_PP,full_model_clm_PP)
+a24 <- anova(services_model_clm_PP,full_model_clm_PP)
+a25 <- anova(teacher_model_clm_PP,full_model_clm_PP)
+
+
+LR_stat <- c(a1$LR.stat[2],a2$LR.stat[2],a3$LR.stat[2],a4$LR.stat[2],a5$LR.stat[2],a6$LR.stat[2],a7$LR.stat[2],a8$LR.stat[2],a9$LR.stat[2],a10$LR.stat[2],a11$LR.stat[2],a12$LR.stat[2],a13$LR.stat[2],a14$LR.stat[2],a15$LR.stat[2],a16$LR.stat[2],a17$LR.stat[2],a18$LR.stat[2],a19$LR.stat[2],a20$LR.stat[2],a21$LR.stat[2],a22$LR.stat[2],a23$LR.stat[2],a24$LR.stat[2],a25$LR.stat[2])
+
+
+pr_chisq <- c(a1$`Pr(>Chisq)`[2],a2$`Pr(>Chisq)`[2],a3$`Pr(>Chisq)`[2],a4$`Pr(>Chisq)`[2],a5$`Pr(>Chisq)`[2],a6$`Pr(>Chisq)`[2],a7$`Pr(>Chisq)`[2],a8$`Pr(>Chisq)`[2],a9$`Pr(>Chisq)`[2],a10$`Pr(>Chisq)`[2],a11$`Pr(>Chisq)`[2],a12$`Pr(>Chisq)`[2],a13$`Pr(>Chisq)`[2],a14$`Pr(>Chisq)`[2],a15$`Pr(>Chisq)`[2],a16$`Pr(>Chisq)`[2],a17$`Pr(>Chisq)`[2],a18$`Pr(>Chisq)`[2],a19$`Pr(>Chisq)`[2],a20$`Pr(>Chisq)`[2],a21$`Pr(>Chisq)`[2],a22$`Pr(>Chisq)`[2],a23$`Pr(>Chisq)`[2],a24$`Pr(>Chisq)`[2],a25$`Pr(>Chisq)`[2])
+
+
+LR_table <- cbind(LR_stat,round(pr_chisq,5))
+rownames(LR_table) <- c('school','sex','age' ,'address','famsize','Pstatus','traveltime','studytime','failures','schoolsup', 'activities' , 'nursery' , 'higher' , 'internet' , 'romantic' , 'famrel' , 'goout' , 'health' , 'absences' , 'edu' , 'alc' , 'extrasup' , 'at_home' , 'services' , 'teacher')
+
+LR_table
+```
+
+**sex**, **age**,**studytime**,**failures**,**schoolsup**,**health**,**edu**,**alc**, and **teacher** are significant  with P <0.1. An interesting observation is the following fact: variable **alc** was clearly not significant in the proportional odds model, but it is significant in partial proportional odds model.
 <br/>
 
 
@@ -482,41 +594,39 @@ anova(no_alc_model_clm,full_model_clm)
 ```
 
 <br/>
-However, it is significant in the partial proportional odds model.
+We should mention that violating the proportional odds assumption might not be detrimental. The proportional odds model, even when the proportional odds assumption is not met, still retains meaning: it essentially estimates an average odds ratio across the outcome levels, i.e., it provides a general trend. Where a serious departure can occur is when investigating the effect on individual outcome levels; see https://www.fharrell.com/post/po/ for more details (and our **alc** example). 
+
+Let us compare the predicted probabilities of proportional odds and partial proportional odds model. We will refit the partial proportional odds model using the package *VGAM*, since its *predict* provides all class probabilities.
 <br/>
 
 ```{r,message = FALSE,warning=FALSE}
-anova(no_alc_model_clm,partial_lin_alc_model)
+
+library(VGAM)
+full_model_PP <- vglm(grade ~ higher + school + sex + age + address + famsize + Pstatus  + studytime + failures  + activities + nursery  + internet + romantic + famrel + goout + health + absences + edu + extrasup + at_home + services + poly(traveltime,2) + schoolsup + poly(alc,3) + teacher, family = cumulative(parallel = FALSE ~ poly(traveltime,2) + schoolsup + poly(alc,3) + teacher), data = student_mat_final)
+
+# class probabilities
+cbind(predict(full_model,type='probs')[1:10,], predict(full_model_PP,type = 'response')[1:10,])
+
+# classified in the same category
+sum(max.col(predict(full_model_PP,type = 'response')) == as.numeric(predict(full_model)))
 ```
 
 <br/>
-This suggests that the **alc** effect varies noticeably by the level of **grade**. 
-<br/>
-
-```{r,message = FALSE,warning=FALSE}
-coefficients(partial_lin_alc_model)[5:8]
-plot_model(partial_lin_alc_model, type = "pred", terms = c('alc'),title = 'Predicted probabilities of grade - PPO model')
-plot_model(full_model_clm, type = "pred", terms = c('alc'),title = 'Predicted probabilities of grade - PO model')
-```
-
-<br/>
-However, we should keep in mind that we probably do not have enough data to make this claim (we clearly do not have enough data to make the fit reliably), and hence, this might be just the effect of the noise in the data.
-
-Lastly, we should mention that violating the proportional odds assumption might not be detrimental. The proportional odds model, even when the proportional odds assumption is not met, still retains meaning: it essentially estimates an average odds ratio across the outcome levels, i.e., it provides a general trend. Where a serious departure can occur is when investigating the effect on individual outcome levels; see https://www.fharrell.com/post/po/ for more details (and our **alc** example). 
+We observe that 86% (~340/395) of observations would be classified in the same category.
 
 The last thing that we evaluate is residuals. Similarly to the logistic regression, it is not straightforward to define residuals that help to assess the model. For this purpose, we will use *surrogate residuals* proposed by  *D. Liu and H. Zhang. Residuals and diagnostics for ordinal regression models: a surrogate approach." Journal of the American Statistical Association 113.522 (2018): 845-854.* specifically for ordinal models (see https://koalaverse.github.io/sure/articles/sure.html for more details). Under a well-specified model, the surrogate residuals have a zero mean and are homoskedastic (i.e., have constant variance independent of $X$).  
 
-Let us compute the surrogate residuals for our model using the *sure package* and plot them vs the linear predictor and our regressors (both those we included in the model and those we choose to omit)
+Let us compute the surrogate residuals for our partial proportional odds model model using the *sure package* and plot them vs the linear predictor and variables we choose to omit.
 <br/>
 
 ```{r,message = FALSE,warning=FALSE}
 library(sure)
-sres <- resids(full_model)
+
+sres <- resids(full_model_clm_PP)
 
 # QQ plot and residuals vs linear predictor
 autoplot.resid(sres, what = 'qq') 
-autoplot.resid(sres, what = 'fitted',fit = full_model) 
-
+autoplot.resid(sres, what = 'fitted',fit = full_model_clm_PP) 
 
 # residuals vs variables in the model
 autoplot.resid(sres, what = 'covariate',x = student_mat_final$school) 
@@ -585,7 +695,7 @@ We observe that some trends (e.g., for **failures** and **edu**) are quite notic
 ## Continuation ratio model
 
 <br/>
-Before we conclude the first part of this project, we will take a brief look at an alternative model of ordinal response: the *continuation ratio model*. Unlike the proportional odds model, the continuation ratio (CR) model considers conditional probabilities $P[Y = k | Y \geq k ] = \mathrm{ilogit}\, (\theta_k + X\beta)$. Essentially, the CR model is a
+Before we conclude the first part of this project, we will take a brief look at an alternative models of ordinal response. We start with the *continuation ratio model*. Unlike the proportional odds model, the continuation ratio (CR) model considers conditional probabilities $P[Y = k | Y \geq k ] = \mathrm{ilogit}\, (\theta_k + X\beta)$. Essentially, the CR model is a
 discrete version of the Cox proportional hazards model used in survival analysis.
 
 A nice property of the CR model is that it can be estimated using the logistic regression by an appropriate extension of the design matrix (*F. E. Harrell. Regression modeling strategies: with applications to linear models, logistic regression, and survival analysis. Vol. 608. New York: springer, 2001.*). In R, this approach is implemented in the *rms* package as follows.
@@ -593,11 +703,11 @@ A nice property of the CR model is that it can be estimated using the logistic r
 
 
 ```{r,message = FALSE,warning=FALSE}
-u <- cr.setup(student_mat_final$grade)
+u <- cr.setup(grade)
 student_mat_expanded <- student_mat_final[u$sub , ]
 y <- u$y
 cohort <- u$cohort
-levels(cohort) <- c('>= F','>= D','>=C','>=B')
+levels(cohort) <- c('>= F','>= C/D')
 ```
 
 <br/>
@@ -610,45 +720,30 @@ anova(cr_model)
 ```
 
 <br/>
-We see that predictors that appear to be significant (**sex**, **age**, **studytime**, **failures**, **schoolsup**, **goout**) are very similar to those in the proportional odds model.
+We see that predictors that appear to be significant (**sex**, **age**, **address**,**studytime**, **failures**, **schoolsup**, **higher**,**health**,**teacher**) are very similar to those in the proportional odds model.
 
-Computing class probabilities is a bit more involved, requiring the derivation of unconditional probabilities from conditional ones.
+Computing class probabilities is a bit more involved, requiring the derivation of unconditional probabilities from the conditional ones.
 <br/>
 
 ```{r}
 # probability of F
-prob_F <- ilogit(model.matrix(full_model)[,2:44] %*%  coefficients(cr_model)[5:47] + coefficients(cr_model)[1])
+prob_F <- ilogit(model.matrix(full_model)[,2:44] %*%  coefficients(cr_model)[3:45] + coefficients(cr_model)[1])
 resF <- cbind(prob_F,predict(full_model, type = 'probs')[,1])
 colnames(resF) <- c('CR','PO')
 resF[1:15,]
 
-# probability of D
-prob_D <- (ilogit(model.matrix(full_model)[,2:44] %*%  coefficients(cr_model)[5:47] + coefficients(cr_model)[2]))*
+# probability of C/D
+prob_CD <- (ilogit(model.matrix(full_model)[,2:44] %*%  coefficients(cr_model)[3:45] + coefficients(cr_model)[2]))*
 (1-prob_F)
-resD <- cbind(prob_D,predict(full_model, type = 'probs')[,2])
-colnames(resD) <- c('CR','PO')
-resD[1:15,]
+resCD <- cbind(prob_CD,predict(full_model, type = 'probs')[,2])
+colnames(resCD) <- c('CR','PO')
+resCD[1:15,]
 
-# probability of C
-prob_C <- (ilogit(model.matrix(full_model)[,2:44] %*%  coefficients(cr_model)[5:47] + coefficients(cr_model)[3]))*
-(1-prob_D-prob_F)
-resC <- cbind(prob_C,predict(full_model, type = 'probs')[,3])
-colnames(resC) <- c('CR','PO')
-resC[1:15,]
-
-# probability of B
-prob_B <- (ilogit(model.matrix(full_model)[,2:44] %*%  coefficients(cr_model)[5:47] + coefficients(cr_model)[4]))*
-(1-prob_C-prob_D-prob_F)
-resB <- cbind(prob_B,predict(full_model, type = 'probs')[,4])
-colnames(resB) <- c('CR','PO')
-resB[1:15,]
-
-
-# probability of A
-prob_A <- (1-prob_B-prob_C-prob_D-prob_F)
-resA <- cbind(prob_A,predict(full_model, type = 'probs')[,5])
-colnames(resA) <- c('CR','PO')
-resA[1:15,]
+# probability of A/b
+prob_AB <- (1-prob_CD-prob_F)
+resAB <- cbind(prob_AB,predict(full_model, type = 'probs')[,3])
+colnames(resAB) <- c('CR','PO')
+resAB[1:15,]
 ```
 
 <br/>
@@ -656,15 +751,15 @@ We observe that the predicted probabilities generally align with those provided 
 <br/>
 
 ```{r}
-pred_cr <- cbind(resF[,1],resD[,1],resC[,1],resB[,1],resA[,1])
+pred_cr <- cbind(resF[,1],resCD[,1],resAB[,1])
 sum(max.col(pred_cr) == as.numeric(predict(full_model)))
 ```
 
 <br/>
-We see that the predicted classes are the same in 85% (~334/395) of all cases. We should note that an alternative method for fitting the CR model is available via the *VGAM* package.
+We see that the predicted classes are the same in 93% (~369/395) of all cases. We should note that an alternative method for fitting the CR model is available via the *VGAM* package.
 <br/>
 
-```{r}
+```{r,message = FALSE,warning=FALSE}
 library(VGAM)
 cr_vglm <- vglm(grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery  + higher  + internet  + romantic + famrel + goout + health + absences + edu + alc +  extrasup + at_home + services + teacher, data = student_mat_final, family=cratio(parallel = TRUE))
 
@@ -678,18 +773,97 @@ pred_cr[1:15,]
 ```
 
 <br/>
-The CR model is not inherently better than the proportional odds model. However, its main advantage over the proportional odds model is the fact that its "proportional assumption" ($\beta$ does not depend on class) is much more easily relaxed than in the proportional odds model (which requires specialized software). One just needs to include interaction terms with the *cohort* in the logit model (*F. E. Harrell. Regression modeling strategies: with applications to linear models, logistic regression, and survival analysis. Vol. 608. New York: springer, 2001.*). 
+The CR model is not inherently better than the proportional odds model. However, its main advantage over the proportional odds model is the fact that its "parallel slopes assumption" ($\beta$ does not depend on class) is much more easily relaxed than in the proportional odds model (which requires specialized software). One just needs to include interaction terms with the *cohort* in the logit model (*F. E. Harrell. Regression modeling strategies: with applications to linear models, logistic regression, and survival analysis. Vol. 608. New York: springer, 2001.*). 
 <br/>
 
-```{r}
+```{r,message = FALSE,warning=FALSE}
 cr_model_inter <- glm(y ~ cohort*(school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery  + higher  + internet  + romantic + famrel + goout + health + absences + edu + alc +  extrasup + at_home + services + teacher) - 1, data = student_mat_expanded, family = binomial)
 
 anova(cr_model,cr_model_inter)
 ```
 
 <br/>
-We observe that the difference between the two CR models is not significant, which suggests that the proportional assumption in the CR model is justified.
+We observe that the difference between the two CR models is not significant, which suggests that the parallel slopes assumption in the CR model is overall somewhat justified. 
+<br/>
 
-With this observation, we conclude Part One. In the second part of this demonstration, we examine the predictive performance of our models and discuss the results. 
+## Adjacent categories model 
+
+<br/>
+The next ordinal response model we will discuss here is an adjacent categories model. The probabilities in the model are given as $\mathrm{log} \; \frac{p_k}{p_{k+1}} = \theta_k + X\beta$. The adjacent categories mode can be fitted via the *VGAM* package.
+<br/>
+
+```{r,message = FALSE,warning=FALSE}
+ac_vglm <- vglm(grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery  + higher  + internet  + romantic + famrel + goout + health + absences + edu + alc +  extrasup + at_home + services + teacher, data = student_mat_final, family=acat(parallel = TRUE))
+```
+
+<br/>
+Let us check the significant predictors.
+<br/>
+
+```{r,message = FALSE,warning=FALSE}
+Anova(ac_vglm)
+```
+
+<br/>
+The significant predictors are **sex**,**age**, **studytime**, **failures**, **schoolsup**, **health**, **edu**, and **teacher**, which is similar to the proportional odds model and the continual ratio model. We can again compare the predictions of the model
+<br/>
+
+```{r}
+sum(max.col(predict(ac_vglm ,type='response')) == as.numeric(predict(full_model)))
+```
+
+<br/>
+We see that about 96% (~380/395) of the observations has the same predicted class as in the proportional odds model. Again, we could consider the model with non-parallel slopes. We could suspect based on our observations for the proportional odds model that **alc** violates the parallel slopes condition.
+<br/>
+
+```{r,message = FALSE,warning=FALSE}
+ac_vglm_alc_PP <- vglm(grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery  + higher  + internet  + romantic + famrel + goout + health + absences + edu + alc +  extrasup + at_home + services + teacher, data = student_mat_final, family=acat(parallel = FALSE ~ alc))
+anova(ac_vglm,ac_vglm_alc_PP,type = 'I')
+```
+
+<br/>
+Indeed, it seems that it does. Again, we could then observe that in the non-parallel model **alc** is somewhat significant whereas in the plain adjacent categories model it was not. 
+<br/>
+
+```{r}
+ac_vglm_noalc <- vglm(grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery  + higher  + internet  + romantic + famrel + goout + health + absences + edu +  extrasup + at_home + services + teacher, data = student_mat_final, family=acat(parallel = TRUE))
+anova(ac_vglm_noalc,ac_vglm_alc_PP,type = 'I')
+```
+
+<br/>
+Overall, we could repeat all the steps for the adjacent categories model as we did for the proportional odds model.
+<br/>
+
+## Multinomial logistic regression
+
+<br/>
+The last model that should be mentioned here is the multinomial logit model. This model assumes nominal categorical response, i.e, it assumes that there is no particular order for resposne categories. In other words, it corresponds to the model in which there are no "parallel" terms. Thus, this model has the largest number of parameters. The model is described by the equations $\mathrm{log}\; \frac{p_i}{p_1} = X\beta_i$, where $i = 2,3,\ldots$.
+<br/>
+
+```{r,message = FALSE,warning=FALSE}
+multi_model <- vglm(grade ~ school + sex + age + address + famsize + Pstatus + traveltime + studytime + failures + schoolsup + activities + nursery + higher + internet + romantic + famrel + goout + health + absences + edu + alc + extrasup + at_home + services + teacher, family=multinomial,data = student_mat_final)
+multi_model
+```
+
+<br/>
+We can again check the significant predictors.
+<br/>
+
+```{r,message = FALSE,warning=FALSE}
+Anova(multi_model)
+```
+
+<br/>
+The significant predictors (P <0.1) are **sex**,**age**, **studytime**, **failures**, **schoolsup**,**health**, and **teacher**, which is similar to the other models we have considered. We can also compare the predictions of the model
+<br/>
+
+```{r}
+sum(max.col(predict(multi_model ,type='response')) == as.numeric(predict(full_model)))
+```
+
+<br/>
+We see that about 73% (~289/395) of the observations has the same predicted class as in the proportional odds model. Thus, these models are quite different. The multinomial logit is the most flexible model we have considered but it has about two times the number of parameters than the proportional odds model and thus, there is the greatest risk of overfitting and the greatest risk of poor generalization to new data.
+
+We will conclude Part One here. In the second part of this demonstration, we examine the predictive performance of our four models and discuss the results. 
 <br/>
 
