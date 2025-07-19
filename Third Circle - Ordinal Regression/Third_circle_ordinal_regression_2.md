@@ -397,10 +397,10 @@ The last metric we will mention here, which we know from the binary
 regression, is the Brier score, i.e., the mean squared error. For
 ordinal outcome, the Brier score is defined as
 $\frac{1}{N} \sum_{i = 1}^N \sum_{j = 1}^K  (p_{ij} - o_{ij})^2$, where
-$p_{ij}$ are predicted probabilities for the $i$th observation and
-$o_{ij}$ are observed outcomes, i.e., $o_{ij} = 1$ if the $j$th class
-was observed for the $i$th observation and $o_{ik} = 0$ for all
-$k \neq j$. <br/>
+$p_{ij}$ are predicted probabilities for the $i\mathrm{th}$ observation
+and $o_{ij}$ are observed outcomes, i.e., $o_{ij} = 1$ if the $j$th
+class was observed for the $i\mathrm{th}$th observation and $o_{ik} = 0$
+for all $k \neq j$. <br/>
 
 ``` r
 obs_class <- cbind(as.numeric(student_mat_final$grade == 'F'),as.numeric(student_mat_final$grade == 'C/D'),as.numeric(student_mat_final$grade == 'A/B'))
@@ -571,12 +571,14 @@ dca_curve %>% plot(smooth = TRUE)
 decisions, F and A/B vs. the treat-all and treat-none policy. But, as
 suggested by the evaluation of predictive performance, only the
 multinomial model could achieve net benefit for making the decisions
-about class C/D.
+about class C/D. <br/>
 
-Overall, the multinomial model appears to be the best. However, as we
-have already mentioned in Part One, the multinomial model has twice as
-many parameters as the other models. Thus, there is serious doubt about
-its generalizability to new data. Thus, let us perform a
+## Cross-validation
+
+<br/> Overall, the multinomial model appears to be the best. However, as
+we have already mentioned in Part One, the multinomial model has twice
+as many parameters as the other models. Thus, there is serious doubt
+about its generalizability to new data. Thus, let us perform a
 cross-validation to validate the values of all performance metrics of
 our models. <br/>
 
@@ -865,10 +867,12 @@ Overall, we observed a major decrease in the performance of the
 multinomial model due to overfitting. All our considered models
 (proportional odds, continuous ratio, adjacent categories, multinomial)
 are close. The best model overall, based on the performance metrics,
-seems to be the continuation ratio model.
+seems to be the continuation ratio model. <br/>
 
-However, in Part One, we observed a presence of some non-parallel”terms
-in the proportional odds/adjacent categories models (namely **alc**
+## Partial Continuation Ratio Model (predictive performance)
+
+<br/> In Part One, we observed a presence of some non-parallel terms in
+the proportional odds/adjacent categories models (namely **alc**
 variable). Thus, we will now fit partial models with non-parallel terms
 and try to improve the predictive performance. For simplicity’s sake, we
 will fit the continuation ratio model only.

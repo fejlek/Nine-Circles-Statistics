@@ -239,7 +239,7 @@ Let us look for redundant variables first. <br/>
     ##     failures + schoolsup + famsup + paid + activities + nursery + 
     ##     higher + internet + romantic + famrel + freetime + goout + 
     ##     Dalc + Walc + health + absences
-    ## <environment: 0x000001c71b3c0820>
+    ## <environment: 0x000001d88d470540>
     ## 
     ## n: 395   p: 30   nk: 0 
     ## 
@@ -1399,7 +1399,93 @@ autoplot.resid(sres_null, what = 'covariate',x = student_mat_final$health)
 
 <br/> We observe that some trends (e.g., for **failures** and **edu**)
 are quite noticeable, suggesting that these variables should be included
-in the model. <br/>
+in the model.
+
+The last thing to check is the presence of influential observations. The
+package *VGAM* includes some basic functions for such diagnostics. Let
+us first plot the hat values (leverages) for each observation. <br/>
+
+``` r
+hatplot(full_model_PP)
+```
+
+![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-32-1.png)<!-- -->![](Third_circle_ordinal_regression_1_files/figure-GFM/unnamed-chunk-32-2.png)<!-- -->
+
+<br/> We observe that some observations might be overly influential. Let
+us check, whether deleting observations based on several leverage
+thresholds change the fit significantly. <br/>
+
+``` r
+lvrg <- hatvalues(full_model_PP)
+
+full_model_red1 <- vglm(grade ~ higher + school + sex + age + address + famsize + Pstatus  + studytime + failures  + activities + nursery  + internet + romantic + famrel + goout + health + absences + edu + extrasup + at_home + services + poly(traveltime,2) + schoolsup + poly(alc,3) + teacher, family = cumulative(parallel = FALSE ~ poly(traveltime,2) + schoolsup + poly(alc,3) + teacher), data = student_mat_final[lvrg[,1]<0.3 & lvrg[,2]<0.3,])
+
+
+full_model_red2 <- vglm(grade ~ higher + school + sex + age + address + famsize + Pstatus  + studytime + failures  + activities + nursery  + internet + romantic + famrel + goout + health + absences + edu + extrasup + at_home + services + poly(traveltime,2) + schoolsup + poly(alc,3) + teacher, family = cumulative(parallel = FALSE ~ poly(traveltime,2) + schoolsup + poly(alc,3) + teacher), data = student_mat_final[lvrg[,1]<0.2 & lvrg[,2]<0.2,])
+
+full_model_red3 <- vglm(grade ~ higher + school + sex + age + address + famsize + Pstatus  + studytime + failures  + activities + nursery  + internet + romantic + famrel + goout + health + absences + edu + extrasup + at_home + services + poly(traveltime,2) + schoolsup + poly(alc,3) + teacher, family = cumulative(parallel = FALSE ~ poly(traveltime,2) + schoolsup + poly(alc,3) + teacher), data = student_mat_final[lvrg[,1]<0.1 & lvrg[,2]<0.1,])
+
+
+coeff_delete <- cbind(coefficients(full_model_PP),coefficients(full_model_red1),coefficients(full_model_red2),coefficients(full_model_red3))
+
+colnames(coeff_delete) <- c('All','CD<0.3','CD<0.2','CD<0.1')
+coeff_delete
+```
+
+    ##                                  All        CD<0.3        CD<0.2       CD<0.1
+    ## (Intercept):1          -4.9179818290 -5.0350663906 -5.0913151807 -4.624019720
+    ## (Intercept):2          -2.4770793998 -2.6130898948 -2.7612993197 -2.252979109
+    ## higheryes              -0.7847658211 -0.7764928362 -0.6127226834 -1.298382330
+    ## schoolMS                0.0424916360  0.0469169717  0.0860454543  0.235299407
+    ## sexM                   -0.4874351314 -0.4936799839 -0.5305051912 -0.402515844
+    ## age                     0.2210353130  0.2249410333  0.2276544508  0.198632271
+    ## addressU               -0.3049129172 -0.3023706126 -0.3005153951 -0.775829747
+    ## famsizeLE3             -0.2342232638 -0.2282988245 -0.1965969718  0.002575402
+    ## PstatusT                0.2259980454  0.2436294877  0.2107574013  0.111568922
+    ## studytime.L            -0.6266114592 -0.6505998453 -0.7059999145 -0.697104693
+    ## studytime.Q             0.1674837570  0.1526724598  0.2038662526  0.187291708
+    ## studytime.C             0.5286733001  0.5243738431  0.4732723036  0.402756074
+    ## failures                0.8550109050  0.8558716814  0.9229042697  0.824089134
+    ## activitiesyes          -0.0003598167 -0.0006285075  0.0004988787  0.088091909
+    ## nurseryyes              0.3085820966  0.3170415563  0.3301395356  0.168485619
+    ## internetyes            -0.0594456081 -0.0613500413 -0.0083575857  0.273933202
+    ## romanticyes             0.2881652623  0.2846939422  0.2377428719  0.291601504
+    ## famrel.L               -0.4294667544 -0.3670177076 -0.6144687625 -0.993339909
+    ## famrel.Q                0.3101262229  0.2586560807  0.4150604543  0.601381482
+    ## famrel.C               -0.3236652745 -0.2956994239 -0.3691112530 -0.192463877
+    ## famrel^4                0.3574002634  0.3501225241  0.3592383538  4.373931613
+    ## goout.L                 0.7959935375  0.7970146653  0.9016577628 -2.992424602
+    ## goout.Q                -0.0408218681 -0.0317392201  0.0023892149  1.476051320
+    ## goout.C                -0.1878333315 -0.1781034414 -0.1382485273 -1.023178913
+    ## goout^4                -0.0541659152 -0.0568358638 -0.0603411822  0.945831222
+    ## health.L                0.7371957470  0.7366649306  0.7086574248 -0.585501194
+    ## health.Q               -0.3791557736 -0.3715272885 -0.3705085017  0.044869019
+    ## health.C                0.1921150704  0.1882402071  0.1996725986  0.150885756
+    ## health^4                0.1205601461  0.1135455644  0.0931178147 -0.015052444
+    ## absences                0.0166082706  0.0167881633  0.0091034133 -0.923620905
+    ## edu.L                  -0.7879569551 -0.7961252186 -0.8064892719 -0.324575648
+    ## edu.Q                  -0.3729692327 -0.3884233528 -0.3518788094 -0.201724492
+    ## edu.C                   0.0722213833  0.0748883263  0.0739797662  0.239193490
+    ## extrasupyes             0.3478660840  0.3488992119  0.3565853272  0.374498234
+    ## at_homeyes              0.1469331592  0.1427368044  0.0944341472 -0.149473766
+    ## servicesyes            -0.1570682166 -0.1618452494 -0.1609308348  0.464062611
+    ## poly(traveltime, 2)1:1 -1.2629065383 -1.2542067748 -1.4340507619  3.617384868
+    ## poly(traveltime, 2)1:2  6.3986864315  6.5205114102  4.0878616685  0.549638632
+    ## poly(traveltime, 2)2:1 -1.8994038474 -1.8843112705 -2.7284007591 -2.790383147
+    ## poly(traveltime, 2)2:2  0.8795558715  0.9772575896 -1.2123094569  0.727183317
+    ## schoolsupyes:1          0.9946405083  0.9948433917  0.9719984818  2.324805846
+    ## schoolsupyes:2          2.2374838990  2.2354830310  2.2321540869 -4.090983208
+    ## poly(alc, 3)1:1        -2.4044014179 -2.3137983186 -1.0676704171  1.246931736
+    ## poly(alc, 3)1:2         8.0840188396  6.8870667272  5.6697997457  0.867738989
+    ## poly(alc, 3)2:1         0.5683951731  0.7060712673  2.0419067333 -2.218148744
+    ## poly(alc, 3)2:2         2.3778050142  1.0148146927  0.0954149949 -4.072360329
+    ## poly(alc, 3)3:1        -3.9679343344 -3.9233666771 -2.3055302167 -1.522002090
+    ## poly(alc, 3)3:2         1.4586478436  0.1708776907 -0.1177101818  1.032554633
+    ## teacheryes:1            0.9173475388  0.9278086993  0.8769648143  0.334430774
+    ## teacheryes:2            0.3097918136  0.3225576004  0.3410764334 -4.624019720
+
+<br/> We do not observe major changes in the fits, thus, there we found
+no reason to consider deleting observations. <br/>
 
 ## Continuation ratio model
 

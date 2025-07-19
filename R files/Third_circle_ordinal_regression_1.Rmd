@@ -690,7 +690,41 @@ autoplot.resid(sres_null, what = 'covariate',x = student_mat_final$health)
 
 <br/>
 We observe that some trends (e.g., for **failures** and **edu**) are quite noticeable, suggesting that these variables should be included in the model. 
+
+The last thing to check is the presence of influential observations. The package *VGAM* includes some basic functions for such diagnostics. Let us first plot the hat values (leverages) for each observation.
 <br/>
+
+```{r,message = FALSE,warning=FALSE}
+hatplot(full_model_PP)
+```
+
+<br/>
+We observe that some observations might be overly influential. Let us check, whether deleting observations based on several leverage thresholds change the fit significantly.
+<br/>
+
+
+```{r,message = FALSE,warning=FALSE}
+lvrg <- hatvalues(full_model_PP)
+
+full_model_red1 <- vglm(grade ~ higher + school + sex + age + address + famsize + Pstatus  + studytime + failures  + activities + nursery  + internet + romantic + famrel + goout + health + absences + edu + extrasup + at_home + services + poly(traveltime,2) + schoolsup + poly(alc,3) + teacher, family = cumulative(parallel = FALSE ~ poly(traveltime,2) + schoolsup + poly(alc,3) + teacher), data = student_mat_final[lvrg[,1]<0.3 & lvrg[,2]<0.3,])
+
+
+full_model_red2 <- vglm(grade ~ higher + school + sex + age + address + famsize + Pstatus  + studytime + failures  + activities + nursery  + internet + romantic + famrel + goout + health + absences + edu + extrasup + at_home + services + poly(traveltime,2) + schoolsup + poly(alc,3) + teacher, family = cumulative(parallel = FALSE ~ poly(traveltime,2) + schoolsup + poly(alc,3) + teacher), data = student_mat_final[lvrg[,1]<0.2 & lvrg[,2]<0.2,])
+
+full_model_red3 <- vglm(grade ~ higher + school + sex + age + address + famsize + Pstatus  + studytime + failures  + activities + nursery  + internet + romantic + famrel + goout + health + absences + edu + extrasup + at_home + services + poly(traveltime,2) + schoolsup + poly(alc,3) + teacher, family = cumulative(parallel = FALSE ~ poly(traveltime,2) + schoolsup + poly(alc,3) + teacher), data = student_mat_final[lvrg[,1]<0.1 & lvrg[,2]<0.1,])
+
+
+coeff_delete <- cbind(coefficients(full_model_PP),coefficients(full_model_red1),coefficients(full_model_red2),coefficients(full_model_red3))
+
+colnames(coeff_delete) <- c('All','CD<0.3','CD<0.2','CD<0.1')
+coeff_delete
+```
+
+
+<br/>
+We do not observe major changes in the fits, thus, there we found no reason to consider deleting observations.
+<br/>
+
 
 ## Continuation ratio model
 
