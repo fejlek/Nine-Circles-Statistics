@@ -398,8 +398,8 @@ regression, is the Brier score, i.e., the mean squared error. For
 ordinal outcome, the Brier score is defined as
 $\frac{1}{N} \sum_{i = 1}^N \sum_{j = 1}^K  (p_{ij} - o_{ij})^2$, where
 $p_{ij}$ are predicted probabilities for the $i\mathrm{th}$ observation
-and $o_{ij}$ are observed outcomes, i.e., $o_{ij} = 1$ if the $j$ th
-class was observed for the $i\mathrm{th}$ th observation and $o_{ik} = 0$
+and $o_{ij}$ are observed outcomes, i.e., $o_{ij} = 1$ if the $j\mathrm{th}$
+class was observed for the $i\mathrm{th}$ observation and $o_{ik} = 0$
 for all $k \neq j$. <br/>
 
 ``` r
@@ -539,7 +539,7 @@ class_AB
     ## MN 0.6576271 0.8288136 0.1400658  0.01223925 1.018028
     ## PV 0.0000000 0.5000000 0.1890723 -1.08180517 0.000000
 
-<br/> Our models are fairly decent for predicting the F category and A/B
+<br/> Our models are fairly decent for predicting the F category and the A/B
 category. However, they are mostly useless (except for the multinomial
 model) for predicting the C/D category, being no better than the trivial
 model. We can also examine the decision curve analysis for predicting
@@ -571,7 +571,7 @@ dca_curve %>% plot(smooth = TRUE)
 decisions, F and A/B vs. the treat-all and treat-none policy. But, as
 suggested by the evaluation of predictive performance, only the
 multinomial model could achieve net benefit for making the decisions
-about class C/D. <br/>
+about the class C/D. <br/>
 
 ## Cross-validation
 
@@ -859,8 +859,8 @@ ylim(-0.06, 0.185) + xlim(0.00, 1.00) + ylab('Net benefit') + xlab('Threshold') 
 
 ![](Third_circle_ordinal_regression_2_files/figure-GFM/unnamed-chunk-14-3.png)<!-- -->
 
-<br/> We validated the net benefit of our models compared to the “treat
-all” policy for F and A/B classes. For the class C/D, there is no
+<br/> We validated the net benefit of our models compared to the treat-all
+policy for the F and A/B classes. For the class C/D, there is no
 benefit.
 
 Overall, we observed a major decrease in the performance of the
@@ -1199,7 +1199,7 @@ with friends. <br/>
 **alc**. Noticeably, it seems that the probability of A/B decreases with
 alcohol consumption. There is some evidence in the literature that
 alcohol consumption is associated with lower school performance (*M.
-RHayatbakhsh et al. School performance and alcohol use problems in early
+R. Hayatbakhsh et al. School performance and alcohol use problems in early
 adulthood: a longitudinal study. Alcohol 45.7 (2011): 701-709.*, *A. I.
 Balsa, L. M. Giuliano, and M. T. French. The effects of alcohol use on
 academic achievement in high school. Economics of education review 30.1
@@ -1265,10 +1265,10 @@ global assessment of the gender gap in self-reported health with survey
 data from 59 countries.” BMC public health 16.1 (2016): 675.*).
 
 As far as **age** is concerned, it was a somewhat significant predictor
-in all models, and it seems that the math grades worsen with age. **M.
+in all models, and it seems that the math grades worsen with age. *M.
 Pellizzari, and F. C. Billari. “The younger, the better? Age-related
 differences in academic performance at university.” Journal of
-Population Economics 25.2 (2012): 697-739.** that studied the academic
+Population Economics 25.2 (2012): 697-739.* that studied the academic
 performance of first-year university students provide some insight:
 youngest students performed better compared to their oldest peers across
 almost all subjects due to among due to, among other things differences
