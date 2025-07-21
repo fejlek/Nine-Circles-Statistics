@@ -303,7 +303,7 @@ the difference of concordant pairs and discordant pairs divided by the
 number of ties in the outcome. In the case of ordinal regression
 (<https://support.minitab.com/en-us/minitab/help-and-how-to/statistical-modeling/regression/how-to/ordinal-logistic-regression/interpret-the-results/all-statistics/measures-of-association/#goodman-kruskal-gamma>),
 the observation pair is concordant whenever their observed class
-differs. The predicted cumulative probability of the lower observed
+differs and the predicted cumulative probability of the lower observed
 class is higher for the observation with the lower observed class, i.e.,
 $(X_1,Y_1)$ and $(X_2,Y_2)$, $Y_1 < Y_2$ is concordant $\leftrightarrow$
 $P(Y \leq Y_1 \mid X_1) > P(Y \leq Y_1 \mid X_2)$ ($P$ is computed under
