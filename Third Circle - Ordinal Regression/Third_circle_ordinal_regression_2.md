@@ -398,8 +398,8 @@ regression, is the Brier score, i.e., the mean squared error. For
 ordinal outcome, the Brier score is defined as
 $\frac{1}{N} \sum_{i = 1}^N \sum_{j = 1}^K  (p_{ij} - o_{ij})^2$, where
 $p_{ij}$ are predicted probabilities for the $i\mathrm{th}$ observation
-and $o_{ij}$ are observed outcomes, i.e., $o_{ij} = 1$ if the $j$th
-class was observed for the $i\mathrm{th}$th observation and $o_{ik} = 0$
+and $o_{ij}$ are observed outcomes, i.e., $o_{ij} = 1$ if the $j$ th
+class was observed for the $i\mathrm{th}$ th observation and $o_{ik} = 0$
 for all $k \neq j$. <br/>
 
 ``` r

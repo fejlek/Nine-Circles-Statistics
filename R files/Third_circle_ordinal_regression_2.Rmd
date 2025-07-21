@@ -273,7 +273,7 @@ sommersD(p_prev,as.numeric(student_mat_final$grade))
 <br/>
 We observe that, again, the multinomial logit model has the highest value of Sommer's $D_{XY}$. We also notice that similarly to the binary outcome, Sommer's $D_{XY}$ for the purely random predictions is zero.
 
-The last metric we will mention here, which we know from the binary regression, is the Brier score, i.e., the mean squared error. For ordinal outcome, the Brier score is defined as $\frac{1}{N} \sum_{i = 1}^N \sum_{j = 1}^K  (p_{ij} - o_{ij})^2$, where $p_{ij}$ are predicted probabilities for the $i\mathrm{th}$ observation and $o_{ij}$ are observed outcomes, i.e., $o_{ij} = 1$ if the $j$th class was observed for the $i\mathrm{th}$th observation and $o_{ik} = 0$ for all $k \neq j$.
+The last metric we will mention here, which we know from the binary regression, is the Brier score, i.e., the mean squared error. For ordinal outcome, the Brier score is defined as $\frac{1}{N} \sum_{i = 1}^N \sum_{j = 1}^K  (p_{ij} - o_{ij})^2$, where $p_{ij}$ are predicted probabilities for the $i\mathrm{th}$ observation and $o_{ij}$ are observed outcomes, i.e., $o_{ij} = 1$ if the $j$ th class was observed for the $i\mathrm{th}$ th observation and $o_{ik} = 0$ for all $k \neq j$.
 <br/>
 
 ```{r}
