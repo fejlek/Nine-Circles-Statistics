@@ -345,7 +345,7 @@ dim(model.matrix(grade ~ school + sex + age + address + famsize + Pstatus + trav
 <br/> To model the ordinal response (in this case, the final grade), we
 will use the ordered logit model. Ordered logit models cumulative
 distribution functions
-$P[Y \leq k ] = \mathrm{ilogit}\, (\theta_k - X\beta)$ for ordinal
+$P[Y \leq k ] = \mathrm{ilogit}  (\theta_k - X\beta)$ for ordinal
 response $k = 1,2,3, \ldots$. The model is called proportional since the
 parameter $\beta$ does not depend on class $k$.
 
@@ -728,7 +728,7 @@ strong evidence against the proportional odds assumption. We observe
 that **alc** and **traveltime** are borderline.
 
 An alternative to the ordered logit is a model where we allow $\beta$ to
-vary: $P[Y \leq k ] = \mathrm{ilogit}\, (\theta_k - X\beta_k)$. This
+vary: $P[Y \leq k ] = \mathrm{ilogit}  (\theta_k - X\beta_k)$. This
 model no longer assumes the proportional odds assumption. The price for
 the generalization is a much larger number of parameters. Thus, it is
 advisable to relax the proportional odds assumption only for some
@@ -1493,7 +1493,7 @@ no reason to consider deleting observations. <br/>
 brief look at an alternative models of ordinal response. We start with
 the *continuation ratio model*. Unlike the proportional odds model, the
 continuation ratio (CR) model considers conditional probabilities
-$P[Y = k | Y \geq k ] = \mathrm{ilogit}\, (\theta_k + X\beta)$.
+$P[Y = k | Y \geq k ] = \mathrm{ilogit}  (\theta_k + X\beta)$.
 Essentially, the CR model is a discrete version of the Cox proportional
 hazards model used in survival analysis.
 
@@ -1794,7 +1794,7 @@ CR model is overall somewhat justified. <br/>
 
 <br/> The next ordinal response model we will discuss here is an
 adjacent categories model. The probabilities in the model are given as
-$\mathrm{log} \; \frac{p_k}{p_{k+1}} = \theta_k + X\beta$. The adjacent
+$\mathrm{log}  \frac{p_k}{p_{k+1}} = \theta_k + X\beta$. The adjacent
 categories mode can be fitted via the *VGAM* package. <br/>
 
 ``` r
