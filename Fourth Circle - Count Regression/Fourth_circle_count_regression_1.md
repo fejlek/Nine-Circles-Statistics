@@ -218,7 +218,7 @@ $P[Y = k] = e^{-\lambda} \frac{\lambda^k}{k!}$, where $\lambda>0$.
 The Poisson distribution is a natural distribution for a count response,
 as we explain later. The link function for the model is usually taken as
 the logarithm (which is a canonical link for the Poisson model). Thus,
-the link function for the model is$\mathrm{log} \; E(Y|X) = X\beta$,
+the link function for the model is $\mathrm{log} E(Y|X) = X\beta$,
 i.e., $\lambda = e^{X\beta}$.
 
 Let us fit the Poisson model for our data. <br/>
