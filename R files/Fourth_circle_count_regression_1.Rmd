@@ -142,7 +142,7 @@ We have 4406 individual observations. The Poisson model with all interactions wi
 <br/>
 We start our modelling with a Poisson regression, i.e., the model assumes that the response has a Poisson distribution $P[Y = k] = e^{-\lambda} \frac{\lambda^k}{k!}$, where $\lambda>0$. 
 
-The Poisson distribution is a natural distribution for a count response, as we explain later. The link function for the model is usually taken as the logarithm (which is a canonical link for the Poisson model). Thus, the link function for the model is$\mathrm{log} \; E(Y|X) = X\beta$, i.e., $\lambda = e^{X\beta}$.
+The Poisson distribution is a natural distribution for a count response, as we explain later. The link function for the model is usually taken as the logarithm (which is a canonical link for the Poisson model). Thus, the conditional mean for the model is $\mathrm{log} E(Y|X) = X\beta$, i.e., $\lambda = e^{X\beta}$.
 
 Let us fit the Poisson model for our data.
 <br/>
@@ -398,7 +398,7 @@ res_HC
 We observe that heteroskedasticity-consistent standard errors are much larger than the original standard error estimates; HC4 estimates are even larger than HC0 estimates. Some variable are no longer statistically significant; **black**, **married**, and **faminc** for HC0 and  even **emer**, **adldiff**,**region**,**gender**,**employed**, and **medicaid** for HC4.
 
 An alternative to heteroskedasticity-consistent standard errors is a bootstrapped Wald test (*J. W. Hardin and J. M. Hilbe. Generalized linear models and extensions. Stata press, 2007.*).
-<br/
+<br/>
 
 ```{r,message=FALSE,warning=FALSE}
 set.seed(123) # for reproducibility
