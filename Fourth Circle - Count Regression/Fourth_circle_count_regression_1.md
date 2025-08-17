@@ -1942,8 +1942,8 @@ brier_score_res
     ## zeroinf poisson              0.9169420
     ## zeroinf negbin (no int)      0.9010911
 
-- ranked probability score ($\frac{1}{n}\sum_i \sum_j (\hat{q}_{i,j} - 1_i(x \leq j))^2$ 
-  where $\hat{q}_{i,j}$ is the predicted cumulative probability for the
+- ranked probability score ($\frac{1}{n}\sum_i \sum_j (\hat{p}_{i,j} - 1_i(x=j))^2$ 
+  where  is the predicted cumulative probability for the
   $i\mathrm{th}$ observation and the response count $j$)
 
 ``` r
