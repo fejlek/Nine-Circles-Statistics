@@ -749,7 +749,7 @@ estimates. Again, some variables appear to be non-significant, namely,
 The last method, which we will mention in this part, is quasi-Poisson
 regression. Quasi-Poisson regression has the same conditional mean
 specification as the Poisson model
-($\mathrm{log} \; \mu = \mathrm{log} \; E(Y|X) = X\beta$), but the
+($\mathrm{log} \mu = \mathrm{log}  E(Y|X) = X\beta$), but the
 variance function is assumed to be $\mathrm{Var} (Y|X) = \theta\mu$,
 where $\theta$ is a free dispersion parameter. Quasi-Poisson regression
 exploits the fact that to obtain estimates of $\beta  s$, we do not need
@@ -919,7 +919,7 @@ details.
 
 The link function for the negative binomial is usually logarithmic, as
 in the Poisson distribution, i.e.,
-$\mathrm{log} \; \mu = \mathrm{log} \; E(Y|X) = X\beta$ (negative
+$\mathrm{log}  \mu = \mathrm{log}  E(Y|X) = X\beta$ (negative
 binomial regression has the same conditional mean specification as the
 Poisson model). However, the variance function is
 $\mathrm{Var}(Y|X) = \mu + \alpha\mu^2$, where $\theta >0$ (i.e., it is
