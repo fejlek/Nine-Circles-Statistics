@@ -1943,8 +1943,7 @@ brier_score_res
     ## zeroinf negbin (no int)      0.9010911
 
 - ranked probability score ($\frac{1}{n}\sum_i \sum_j (\hat{P}_{i,j} - 1_i(x\leq j))^2$ 
-  where $\hat{P}_{i}$ is the predicted cumulative probability for the
-  $i\mathrm{th}$ observation and the response count $j$)
+  where $\hat{P}$ is the predicted cumulative probability)
 
 ``` r
 rps_score <- function(pred_prob,obs_prob) {
