@@ -1,0 +1,1199 @@
+---
+title: "The Fourth Circle: Count Regression"
+author: "Jiří Fejlek"
+date: "2025-08-15"
+output:
+  md_document:
+    variant: GFM
+code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+<br/>
+This project is concerned with models for a count response. We will look at the two most important models: the Poisson model and the negative binomial model. We will also briefly introduce two major generalizations to these models to handle an excessive number of zero outcomes, hurdle models and zero-inflated models. 
+
+This project will be different in the sense that we will be repeating the analysis from *A. Zeileis, C. Kleiber, and S. Jackman. Regression models for count data in R. Journal of statistical software 27.1 (2008): 1-25.* However, we will add quite a few things to the original analysis; thus, this project will not be a complete rehash. The investigated dataset is originally from *P. Deb and P. K. Trivedi. Demand for medical care by the elderly: a finite mixture approach. Journal of applied Econometrics 12.3 (1997): 313-336.* and is concerned with the medical needs of people age 66 and over. In particular, we seek to model physician office visits.
+<br/>
+
+
+## National medical expenditure survey (1987-1988) dataset
+
+<br/>
+We will use the aforementioned dataset from *P. Deb and P. K. Trivedi. Demand for medical care by the elderly: a finite mixture approach. Journal of applied Econometrics 12.3 (1997): 313-336.* This dataset is based on a representative, national probability sample of the civilian US population (non-institutionalized and no individuals admitted to long-term care facilities) during 1987. More than 38000 individuals in 15000 households across the United States were interviewed about their health insurance coverage, the services they used, and the cost and source of payments for those services. In addition to health-care data, data about employment, sociodemographic characteristics, and economic status were also provided. The dataset we will use here for our analysis is the subsample of individuals of age 66 and over, as in *P. Deb and P. K. Trivedi. Demand for medical care by the elderly: a finite mixture approach. Journal of applied Econometrics 12.3 (1997): 313-336.*. 
+
+The data contains the following information about 4,406 individuals. 
+<br/>
+
+* **ofp** - # of physician office visits
+* **ofnp** - # of non-physician office visits
+* **opp** - # of physician hospital outpatient visits
+* **opnp** - # of non-physician hospital outpatient visits
+* **emr** - # of emergency room visits
+* **hosp** - # of hospital stays
+* **health** - poor, average, excellent (self-perceived)
+* **numchron** - # of chronic conditions (cancer, heart attack, gall bladder problems, emphysema, arthritis, diabetes, other heart disease) 
+* **adldiff** - whether the person has a condition that limits activities of daily living
+* **region** -  northeastern US,  midwestern US, western US, and other
+* **age** 
+* **black**
+* **gender**
+* **married**
+* **school** - # of years of education
+* **faminc** - family income in $10 000
+* **employed**
+* **privins** - whether the person is covered by private health insurance 
+* **medicaid** - whether the person is covered by Medicaid
+
+
+<br/>
+Let us start with loading the dataset and specifying the correct variable types.
+<br/>
+
+```{r, message=FALSE,warning=FALSE}
+library(readr)
+library(dplyr)
+
+DebTrivedi <- read_csv('C:/Users/elini/Desktop/nine circles/DebTrivedi.csv')
+
+DebTrivedi$health <- factor(DebTrivedi$health,ordered = TRUE,levels = c('poor','average','excellent'))
+DebTrivedi$adldiff <- factor(DebTrivedi$adldiff)
+DebTrivedi$region <- factor(DebTrivedi$region,levels = c('other','midwest','noreast','west'))
+DebTrivedi$black <- factor(DebTrivedi$black)
+DebTrivedi$gender <- factor(DebTrivedi$gender)
+DebTrivedi$married <- factor(DebTrivedi$married)
+DebTrivedi$employed <- factor(DebTrivedi$employed)
+DebTrivedi$privins <- factor(DebTrivedi$privins)
+DebTrivedi$medicaid <- factor(DebTrivedi$medicaid)
+```
+
+<br/>
+We will seek to model # of physician office visits **ofp** using predictors **emr**,**hosp**, **health**, **numchron**, **adldiff**, **region**, **age**, **black**, **gender**, **married**, **school**, **faminc**, **employed**, **privins**, and **medicaid**. Let us check the predictors next.
+<br/>
+
+```{r}
+any(duplicated(DebTrivedi))
+any(is.na(DebTrivedi))
+```
+
+```{r,message=FALSE,warning=FALSE,echo=FALSE}
+summary(DebTrivedi$emer)
+summary(DebTrivedi$hosp)
+summary(DebTrivedi$health)
+summary(DebTrivedi$numchron)
+summary(DebTrivedi$adldiff)
+summary(DebTrivedi$region)
+summary(DebTrivedi$age)
+summary(DebTrivedi$black)
+summary(DebTrivedi$gender)
+summary(DebTrivedi$married)
+summary(DebTrivedi$school)
+summary(DebTrivedi$faminc)
+summary(DebTrivedi$employed)
+summary(DebTrivedi$privins)
+summary(DebTrivedi$medicaid)
+```
+
+```{r,message=FALSE,warning=FALSE,echo=FALSE}
+hist(DebTrivedi$emer,main = 'emer',xlab = 'emer')
+hist(DebTrivedi$hosp,main = 'hosp',xlab = 'hosp')
+plot(DebTrivedi$health,main = 'health')
+hist(DebTrivedi$numchron,main = 'numchron',xlab = 'numchron')
+plot(DebTrivedi$adldiff,main = 'adldiff')
+plot(DebTrivedi$region,main = 'region')
+hist(DebTrivedi$age,main = 'age',xlab = 'age')
+plot(DebTrivedi$black,main = 'black')
+plot(DebTrivedi$gender,main = 'gender')
+plot(DebTrivedi$married,main = 'married')
+hist(DebTrivedi$school,main = 'school',xlab = 'school')
+hist(DebTrivedi$faminc,main = 'faminc',xlab = 'faminc')
+plot(DebTrivedi$employed,main = 'employed')
+plot(DebTrivedi$privins,main = 'privins')
+plot(DebTrivedi$medicaid,main = 'medicaid')
+```
+
+<br/>
+No data is missing. Concerning the values of the predictors, nothing seems out of the ordinary. The redundancy analysis is next.
+<br/>
+
+```{r,message=FALSE,warning=FALSE}
+library(Hmisc)
+redun(~.- ofp - ofnp - opp - opnp,data = DebTrivedi,nk = 0, r2 = 0.95)
+```
+
+<br/>
+No variable is overly redundant; thus, we keep all variables in the model. Let us check the number of parameters.
+<br/>
+
+```{r,message=FALSE,warning=FALSE}
+dim(model.matrix(ofp ~ emer + hosp + health + numchron + adldiff + region + age + black + gender + married + school + faminc + employed + privins + medicaid,data = DebTrivedi))
+
+dim(model.matrix(ofp ~ (emer + hosp + health + numchron + adldiff + region + age + black + gender + married + school + faminc + employed + privins + medicaid)^2,data = DebTrivedi))
+```
+
+<br/>
+We have 4406 individual observations. The Poisson model with all interactions will have 168 terms, which satisfies our guidelines (15-20 observations per parameter, the ratio is 26.2 for our model). We could even consider additional nonlinear terms in the model. However, we wish to keep the presentation simpler. In addition, we also fit hurdle/zero-inflated models, which double the number of parameters. In such a case, the fits seem still reasonable enough. 
+<br/>
+
+## Poisson regression 
+
+<br/>
+We start our modelling with a Poisson regression, i.e., the model assumes that the response has a Poisson distribution $P[Y = k] = e^{-\lambda} \frac{\lambda^k}{k!}$, where $\lambda>0$. 
+
+The Poisson distribution is a natural distribution for a count response, as we explain later. The link function for the model is usually taken as the logarithm (which is a canonical link for the Poisson model). Thus, the link function for the model is$\mathrm{log} \; E(Y|X) = X\beta$, i.e., $\lambda = e^{X\beta}$.
+
+Let us fit the Poisson model for our data.
+<br/>
+
+```{r,message=FALSE,warning=FALSE}
+full_model <- glm(ofp ~ (emer + hosp + health + numchron + adldiff + region + age + black + gender + married + school + faminc + employed + privins + medicaid)^2, family = poisson, DebTrivedi)
+```
+
+<br/>
+We can test the significance of the predictors via the likelihood ratio test.
+<br/>
+
+```{r,message=FALSE,warning=FALSE}
+variables <- c('emer','hosp','health','numchron','adldiff','region','age','black','gender' ,'married','school','faminc','employed','privins','medicaid')
+
+anova_pvalues <- rep(0,1,length(variables))
+
+ for(i in 1:length(variables)){
+      
+      formula <- as.formula(paste('ofp ~ (',paste(variables[-i],collapse='+'),')^2'))
+      model_red <- glm(formula, family = poisson, DebTrivedi)
+      anova_pvalues[i] <- anova(model_red,full_model)$`Pr(>Chi)`[2]
+ }
+
+res <- as.data.frame(cbind(variables,round(anova_pvalues,digits = 6)))
+colnames(res) <- c('Variable','Pr(>Chi)')
+res
+```
+
+<br/>
+All variables seem highly significant. We can also check the significance of interaction terms.
+<br/>
+
+```{r,message=FALSE,warning=FALSE}
+no_int_model <- glm(ofp ~ emer + hosp + health + numchron + adldiff + region + age + black + gender + married + school + faminc + employed + privins + medicaid, family = poisson, DebTrivedi)
+
+anova(no_int_model,full_model)
+```
+
+<br/>
+Akaike's information criterion offers another way to compare these models.
+<br/>
+
+```{r,message=FALSE,warning=FALSE}
+aic_stat <- cbind(AIC(full_model),AIC(no_int_model))
+colnames(aic_stat) <- c('full','no inter.')
+aic_stat
+```
+
+<br/>
+Overall, the full model with all interactions seems justified. However, we need to check the distributional assumptions of our model to ensure that our tests are valid.
+
+Let us first discuss a motivation behind modelling count responses via the Poisson model. Let's assume a simple count process, a random process that denotes a number of occurrences of some event in time, i.e., this process starts in the state zero, then eventually moves to the state one, then two, and so on. Let us assume that the *rate* of occurrence of the tracked event is constant in time; the distribution of time to the next event is always the same and does not depend on the past. Only continuous distribution that has this *memoryless* property is exponential distribution $f(t;\lambda) = \lambda e^{-\lambda t}$  (i.e., it meets $P[t > T + \delta| t > \delta] = P[t >T]$, in other words, the distribution of the time to a next event does not depend on how much time has already passed). It can be shown that the distribution of the number of events in the period $[0,T]$ for this count process is Poisson with parameter $\lambda T$. 
+
+Thus, we see that the Poisson distribution of the count response is tied to the assumption that the underlying count process is close to this idealized simple count process with a constant rate. Usually, this is not the case, and the counts are somehow correlated (in our case, we can suspect that a visit to a doctor increases the probability of further visits). Thus, the distribution of the number of visits is not truly Poisson. In terms of fit, this model misspecification translates to a so-called overdispersion/underdispersion.
+
+Poisson distribution is a single-parameter distribution; thus, as opposed to the normal distribution, it does not have a separate parameter for scale (or, in other words, variance). The variance of the Poisson distribution is equal to its mean, i.e, the variance function of the model is $\mathrm{Var} (Y|X) =  E(Y|X) = e^{X\beta}$. Let us plot the residuals of the model to check this assumption. First, we plot the raw residuals.
+<br/>
+
+```{r,message=FALSE,warning=FALSE}
+plot(predict(full_model,type = 'response'),residuals(full_model,type = 'response'),xlab = 'Predicted Values', ylab = 'Raw residuals')
+qqnorm(residuals(full_model,type = 'response'))
+qqline(residuals(full_model,type = 'response'))
+```
+
+<br/>
+We observe that the distribution of residuals is obviously not normal, and their variance increases with the predicted values. Let us compute the Pearson residuals $\frac{y_i - \hat{y}_i}{\sqrt{\hat{y}_i}}$, the raw residuals divided by their expected standard deviation.
+<br/>
+
+```{r,message=FALSE,warning=FALSE}
+(residuals(full_model,type = 'response')/sqrt(predict(full_model,type = 'response')))[1:5]
+residuals(full_model,type = 'pearson')[1:5]
+```
+
+<br/>
+If the specification of our model is correct, the Pearson residuals should have a constant spread.
+<br/>
+
+```{r,message=FALSE,warning=FALSE}
+plot(predict(full_model,type = 'response'),residuals(full_model,type = 'pearson'),xlab = 'Predicted Values', ylab = 'Pearson residuals')
+qqnorm(residuals(full_model,type = 'pearson'))
+qqline(residuals(full_model,type = 'pearson'))
+```
+
+<br/>
+We observe that this is not the case; the spread in residuals still increases with the predicted values even after the correction. Another way to check the variance assumption is to compute the Pearson $\chi^2$ statistic (or deviance statistic) of the model and divide it by its degrees of freedom. Provided that the Poisson model is correctly specified, these ratios should be close to one (*J. W. Hardin and J. M. Hilbe. Generalized linear models and extensions. Stata Press, 2007.*). 
+<br/>
+
+```{r,message=FALSE,warning=FALSE}
+# Pearson chi-squared
+sum(residuals(full_model,type = 'pearson')^2)/summary(full_model)$df.residual
+# Deviance
+summary(full_model)$deviance/summary(full_model)$df.residual
+```
+
+<br/>
+We see that these values are very far from one. Thus, our model is clearly *overdispersed*. There are two primary sources of the overdispersion (*J. M. Hilbe. Negative binomial regression. Cambridge University Press, 2011.*). One is *apparent*, it is caused, for example, by missing important predictors in the model, outliers, or an inadequate link. The real overdispersion is, for example, caused by correlation between responses, as we discussed earlier, or by an excess variation between response probabilities. 
+
+Let us check that our overdispersion is not merely *apparent*. We fitted a fairly general model that included all assumed predictors and all first-order interactions, which should be sufficient. Thus, let us look for the presence of outliers. First, we will plot the leverage and the Cook's distance.
+<br/>
+
+```{r,message=FALSE,warning=FALSE,echo=FALSE}
+plot(hatvalues(full_model),ylab = "Leverage", type = "h")
+plot(cooks.distance(full_model),ylab = "Cook's distance", type = "h")
+```
+
+<br/>
+Some observations might be overly influential. Thus, we will attempt to remove these (based on the leverage and the Cook's distance thresholds) and check whether the overdispersion improved.
+<br/>
+
+```{r,message=FALSE,warning=FALSE}
+full_model_cred1 <- glm(ofp ~ (emer + hosp + health + numchron + adldiff + region + age + black + gender + married + school + faminc + employed + privins + medicaid)^2, family = poisson, DebTrivedi[cooks.distance(full_model) < 0.2,])
+
+full_model_cred2 <- glm(ofp ~ (emer + hosp + health + numchron + adldiff + region + age + black + gender + married + school + faminc + employed + privins + medicaid)^2, family = poisson, DebTrivedi[cooks.distance(full_model) < 0.1,])
+
+full_model_cred3 <- glm(ofp ~ (emer + hosp + health + numchron + adldiff + region + age + black + gender + married + school + faminc + employed + privins + medicaid)^2, family = poisson, DebTrivedi[cooks.distance(full_model) < 0.05,])
+
+full_model_cred4 <- glm(ofp ~ (emer + hosp + health + numchron + adldiff + region + age + black + gender + married + school + faminc + employed + privins + medicaid)^2, family = poisson, DebTrivedi[cooks.distance(full_model) < 0.025,])
+
+
+full_model_lred1 <- glm(ofp ~ (emer + hosp + health + numchron + adldiff + region + age + black + gender + married + school + faminc + employed + privins + medicaid)^2, family = poisson, DebTrivedi[hatvalues(full_model) < 0.8,])
+
+full_model_lred2 <- glm(ofp ~ (emer + hosp + health + numchron + adldiff + region + age + black + gender + married + school + faminc + employed + privins + medicaid)^2, family = poisson, DebTrivedi[hatvalues(full_model) < 0.6,])
+
+full_model_lred3 <- glm(ofp ~ (emer + hosp + health + numchron + adldiff + region + age + black + gender + married + school + faminc + employed + privins + medicaid)^2, family = poisson, DebTrivedi[hatvalues(full_model) < 0.4,])
+
+full_model_lred4 <- glm(ofp ~ (emer + hosp + health + numchron + adldiff + region + age + black + gender + married + school + faminc + employed + privins + medicaid)^2, family = poisson, DebTrivedi[hatvalues(full_model) < 0.2,])
+
+
+full_model_clred1 <- glm(ofp ~ (emer + hosp + health + numchron + adldiff + region + age + black + gender + married + school + faminc + employed + privins + medicaid)^2, family = poisson, DebTrivedi[hatvalues(full_model) < 0.8 & cooks.distance(full_model) < 0.2,])
+
+full_model_clred2 <- glm(ofp ~ (emer + hosp + health + numchron + adldiff + region + age + black + gender + married + school + faminc + employed + privins + medicaid)^2, family = poisson, DebTrivedi[hatvalues(full_model) < 0.6 & cooks.distance(full_model) < 0.1,])
+
+full_model_clred3 <- glm(ofp ~ (emer + hosp + health + numchron + adldiff + region + age + black + gender + married + school + faminc + employed + privins + medicaid)^2, family = poisson, DebTrivedi[hatvalues(full_model) < 0.4 & cooks.distance(full_model) < 0.05,])
+
+full_model_clred4 <- glm(ofp ~ (emer + hosp + health + numchron + adldiff + region + age + black + gender + married + school + faminc + employed + privins + medicaid)^2, family = poisson, DebTrivedi[hatvalues(full_model) < 0.2 & cooks.distance(full_model) < 0.025,])
+
+pearson_stat <- rbind(
+  sum(residuals(full_model,type = 'pearson')^2)/summary(full_model)$df.residual,
+  sum(residuals(full_model_cred1,type = 'pearson')^2)/summary(full_model_cred1)$df.residual,
+  sum(residuals(full_model_cred2,type = 'pearson')^2)/summary(full_model_cred2)$df.residual,
+  sum(residuals(full_model_cred3,type = 'pearson')^2)/summary(full_model_cred3)$df.residual,
+  sum(residuals(full_model_cred4,type = 'pearson')^2)/summary(full_model_cred4)$df.residual,
+  sum(residuals(full_model_lred1,type = 'pearson')^2)/summary(full_model_cred1)$df.residual,
+  sum(residuals(full_model_lred2,type = 'pearson')^2)/summary(full_model_cred2)$df.residual,
+  sum(residuals(full_model_lred3,type = 'pearson')^2)/summary(full_model_cred3)$df.residual,
+  sum(residuals(full_model_lred4,type = 'pearson')^2)/summary(full_model_cred4)$df.residual,
+  sum(residuals(full_model_clred1,type = 'pearson')^2)/summary(full_model_cred1)$df.residual,
+  sum(residuals(full_model_clred2,type = 'pearson')^2)/summary(full_model_cred2)$df.residual,
+  sum(residuals(full_model_clred3,type = 'pearson')^2)/summary(full_model_cred3)$df.residual,
+  sum(residuals(full_model_clred4,type = 'pearson')^2)/summary(full_model_cred4)$df.residual)
+dev_stat <- rbind(
+  summary(full_model)$deviance/summary(full_model)$df.residual,
+  summary(full_model_cred1)$deviance/summary(full_model_cred1)$df.residual,
+  summary(full_model_cred2)$deviance/summary(full_model_cred2)$df.residual,
+  summary(full_model_cred3)$deviance/summary(full_model_cred3)$df.residual,
+  summary(full_model_cred4)$deviance/summary(full_model_cred4)$df.residual,
+  summary(full_model_lred1)$deviance/summary(full_model_cred1)$df.residual,
+  summary(full_model_lred2)$deviance/summary(full_model_cred2)$df.residual,
+  summary(full_model_lred3)$deviance/summary(full_model_cred3)$df.residual,
+  summary(full_model_lred4)$deviance/summary(full_model_cred4)$df.residual,
+  summary(full_model_clred1)$deviance/summary(full_model_cred1)$df.residual,
+  summary(full_model_clred2)$deviance/summary(full_model_cred2)$df.residual,
+  summary(full_model_clred3)$deviance/summary(full_model_cred3)$df.residual,
+  summary(full_model_clred4)$deviance/summary(full_model_cred4)$df.residual)
+
+stats <- cbind(pearson_stat,dev_stat)
+rownames(stats) <- c('full','CD < 0.2','CD < 0.1','CD < 0.05','CD < 0.025','L < 0.8','L < 0.6','L < 0.4','L < 0.2','CD < 0.2 & L < 0.8','CD < 0.1 & L < 0.6','CD < 0.05 & L < 0.4','CD < 0.025 & L < 0.2')
+colnames(stats) <- c('pearson * (1/dof)','deviance * (1/dof)')
+stats
+```
+
+<br/>
+We observe that the overdispersion showed little improvement. Thus, we will assume that the overdispersion is not merely apparent.
+
+The last method to assess the fit of the Poisson model we will demonstrate here is to compare predicted ratios of count responses to the observed ratios in the data. We will compute the predicted percentages by computing the predicted probabilities for each observation and averaging the result for each count response (0, 1, 2, etc. ).   
+<br/>
+
+```{r,message=FALSE,warning=FALSE}
+obs_freq <- numeric(21)
+pred_freq <- numeric(21)
+
+y <- predict(full_model,type = 'response')
+
+for(i in 0:20){
+obs_freq[i+1] <- sum(DebTrivedi$ofp == i)/4406*100 # observed percentage
+pred_freq[i+1] <- mean(exp(-y)*y^i/factorial(i))*100 # predicted percentage
+}
+
+obs_freq
+pred_freq
+
+# or simply
+library(pscl)
+apply(predprob(full_model),2,mean)[1:21]*100
+```
+
+<br/>
+We observe that in this regard, the fit is quite poor. The Poisson model predicts a significantly smaller number of zero (and one) responses compared to the observed counts. Underestimation of zero responses, especially, is another common issue with Poisson models in practice.  
+
+A nice way to visualize this effect is a rootogram: the red line denotes the square root of the predicted total number of count responses (total number of 0s, total number of 1s, etc.). The grey bars denote the actual observed counts. Provided that the Poisson model is correct, the gray bars should have their endpoints near the zero line.
+<br/>
+
+```{r,message=FALSE,warning=FALSE}
+library(topmodels)
+rootogram(full_model, xlim = c(0,60), confint = FALSE, plot = "base")
+```
+
+<br/>
+Overall, we determined that significant overdispersion is present and there is an excessive number of zeros, making the simple Poisson model not suitable for this dataset.
+<br/>
+
+## Variance robust errors, pairs bootstrap, and quasi-Poisson model
+
+<br/>
+Before we introduce more general models than the Poisson model, we will examine methods that adjust standard error estimates to account for overdispersion in the Poisson model. Overdispersion causes biased (deflated) standard error estimates, which underestimate the variance in the data and make insignificant predictors appear highly significant. However, the coefficient estimates are still consistent provided that the conditional mean expectation ($E(Y|X) = e^{X\beta}$) is correctly specified (*A. C. Cameron and P. K. Trivedi. Microeconometrics: methods and applications. Cambridge University Press, 2005.*). 
+
+We should keep in mind that these methods do not change the fit itself (only the standard error estimates). Hence, these methods are probably not the most appropriate in our case, since we observed that the Poisson model fits the data poorly due to a large number of excess zeros.
+
+Handling overdispersion in Poisson regression is very similar to heteroskedasticity in ordinary linear regression. The first correction of standard error estimates is using heteroskedasticity-consistent standard errors (*J. W. Hardin and J. M. Hilbe. Generalized linear models and extensions. Stata press, 2007.*). We will consider HC0 standard errors (Eicker–Huber–White) and HC4 standard errors (Cribari-Neto). According to simulations, HC4 estimates should perform better in the presence of high leverage observations, and when errors are not normally distributed (*F. Cribari-Neto. Asymptotic inference under heteroskedasticity of unknown form. Computational Statistics & Data Analysis 45.2 (2004): 215-233.*), which is our case.
+
+To assess the significance of the predictors in the model, we will use the Wald test with the heteroskedasticity-consistent standard errors.
+<br/>
+
+```{r,message=FALSE,warning=FALSE}
+library(lmtest)
+library(sandwich)
+
+st_errors <- cbind(coeftest(full_model)[1:20,2],coeftest(full_model,vcov = vcovHC(full_model, type = 'HC0'))[1:20,2],coeftest(full_model,vcov = vcovHC(full_model, type = 'HC4'))[1:20,2])
+colnames(st_errors) <- c('SE', 'SE(HC0)','SE(HC4)')
+st_errors
+
+
+waldtest_pvalues <- rep(0,1,length(variables))
+waldtest_HC0_pvalues <- rep(0,1,length(variables))
+waldtest_HC4_pvalues <- rep(0,1,length(variables))
+
+for(i in 1:length(variables)){
+      
+      formula <- as.formula(paste('ofp ~ (',paste(variables[-i],collapse='+'),')^2'))
+      model_red <- glm(formula, family = poisson, DebTrivedi)
+      waldtest_pvalues[i] <- waldtest(model_red,full_model,test = "Chisq")$`Pr(>Chisq)`[2]
+      waldtest_HC0_pvalues[i] <- waldtest(model_red,full_model,vcov = vcovHC(full_model, type = c("HC0")),test = "Chisq")$`Pr(>Chisq)`[2]
+      waldtest_HC4_pvalues[i] <- waldtest(model_red,full_model,vcov = vcovHC(full_model, type = c("HC4")),test = "Chisq")$`Pr(>Chisq)`[2]
+}
+
+res_HC <- as.data.frame(cbind(variables,round(waldtest_pvalues,digits = 6),round(waldtest_HC0_pvalues,digits = 6),round(waldtest_HC4_pvalues,digits = 6)))
+colnames(res_HC) <- c('Variable','Pr(>Chi)', 'Pr(>Chi) (HC0)' ,'Pr(>Chi) (HC4)')
+res_HC
+```
+
+<br/>
+We observe that heteroskedasticity-consistent standard errors are much larger than the original standard error estimates; HC4 estimates are even larger than HC0 estimates. Some variable are no longer statistically significant; **black**, **married**, and **faminc** for HC0 and  even **emer**, **adldiff**,**region**,**gender**,**employed**, and **medicaid** for HC4.
+
+An alternative to heteroskedasticity-consistent standard errors is a bootstrapped Wald test (*J. W. Hardin and J. M. Hilbe. Generalized linear models and extensions. Stata press, 2007.*).
+<br/
+
+```{r,message=FALSE,warning=FALSE}
+set.seed(123) # for reproducibility
+nb <- 500
+wald_boot <- matrix(0,15,nb)
+pwald <- numeric(15)
+
+for(i in 1:nb){
+  
+  DebTrivedi_new <-  DebTrivedi[sample(nrow(DebTrivedi) , rep=TRUE),]
+  
+  full_model_new <- glm(ofp ~ (emer + hosp + health + numchron + adldiff + region + age + black + gender + married + school + faminc + employed + privins + medicaid)^2, family = poisson, DebTrivedi_new)
+  
+  for (j in 1:15){
+  index <- grepl(variables[j],names(coefficients(full_model)))
+  
+  # trycatch to skip numerical problems with inversions
+  V <- vcov(full_model_new)[index,index]
+  wald_boot[j,i] <- tryCatch((coefficients(full_model_new)[index]-coefficients(full_model)[index]) %*% solve(V) %*% (coefficients(full_model_new)[index]-coefficients(full_model)[index]), error = function(e) {NaN})
+  }
+}
+
+for (j in 1:15){
+index <- grepl(variables[j],names(coefficients(full_model)))
+V <- vcov(full_model)[index,index]
+wald <- coefficients(full_model)[index] %*% solve(V) %*% coefficients(full_model)[index]          
+pwald[j] <- mean(wald_boot[j,] > as.numeric(wald),na.rm = TRUE) # p-value
+}
+
+boot_res <- as.data.frame(cbind(res_HC,round(pwald,digits = 3)))
+colnames(boot_res) <- c('Variable','Pr(>Chi)', 'Pr(>Chi) (HC0)' ,'Pr(>Chi) (HC4)','P-value (bootstrap)')
+boot_res
+```
+
+<br/>
+The results of the bootstrap seem to fall between the HC0 and HC4 estimates. Again, some variables appear to be non-significant, namely, **black**, **gender**, **married**, and **faminc**.
+
+The last method, which we will mention in this part, is quasi-Poisson regression. Quasi-Poisson regression has the same conditional mean specification as the Poisson model ($\mathrm{log} \; \mu = \mathrm{log} \; E(Y|X) = X\beta$), but the variance function is assumed to be $\mathrm{Var} (Y|X) = \theta\mu$, where $\theta$
+is a free dispersion parameter. Quasi-Poisson regression exploits the fact that to obtain estimates of $\beta  s$, we do not need to specify the whole distribution, just the mean and variance (this is an approach fully utilized in generalized estimating equations, so-called GEE). 
+
+Quasi-Poisson regression leads to the same $\beta s$ estimates as Poisson regression. However, the error estimates are modified (*A. Zeileis, C. Kleiber, and S. Jackman. Regression models for count data in R. Journal of statistical software 27.1 (2008): 1-25.*). We can also notice that the scaling parameter for dispersion is based on the aforementioned Pearson statistic.
+
+```{r,message=FALSE,warning=FALSE}
+full_model_qp <- glm(ofp ~ (emer + hosp + health + numchron + adldiff + region + age + black + gender + married + school + faminc + employed + privins + medicaid)^2, family = quasipoisson, DebTrivedi)
+
+
+coef <- cbind(coefficients(full_model),coefficients(full_model_qp))[1:20,]
+colnames(coef) <- c('Poisson','Quasi-Poisson')
+coef
+
+sum(residuals(full_model,type = 'pearson')^2)/summary(full_model)$df.residual
+summary(full_model_qp)$dispersion
+```
+
+<br/>
+We should note that quasi-Poisson regression is a *quasi-likelihood* approach; we are not specifying the whole distribution, just the first two moments. This means that we do not have some usual characteristics available, such as the likelihood function, the AIC, or the count probabilities of the model.
+<br/>
+
+```{r,error=TRUE}
+logLik(full_model_qp)
+AIC(full_model_qp)
+predprob(full_model_qp)
+```
+
+<br/>
+However, we have available recomputed standard errors. 
+<br/>
+
+```{r,message=FALSE,warning=FALSE}
+anova_pvalues_qp <- rep(0,1,length(variables))
+
+ for(i in 1:length(variables)){
+      
+      formula <- as.formula(paste('ofp ~ (',paste(variables[-i],collapse='+'),')^2'))
+      model_red <- glm(formula, family = quasipoisson, DebTrivedi)
+      anova_pvalues_qp[i] <- anova(model_red,full_model_qp)$`Pr(>F)`[2]
+ }
+
+
+res_qp <- as.data.frame(cbind(boot_res,round(anova_pvalues_qp,digits = 6)))
+colnames(res_qp) <- c('Variable','Pr(>Chi)', 'Pr(>Chi) (HC0)' ,'Pr(>Chi) (HC4)','P-value (bootstrap)','Pr(>F) (quasi-pois.)')
+res_qp
+```
+
+<br/>
+We observe that the significance of the variables in the model for the quasi-likelihood regression is quite similar to the Wald test based on HC0 standard errors;  variables  **black**, **married**, and **faminc** appear non-significant. 
+<br/>
+
+## Negative binomial regression
+
+<br/>
+Negative binomial regression is an alternative to Poisson regression for modelling the count response. Negative binomial distribution models the number of failures in a sequence of i.i.d. Bernoulli trials before a specified number of successes occur, i.e., the distribution has two parameters: the probability of a success and the number of successes. The Poisson distribution is a limit of the negative binomial distribution when the probability of success goes to one.  
+
+This usual interpretation of the negative binomial distribution does not really provide a connection to the count processes. To achieve one example of this connection, let us assume that the distribution of counts has a Poisson distribution with a parameter $\lambda$. Now, let us assume that $\lambda$ is not fully deterministic (as was the case for the Poisson regression, where $\lambda = e^{X\beta}$). Instead, let $\lambda$ be equal to $\nu \mu$ where $\nu>0$ is a random variable and just $\mu$ is deterministic (e.g., $\mu = e^{X\beta}$) . 
+
+The $\nu$ represents an observed heterogeneity in the data. Let us assume that  $\nu$ has a gamma distribution (https://en.wikipedia.org/wiki/Gamma_distribution) with the shape parameter $\delta$ equal to the rate parameter. Then, the marginal distribution of the count response (in which $\nu$ is integrated out, i.e., it is essentially an "average" distribution of the count response) is a negative binomial distribution with parameter $\delta$ and $\mu = X\beta$, see *A. C. Cameron and P. K. Trivedi. Microeconometrics: methods and applications. Cambridge university press, 2005.* for more details.
+
+The link function for the negative binomial is usually logarithmic, as in the Poisson distribution, i.e., 
+$\mathrm{log} \; \mu = \mathrm{log} \; E(Y|X) = X\beta$ (negative binomial regression has the same conditional mean specification as the Poisson model). However, the variance function is $\mathrm{Var}(Y|X) = \mu + \alpha\mu^2$,  where $\theta >0$ (i.e., it is a quadratic function of the mean).
+
+The fit of the negative binomial regression for our data is as follows.
+<br/>
+
+
+```{r,message=FALSE,warning=FALSE}
+library(MASS)
+full_model_nb <- glm.nb(ofp ~ (emer + hosp + health + numchron + adldiff + region + age + black + gender + married + school + faminc + employed + privins + medicaid)^2, control = list(epsilon = 1e-08, maxit = 100, trace = FALSE), DebTrivedi)
+```
+
+<br/>
+We can compare the negative binomial model with the Poisson model using the AIC. 
+<br/>
+
+
+```{r,message=FALSE,warning=FALSE}
+aic_stat <- cbind(AIC(full_model),AIC(full_model_nb))
+colnames(aic_stat) <- c('poisson','negbin')
+aic_stat
+```
+
+<br/>
+We observe that the fit in terms of AIC is significantly better. Let us check the significance of variables.
+<br/>
+
+```{r,message=FALSE,warning=FALSE}
+anova_pvalues_nb <- rep(0,1,length(variables))
+
+ for(i in 1:length(variables)){
+      
+      formula <- as.formula(paste('ofp ~ (',paste(variables[-i],collapse='+'),')^2'))
+      model_red <- glm.nb(formula, control = list(epsilon = 1e-08, maxit = 100, trace = FALSE), DebTrivedi)
+      anova_pvalues_nb[i] <- anova(model_red,full_model_nb)$`Pr(Chi)`[2]
+ }
+
+res_nb <- as.data.frame(cbind(variables,round(anova_pvalues_nb,digits = 6)))
+colnames(res_nb) <- c('Variable','Pr(>Chi)')
+res_nb
+```
+
+<br/>
+The significance is quite similar to the quasi-Poisson model. Again, variables  **black** and **faminc** appear non-significant (**married** is borderline). We can compare the results of likelihood ratio tests with the bootstrapped Wald test. 
+<br/>
+
+```{r,message=FALSE,warning=FALSE}
+set.seed(123) # for reproducibility
+nb <- 500
+wald_boot <- matrix(0,15,nb)
+pwald <- numeric(15)
+
+for(i in 1:nb){
+  
+  DebTrivedi_new <-  DebTrivedi[sample(nrow(DebTrivedi) , rep=TRUE),]
+  
+  full_model_new <- glm.nb(ofp ~ (emer + hosp + health + numchron + adldiff + region + age + black + gender + married + school + faminc + employed + privins + medicaid)^2, control = list(epsilon = 1e-08, maxit = 100, trace = FALSE), DebTrivedi_new)
+  
+  if (full_model_new$converged == TRUE){
+    
+    for (j in 1:15){
+      
+      index <- grepl(variables[j],names(coefficients(full_model_nb)))
+      
+      V <- tryCatch(vcov(full_model_new)[index,index], error = function(e) {NaN})
+      
+      if (any(is.na(V)) == FALSE){
+        wald_boot[j,i] <- tryCatch((coefficients(full_model_new)[index]-
+                                  coefficients(full_model_nb)[index])%*%solve(V) %*%
+                                  (coefficients(full_model_new)[index]-coefficients(full_model_nb)[index]),
+                                  error = function(e) {NaN})
+      } else {wald_boot[j,i] = NaN}
+    }
+  } else {wald_boot[,i] = NaN}
+}
+
+for (j in 1:15){
+index <- grepl(variables[j],names(coefficients(full_model_nb)))
+V <- vcov(full_model_nb)[index,index]
+wald <- coefficients(full_model_nb)[index] %*% solve(V) %*% coefficients(full_model_nb)[index]          
+pwald[j] <- mean(wald_boot[j,] > as.numeric(wald),na.rm = TRUE) # p-value
+}
+
+boot_res_nb <- as.data.frame(cbind(variables,round(anova_pvalues_nb,digits = 6),round(pwald,digits = 3)))
+colnames(boot_res_nb) <- c('Variable','Pr(>Chi)','P-value (bootstrap)')
+boot_res_nb
+```
+
+<br/>
+The results of the bootstrap are similar to the previous bootstrap  (**black**, **married**, and **faminc** appear to be largely non-significant). 
+
+The negative binomial model can still be overdispersed, and we should check the number of predicted zeros. First, we can check the deviance and Pearson statistics.  
+<br/>
+
+```{r,message=FALSE,warning=FALSE}
+# Pearson chi-squared
+sum(residuals(full_model_nb,type = 'pearson')^2)/summary(full_model_nb)$df.residual
+# Deviance
+summary(full_model_nb)$deviance/summary(full_model_nb)$df.residual
+```
+
+<br/>
+These values are much closer to one. Next, we look at the residuals. We will use the simulation-based randomized quantile residuals from the DHARMa package (https://cran.r-project.org/web/packages/DHARMa/vignettes/DHARMa.html#interpreting-residuals-and-recognizing-misspecification-problems). Provided that the model is correctly specified, the randomized quantile residuals should be uniformly distributed. 
+<br/>
+
+```{r,message=FALSE,warning=FALSE}
+library(DHARMa)
+simulationOutput_nb <- simulateResiduals(fittedModel = full_model_nb)
+testUniformity(simulationOutput_nb)
+testDispersion(simulationOutput_nb)
+testQuantiles(simulationOutput_nb)
+```
+
+<br/>
+For comparison, let us repeat these tests for the Poisson model.
+<br/>
+
+```{r,message=FALSE,warning=FALSE}
+simulationOutput_q <- simulateResiduals(fittedModel = full_model)
+testUniformity(simulationOutput_q)
+testDispersion(simulationOutput_q)
+testQuantiles(simulationOutput_q)
+```
+
+<br/>
+The negative binomial model is a vast improvement over the Poisson model, although the models still do not seem quite right. Let us check the zeros next. The DHARMa package has a dedicated simulation-based test.
+<br/>
+
+```{r,message=FALSE,warning=FALSE}
+testZeroInflation(simulationOutput_nb)
+```
+
+<br/>
+We see that the number of zeros is still incorrect. We can also check this fact by comparing the predicted number of zeros and the observed number. 
+<br/>
+
+```{r,message=FALSE,warning=FALSE}
+freq <- rbind(obs_freq,pred_freq,100*apply(predprob(full_model_nb),2,mean)[1:21])
+rownames(freq) <- c('observed','poisson','negative binomial')
+freq
+```
+
+<br/>
+Again, we observe that the negative binomial model is significantly better than the Poisson model, but it is slightly off.
+<br/>
+
+```{r,message=FALSE,warning=FALSE}
+rootogram(full_model_nb, xlim = c(0,60), confint = FALSE, plot = "base")
+```
+
+
+## Hurdle model
+
+<br/>
+The hurdle model consists of essentially two models, one model for modelling zero response and one model for modelling non-zero response. The usual combination is a binomial (i.e., logistic) regression for separating zero and non-zero responses with a truncated Poisson or truncated negative binomial regression for modeling positive counts. Let us first use the default hurdle model via the function *hurdle*; the binomial truncated Poisson hurdle model.
+<br/>
+
+```{r,message=FALSE,warning=FALSE}
+hurdle_binomial_poisson <- hurdle(ofp ~ (emer + hosp + health + numchron + adldiff + region + age + black + gender + married + school + faminc + employed + privins + medicaid)^2, data = DebTrivedi)
+
+
+aic_stat <- cbind(AIC(full_model),AIC(full_model_nb),AIC(hurdle_binomial_poisson))
+colnames(aic_stat) <- c('poisson','negbin','hurdle (bin/poisson)')
+aic_stat
+```
+
+<br/>
+We observe that the fit is relatively poor; let us check the truncated negative binomial model next.
+<br/>
+
+```{r,message=FALSE,warning=FALSE}
+hurdle_binomial_negbin <- hurdle(ofp ~ (emer + hosp + health + numchron + adldiff + region + age + black + gender + married + school + faminc + employed + privins + medicaid)^2, data = DebTrivedi, dist = 'negbin')
+
+aic_stat <- cbind(AIC(full_model),AIC(full_model_nb),AIC(hurdle_binomial_poisson),AIC(hurdle_binomial_negbin))
+colnames(aic_stat) <- c('poisson','negbin','hurdle (bin/poisson)','hurdle (bin/negbin)')
+aic_stat
+```
+
+<br/>
+The binomial/negative binomial hurdle is the best-fitting model so far in terms of the AIC. Let us demonstrate that the hurdle model indeed consists of two separate models. First, we fit the logistic model to model zero responses and compare the coefficients with the zero hurdle model coefficients.
+<br/>
+
+```{r,message=FALSE,warning=FALSE}
+visit <- ifelse(DebTrivedi$ofp > 0, 1, 0)
+zero_hurdle_model <- glm(visit ~ (emer + hosp + health + numchron + adldiff + region + age + black + gender + married + school + faminc + employed + privins + medicaid)^2, data=DebTrivedi,family=binomial)
+
+cbind(coefficients(hurdle_binomial_negbin)[(length(coefficients(hurdle_binomial_negbin))/2+1):length(coefficients(hurdle_binomial_negbin))],coefficients(zero_hurdle_model))[1:25,]
+```
+
+<br/>
+We observe that the fits are identical. Next, we fit the truncated negative binomial model for the non-zero responses and compare the coefficients with the count model coefficients of the hurdle model. 
+<br/>
+
+```{r,message=FALSE,warning=FALSE}
+library(glmmTMB)
+truncated_hurdle_model <-  glmmTMB(ofp ~ (emer + hosp + health + numchron + adldiff + region + age + black + gender + married + school + faminc + employed + privins + medicaid)^2, family=truncated_nbinom2(link = "log"), control=glmmTMBControl(optCtrl=list(iter.max=1e3,eval.max=1e3)), data=DebTrivedi[DebTrivedi$ofp >0 ,])
+
+cbind(coefficients(hurdle_binomial_negbin)[2:25],unlist(fixef(truncated_hurdle_model))[2:25])
+```
+
+<br/>
+These fits are also almost identical, which demonstrates that we could indeed fit two separate models. Next, we will check the significance of the predictors via the Wald test. 
+<br/>
+
+```{r,message=FALSE,warning=FALSE}
+waldtest_pvalues_hurdle <- rep(0,1,length(variables))
+
+ for(i in 1:length(variables)){
+      
+      formula <- as.formula(paste('ofp ~ (',paste(variables[-i],collapse='+'),')^2'))
+      model_red <- hurdle(formula, data = DebTrivedi, dist = 'negbin')
+      waldtest_pvalues_hurdle[i] <- waldtest(model_red,hurdle_binomial_negbin)$`Pr(>Chisq)`[2]
+ }
+
+res_hurdle <- as.data.frame(cbind(variables,round(waldtest_pvalues_hurdle,digits = 6)))
+colnames(res_hurdle) <- c('Variable','Pr(>Chi)')
+res_hurdle
+```
+
+<br/>
+We see that the results are pretty similar to the negative binomial and quasi-Poisson models (variables  **black** and **faminc** appear again non-significant). Let us check the results by comparing them to the bootstrap Wald test.
+<br/>
+
+```{r,message=FALSE,warning=FALSE}
+set.seed(123) # for reproducibility
+nb <- 500
+wald_boot_hurdle <- matrix(0,15,nb)
+pwald_hurdle <- numeric(15)
+
+for(i in 1:nb){
+  
+  DebTrivedi_new <-  DebTrivedi[sample(nrow(DebTrivedi) , rep=TRUE),]
+  
+  hurdle_model_new <- tryCatch(hurdle(ofp ~ (emer + hosp + health + numchron + adldiff + region + age + black + gender + married + school + faminc + employed + privins + medicaid)^2, data = DebTrivedi_new, dist = 'negbin'), error = function(e) {NaN})
+  
+  if (any(is.na(hurdle_model_new)) == FALSE){
+  for (j in 1:15){
+    
+  index <- grepl(variables[j],names(coefficients(hurdle_binomial_negbin)))
+  V <- vcov(hurdle_model_new)[index,index]
+  wald_boot_hurdle[j,i] <- tryCatch((coefficients(hurdle_model_new)[index]-coefficients(hurdle_binomial_negbin)[index]) %*% solve(V) %*% (coefficients(hurdle_model_new)[index]-coefficients(hurdle_binomial_negbin)[index]), error = function(e) {NaN})
+
+  }
+  }
+  
+  if (any(is.na(hurdle_model_new)) == TRUE){
+    wald_boot_hurdle[j,i] <-  NaN
+  }
+
+}
+
+for (j in 1:15){
+  
+index <- grepl(variables[j],names(coefficients(hurdle_binomial_negbin)))
+V <- vcov(hurdle_binomial_negbin)[index,index]
+wald <- coefficients(hurdle_binomial_negbin)[index] %*% solve(V) %*% coefficients(hurdle_binomial_negbin)[index]          
+pwald_hurdle[j] <- mean(wald_boot_hurdle[j,] > as.numeric(wald),na.rm = TRUE) # p-value
+}
+
+boot_res_hurdle <- cbind(res_hurdle,round(pwald_hurdle,digits = 3))
+colnames(boot_res_hurdle) <- c('Variable','P-value (Wald test)','P-value (bootstrap)')
+boot_res_hurdle
+```
+
+<br/>
+We observe that the bootstrap mostly confirms the results of the Wald test (variables  **black** and **faminc** appear non-significant). Let us now check the fit of the model. We investigate the predicted counts first.
+<br/>
+
+```{r,message=FALSE,warning=FALSE}
+freq <- rbind(obs_freq,pred_freq,100*apply(predprob(full_model_nb),2,mean)[1:21], 100*apply(predprob(hurdle_binomial_negbin),2,mean)[1:21])
+rownames(freq) <- c('observed','poisson','negative binomial','hurdle (bin/negbin)')
+freq
+```
+
+```{r,message=FALSE,warning=FALSE}
+rootogram(hurdle_binomial_negbin, xlim = c(0,60), confint = FALSE, plot = "base")
+```
+
+<br/>
+The predicted counts mirror the observed ones well. Lastly, let us check the residuals. Unfortunately, the DHARMa package does not support the model obtained from the *hurdle* function. However, we can check our separate fits. Alternatively, we can refit the hurdle model via the supported glmmTMB package.
+<br/>
+
+```{r,message=FALSE,warning=FALSE}
+simulationOutput_zero <- simulateResiduals(fittedModel = zero_hurdle_model)
+testUniformity(simulationOutput_zero)
+testQuantiles(simulationOutput_zero)
+
+
+simulationOutput_trunc <- simulateResiduals(fittedModel = truncated_hurdle_model)
+testUniformity(truncated_hurdle_model)
+testQuantiles(truncated_hurdle_model)
+```
+
+```{r,message=FALSE,warning=FALSE}
+# Refit of the hurdle model
+hurdle_binomial_negbin_alt <-  glmmTMB(ofp ~ (emer + hosp + health + numchron + adldiff + region + age + black + gender + married + school + faminc + employed + privins + medicaid)^2, family=truncated_nbinom2(link = "log"), control=glmmTMBControl(optCtrl=list(iter.max=5e3,eval.max=5e3)), data=DebTrivedi, ziformula = ~.)
+
+simulationOutput_hurdle <- simulateResiduals(fittedModel = hurdle_binomial_negbin_alt)
+testUniformity(simulationOutput_hurdle)
+testQuantiles(simulationOutput_hurdle)
+```
+
+<br/>
+We see no problems with the logistic regression model. We detect some slight discrepancies in the truncated negative binomial model. However, our hurdle model fits the data reasonably well overall.
+<br/>
+
+
+## Zero-inflated model
+
+<br/>
+The last model we will demonstrate here is zero-inflated. The zero-inflated model is a slight variation on the hurdle model. Similarly to the hurdle model, we assume a binary process that generates zeros. However, if the binary process does not generate a zero, the response can still be zero due to the count process. In other words, the zero-inflated model combines the logistic regression with a non-truncated Poisson or negative binomial regression. Since zero responses due to the binary process and the count are intertwined, the fit of the zero-inflated model cannot be separated into two fits (*J. M. Hilbe. Negative binomial regression. Cambridge University Press, 2011.*). 
+
+First, we fit the zero-inflated Poisson model.
+<br/>
+
+```{r,message=FALSE,warning=FALSE}
+zeroinfl_poisson <- zeroinfl(ofp ~ (emer + hosp + health + numchron + adldiff + region + age + black + gender + married + school + faminc + employed + privins + medicaid)^2, data = DebTrivedi)
+AIC(zeroinfl_poisson)
+```
+
+<br/>
+Analogously to the hurdle Poisson model, the zero-inflated Poisson model is poor. Let's try the zero-inflated negative binomial model next.
+<br/>
+
+```{r,message=FALSE,warning=FALSE}
+zeroinfl_negbin <- zeroinfl(ofp ~ (emer + hosp + health + numchron + adldiff + region + age + black + gender + married + school + faminc + employed + privins + medicaid)^2, data = DebTrivedi, dist = 'negbin')
+vcov(zeroinfl_negbin)[1,1:20]
+```
+
+<br/>
+Unfortunately, it appears that the fit is ill-conditioned. We can try the glmmTMB package instead. 
+<br/>
+
+```{r,message=FALSE,warning=FALSE}
+zeroinfl_negbin_refit <- glmmTMB(ofp ~ (emer + hosp + health + numchron + adldiff + region + age + black + gender + married + school + faminc + employed + privins + medicaid)^2, data=DebTrivedi, ziformula=~., family=nbinom2, control=glmmTMBControl(optCtrl=list(iter.max=5e3,eval.max=5e3)))
+zeroinfl_negbin_refit$fit$message
+```
+
+<br/>
+We see that indeed the convergence problem persists. Hence, we will fit a far simpler model without interactions instead.
+<br/>
+
+```{r,message=FALSE,warning=FALSE}
+zeroinfl_negbin_no_int <- zeroinfl(ofp ~ emer + hosp + health + numchron + adldiff + region + age + black + gender + married + school + faminc + employed + privins + medicaid, data = DebTrivedi, dist = 'negbin')
+summary(zeroinfl_negbin_no_int)
+```
+
+<br/>
+In terms of the AIC, this zero-inflated model is better than all models considered before. However, it is marginally worse than the binomial/negative binomial hurdle model without interaction terms.
+<br/>
+
+```{r,message=FALSE,warning=FALSE}
+hurdle_binomial_negbin_noint <- hurdle(ofp ~ (emer + hosp + health + numchron + adldiff + region + age + black + gender + married + school + faminc + employed + privins + medicaid), data = DebTrivedi, dist = 'negbin')
+
+
+aic_stat <- cbind(AIC(full_model),AIC(full_model_nb),AIC(hurdle_binomial_poisson),AIC(hurdle_binomial_negbin), AIC(hurdle_binomial_negbin_noint), AIC(zeroinfl_negbin_no_int))
+colnames(aic_stat) <- c('poisson','negbin','hurdle (bin/poisson)','hurdle (bin/negbin)', 'hurdle (bin/negbin, no inter.)', 'zero-infl (negbin, no inter.)')
+aic_stat
+```
+
+<br/>
+The Wald test for the zero-inflated model is performed analogously to the hurdle models.
+<br/>
+
+```{r,message=FALSE,warning=FALSE}
+waldtest_pvalues_hurdle <- rep(0,1,length(variables))
+
+ for(i in 1:length(variables)){
+      
+      formula <- as.formula(paste('ofp ~ (',paste(variables[-i],collapse='+'),')'))
+      model_red <- zeroinfl(formula, data = DebTrivedi, dist = 'negbin')
+      waldtest_pvalues_hurdle[i] <- waldtest(model_red,zeroinfl_negbin_no_int)$`Pr(>Chisq)`[2]
+ }
+
+res_zeroinfl <- as.data.frame(cbind(variables,round(waldtest_pvalues_hurdle,digits = 6)))
+colnames(res_zeroinfl) <- c('Variable','Pr(>Chi)')
+res_zeroinfl
+```
+
+<br/>
+We can also perform the bootstrap Wald test.
+<br/>
+
+```{r,message=FALSE,warning=FALSE}
+set.seed(123) # for reproducibility
+nb <- 500
+wald_boot_hurdle <- matrix(0,15,nb)
+wald_boot_zeroinfl <- matrix(0,15,nb)
+
+pwald_hurdle <- numeric(15)
+pwald_zeroinfl <- numeric(15)
+
+
+for(i in 1:nb){
+  
+  DebTrivedi_new <-  DebTrivedi[sample(nrow(DebTrivedi) , rep=TRUE),]
+  
+  zeroinfl_model_new <- tryCatch(zeroinfl(ofp ~ (emer + hosp + health + numchron + adldiff + region + age + black + gender + married + school + faminc + employed + privins + medicaid), data = DebTrivedi_new, dist = 'negbin'), error = function(e) {NaN})
+  
+  
+  if (any(is.na(zeroinfl_model_new)) == FALSE){
+  for (j in 1:15){
+  
+  index <- grepl(variables[j],names(coefficients(zeroinfl_negbin_no_int)))
+  V <- vcov(zeroinfl_model_new)[index,index]
+  wald_boot_zeroinfl[j,i] <- tryCatch((coefficients(zeroinfl_model_new)[index]-coefficients(zeroinfl_negbin_no_int)[index]) %*% solve(V) %*% (coefficients(zeroinfl_model_new)[index]-coefficients(zeroinfl_negbin_no_int)[index]), error = function(e) {NaN})
+  
+  }
+  }
+  
+   if (any(is.na(zeroinfl_model_new)) == TRUE){
+    wald_boot_zeroinfl[j,i] <-  NaN
+  }
+}
+
+for (j in 1:15){
+  
+index <- grepl(variables[j],names(coefficients(zeroinfl_negbin_no_int)))
+V <- vcov(zeroinfl_negbin_no_int)[index,index]
+wald <- coefficients(zeroinfl_negbin_no_int)[index] %*% solve(V) %*% coefficients(zeroinfl_negbin_no_int)[index]          
+pwald_zeroinfl[j] <- mean(wald_boot_zeroinfl[j,] > as.numeric(wald),na.rm = TRUE) # p-value
+
+}
+
+boot_res_zf <- cbind(res_zeroinfl,round(pwald_zeroinfl,digits = 3))
+colnames(boot_res_zf) <- c('Variable','P-value (Wald test)','P-value (bootstrap)')
+boot_res_zf
+```
+
+<br/>
+We observe that the bootstrap corresponds to the results of the Wald test. The biggest difference in comparison to the previous models is the fact that **employed** appears largely non-significant
+
+Next, we confirm that the model is well-specified. Let us plot the rootograms for the zero-inflated model. 
+<br/>
+
+```{r,message=FALSE,warning=FALSE}
+rootogram(zeroinfl_negbin_no_int, xlim = c(0,60), confint = FALSE, plot = "base")
+rootogram(hurdle_binomial_negbin, xlim = c(0,60), confint = FALSE, plot = "base")
+```
+
+<br/>
+As can be seen, the rootogram is almost identical to the hurdle model. Unfortunately, the DHARMa package also does not support the *zeroinfl* function. However, we can refit the model using the glmmTMB package.
+<br/>
+
+```{r,message=FALSE,warning=FALSE}
+zeroinfl_negbin_no_int_refit <- glmmTMB(ofp ~ emer + hosp + health + numchron + adldiff + region + age + black + gender + married + school + faminc + employed + privins + medicaid, data=DebTrivedi, ziformula=~., family=nbinom2)
+
+
+simulationOutput_zeroinfl <- simulateResiduals(fittedModel = zeroinfl_negbin_no_int_refit)
+testUniformity(simulationOutput_zeroinfl)
+testQuantiles(simulationOutput_zeroinfl)
+```
+
+<br/>
+The model seems to fit the data fairly well.
+<br/>
+
+## Model validation
+
+<br/>
+In evaluating the predictive performance of our count models, we can use the fact that all the considered regression models except the quasi-Poisson model provide a predictive distribution of the count response. Thus, we can use the same *scoring rules* that we used for models with ordinal response to compare the predictive distribution with the observed counts (*C. Czado, T. Gneiting, and L. Held. Predictive model assessment for count data. Biometrics 65.4 (2009): 1254-1261.*).
+). 
+<br/>
+
+* logarithmic score ($\frac{1}{n}\sum_i - \mathrm{log} \hat{p}_i$ where $\hat{p}_i$ is predicted probability of the observed count)
+
+```{r,message=FALSE,warning=FALSE}
+log_score <- function(pred_prob,obs_prob) {
+  
+  score <- 0
+  for (i in 1:dim(pred_prob)[1]){
+    score <- score -log(pred_prob[i,(obs_prob[i]+1)])
+  }
+  return (as.numeric(score/dim(pred_prob)[1]))
+}
+
+log_score_res <- rbind(
+log_score(predprob(full_model,at=0:200),DebTrivedi$ofp),
+log_score(predprob(full_model_nb,at=0:200),DebTrivedi$ofp),
+log_score(predprob(hurdle_binomial_poisson,at=0:200),DebTrivedi$ofp),
+log_score(predprob(hurdle_binomial_negbin,at=0:200),DebTrivedi$ofp),
+log_score(predprob(hurdle_binomial_negbin_noint,at=0:200),DebTrivedi$ofp),
+log_score(predprob(zeroinfl_poisson,at=0:200),DebTrivedi$ofp),
+log_score(predprob(zeroinfl_negbin_no_int,at=0:200),DebTrivedi$ofp))
+
+rownames(log_score_res) <- c('poisson','negbin','hurdle bin/poisson','hurdle bin/negbin','hurdle bin/negbin (no int)','zeroinf poisson','zeroinf negbin (no int)')
+colnames(log_score_res) <- 'log_score'
+log_score_res
+```
+
+* Brier score ($\frac{1}{n}\sum_i \sum_j (\hat{p}_{i,j} - 1_i(x=j))^2$ where $1_i$ is the indicator function for $i\mathrm{th}$ observation )
+
+```{r,message=FALSE,warning=FALSE}
+
+brier_score <- function(pred_prob,obs_prob) {
+
+  ind <- matrix(0,dim(pred_prob)[1],max(dim(pred_prob)[2],max(obs_prob)+1))
+  
+  for (i in 1:dim(pred_prob)[1]){
+    ind[i,obs_prob[i]+1] <- 1
+  }
+  
+  score <- sum((pred_prob - ind[,1:dim(pred_prob)[2]])^2)
+  return (as.numeric(score/dim(pred_prob)[1]))
+}
+
+brier_score_res <- rbind(
+brier_score(predprob(full_model,at = 0:200),DebTrivedi$ofp),
+brier_score(predprob(full_model_nb,at = 0:200),DebTrivedi$ofp),
+brier_score(predprob(hurdle_binomial_poisson,at = 0:200),DebTrivedi$ofp),
+brier_score(predprob(hurdle_binomial_negbin,at = 0:200),DebTrivedi$ofp),
+brier_score(predprob(hurdle_binomial_negbin_noint,at = 0:200),DebTrivedi$ofp),
+brier_score(predprob(zeroinfl_poisson,at = 0:200),DebTrivedi$ofp),
+brier_score(predprob(zeroinfl_negbin_no_int,at = 0:200),DebTrivedi$ofp))
+
+rownames(brier_score_res) <- c('poisson','negbin','hurdle bin/poisson','hurdle bin/negbin','hurdle bin/negbin (no int)','zeroinf poisson','zeroinf negbin (no int)')
+colnames(brier_score_res) <- 'brier_score'
+brier_score_res
+```
+
+* ranked probability score ($\frac{1}{n}\sum_i \sum_j (\hat{P}_{i,j} - 1_i(x \leq j))^2$ where $\hat{P}_{i,j}$ is the predicted cumulative probability for the $i\mathrm{th}$ observation and the response count $j$)
+
+```{r,message=FALSE,warning=FALSE}
+rps_score <- function(pred_prob,obs_prob) {
+  
+  ind <- matrix(0,dim(pred_prob)[1],max(dim(pred_prob)[2],max(obs_prob)+1))
+  
+  
+  for (i in 1:dim(pred_prob)[1]){
+    ind[i,obs_prob[i]+1] <- 1
+  }
+
+  score <- 0
+  for (i in 1:dim(pred_prob)[1]){
+    score <- score + sum((cumsum(pred_prob[i,]) - cumsum(ind[i,1:dim(pred_prob)[2]]))^2)
+  }
+  return (as.numeric(score/dim(pred_prob)[1]))
+}
+
+rps_score_res <- rbind(
+rps_score(predprob(full_model,at = 0:200),DebTrivedi$ofp),
+rps_score(predprob(full_model_nb,at = 0:200),DebTrivedi$ofp),
+rps_score(predprob(hurdle_binomial_poisson,at = 0:200),DebTrivedi$ofp),
+rps_score(predprob(hurdle_binomial_negbin,at = 0:200),DebTrivedi$ofp),
+rps_score(predprob(hurdle_binomial_negbin_noint,at = 0:200),DebTrivedi$ofp),
+rps_score(predprob(zeroinfl_poisson,at = 0:200),DebTrivedi$ofp),
+rps_score(predprob(zeroinfl_negbin_no_int,at = 0:200),DebTrivedi$ofp))
+
+rownames(rps_score_res) <- c('poisson','negbin','hurdle bin/poisson','hurdle bin/negbin','hurdle bin/negbin (no int)','zeroinf poisson','zeroinf negbin (no int)')
+colnames(rps_score_res) <- 'rps_score'
+rps_score_res
+```
+
+<br/>
+Let us also recheck the AIC.
+<br/>
+
+```{r,message=FALSE,warning=FALSE}
+aic_all <- rbind(AIC(full_model),AIC(full_model_nb),AIC(hurdle_binomial_poisson),AIC(hurdle_binomial_negbin),AIC(hurdle_binomial_negbin_noint),AIC(zeroinfl_poisson),AIC(zeroinfl_negbin_no_int))
+colnames(aic_all) <- 'AIC'
+
+cbind(log_score_res,brier_score_res,rps_score_res,aic_all)
+```
+
+<br/>
+The hurdle bin/negbin model is overall the best in terms of the scoring rules. However, it has significantly more parameters than other models: negbin, hurdle bin/negbin (no int), and zeroinf negbin (no int). Hurdle bin/negbin (no int) and zeroinf negbin (no int) have the lowest value of AIC. Thus, these models should generalize well.  
+<br/>
+
+```{r,message = FALSE,warning=FALSE}
+library(caret)
+
+## Number of repetitions and folds
+rep <- 50
+folds <- 10
+
+set.seed(123) # for reproducibility
+
+k <- 1
+
+log_score_cv <- matrix(NA,folds*rep,7)
+brier_score_cv <- matrix(NA,folds*rep,7)
+rps_score_cv <- matrix(NA,folds*rep,7)
+
+for(j in 1:rep){
+  
+  d <- createFolds(seq(1,dim(DebTrivedi)[1],1), k = 10)
+  
+  for(i in 1:folds){
+
+    index <- unlist(d[i])
+    train_set <- DebTrivedi[-index,]
+    test_set <- DebTrivedi[index,]
+    
+    poisson_new <- glm(ofp ~ (emer + hosp + health + numchron + adldiff + region + age + black + gender + married + school + faminc + employed + privins + medicaid)^2, family = poisson, train_set)
+    
+    negbin_new <- glm.nb(ofp ~ (emer + hosp + health + numchron + adldiff + region + age + black + gender + married + school + faminc + employed + privins + medicaid)^2, control = list(epsilon = 1e-08, maxit = 100, trace = FALSE), train_set)
+    
+    hurdle_binomial_poisson_new <- hurdle(ofp ~ (emer + hosp + health + numchron + adldiff + region + age + black + gender + married + school + faminc + employed + privins + medicaid)^2, data = train_set)
+    
+    hurdle_binomial_negbin_new <- hurdle(ofp ~ (emer + hosp + health + numchron + adldiff + region + age + black + gender + married + school + faminc + employed + privins + medicaid)^2, data = train_set, dist = 'negbin')
+    
+    hurdle_binomial_negbin_noint_new <- hurdle(ofp ~ (emer + hosp + health + numchron + adldiff + region + age + black + gender + married + school + faminc + employed + privins + medicaid), data = train_set, dist = 'negbin')
+    
+    zeroinfl_poisson_new <- zeroinfl(ofp ~ (emer + hosp + health + numchron + adldiff + region + age + black + gender + married + school + faminc + employed + privins + medicaid)^2, data = train_set)
+    
+    zeroinfl_negbin_no_int_new <- zeroinfl(ofp ~ emer + hosp + health + numchron + adldiff + region + age + black + gender + married + school + faminc + employed + privins + medicaid, data = train_set, dist = 'negbin')
+    
+    
+    log_score_cv[k,1] <- log_score(predprob(poisson_new,test_set,at=0:200),test_set$ofp)
+    log_score_cv[k,2] <- log_score(predprob(negbin_new,test_set,at=0:200),test_set$ofp)
+    log_score_cv[k,3] <- log_score(predprob(hurdle_binomial_poisson_new,test_set,at=0:200),test_set$ofp)
+    log_score_cv[k,4] <- log_score(predprob(hurdle_binomial_negbin_new,test_set,at=0:200),test_set$ofp)
+    log_score_cv[k,5] <- log_score(predprob(hurdle_binomial_negbin_noint_new,test_set,at=0:200),test_set$ofp)
+    log_score_cv[k,6] <- log_score(predprob(zeroinfl_poisson_new,test_set,at=0:200),test_set$ofp)
+    log_score_cv[k,7] <- log_score(predprob(zeroinfl_negbin_no_int_new,test_set,at=0:200),test_set$ofp)
+    
+    brier_score_cv[k,1] <-  brier_score(predprob(poisson_new,test_set,at=0:200),test_set$ofp)
+    brier_score_cv[k,2] <-  brier_score(predprob(negbin_new,test_set,at=0:200),test_set$ofp)
+    brier_score_cv[k,3] <-  brier_score(predprob(hurdle_binomial_poisson_new,test_set,at=0:200),test_set$ofp)
+    brier_score_cv[k,4] <-  brier_score(predprob(hurdle_binomial_negbin_new,test_set,at=0:200),test_set$ofp)
+    brier_score_cv[k,5] <-  brier_score(predprob(hurdle_binomial_negbin_noint_new,test_set,at=0:200),test_set$ofp)
+    brier_score_cv[k,6] <-  brier_score(predprob(zeroinfl_poisson_new,test_set,at =0:200),test_set$ofp)
+    brier_score_cv[k,7] <-  brier_score(predprob(zeroinfl_negbin_no_int_new,test_set,at=0:200),test_set$ofp)
+    
+    rps_score_cv[k,1] <-  rps_score(predprob(poisson_new,test_set,at=0:200),test_set$ofp)
+    rps_score_cv[k,2] <-  rps_score(predprob(negbin_new,test_set,at=0:200),test_set$ofp)
+    rps_score_cv[k,3] <-  rps_score(predprob(hurdle_binomial_poisson_new,test_set,at=0:200),test_set$ofp)
+    rps_score_cv[k,4] <-  rps_score(predprob(hurdle_binomial_negbin_new,test_set,at= 0:200),test_set$ofp)
+    rps_score_cv[k,5] <-  rps_score(predprob(hurdle_binomial_negbin_noint_new,test_set,at=0:200),test_set$ofp)
+    rps_score_cv[k,6] <-  rps_score(predprob(zeroinfl_poisson_new,test_set,at=0:200),test_set$ofp)
+    rps_score_cv[k,7] <-  rps_score(predprob(zeroinfl_negbin_no_int_new,test_set,at=0:200),test_set$ofp)
+    
+    k <- k + 1
+    
+  }
+}
+
+cbind(log_score_res,brier_score_res,rps_score_res,aic_all)
+cv_res <- cbind((apply(log_score_cv,2,mean)),(apply(brier_score_cv,2,mean)),(apply(rps_score_cv,2,mean)))
+rownames(cv_res) <- rownames(rps_score_res)
+colnames(cv_res) <- c('log_score','brier_score','rps_score')
+cv_res
+```
+
+<br/>
+Indeed, the hurdle bin/negbin (no int) and zeroinf negbin (no int) achieved the best cross-validation results. We should also point out that the values of scoring metrics did not degrade much demonstrating that the models generalize quite well.
+<br/>
+
+## Conclusions
+
+<br/>
+Let us conclude our results. We have fitted several count models for modelling physician office visits from the National Medical Expenditure Survey (1987-1988) dataset, namely the Poisson, the quasi-Poisson, the negative binomial, the binomial/negative binomial hurdle model, and the zero-inflated negative binomial.
+
+We have shown that the binomial/negative binomial hurdle model and the zero-inflated negative binomial fitted the data best. We have cross-validated the predictive performance of all models, and the best model overall was the binomial/negative binomial hurdle model (without interaction terms). 
+
+The significance of variables in the models was mostly consistent across the models. We observe that the health-related predictors (**emer**,**hosp**,**health**,**numchron**,**adldiff**) have a noticeable effect on the count of physician office visits. The number of visits also tends to increase with education. We also observe that people with health insurance (**privins**,**medicaid**) tend to visit a doctor more. Interestingly enough, the number of visits decreases with age, probably due to the decreasing mobility of older people. These results are mostly consistent with the results published in *P. Deb and P. K. Trivedi. Demand for medical care by the elderly: a finite mixture approach. Journal of applied Econometrics 12.3 (1997): 313-336.*
+
+Let us plot the effect of predictors for the binomial/negative binomial hurdle model (without interaction terms) that performed best in the validation.
+<br/>
+
+
+```{r,message = FALSE,warning=FALSE,echo=FALSE}
+library(sjPlot)
+plot_model(hurdle_binomial_negbin_noint, type = "pred", terms = c('emer'))
+plot_model(hurdle_binomial_negbin_noint, type = "pred", terms = c('hosp'))
+plot_model(hurdle_binomial_negbin_noint, type = "pred", terms = c('health'))
+plot_model(hurdle_binomial_negbin_noint, type = "pred", terms = c('adldiff'))
+plot_model(hurdle_binomial_negbin_noint, type = "pred", terms = c('numchron'))
+plot_model(hurdle_binomial_negbin_noint, type = "pred", terms = c('age'))
+plot_model(hurdle_binomial_negbin_noint, type = "pred", terms = c('school'))
+plot_model(hurdle_binomial_negbin_noint, type = "pred", terms = c('privins'))
+plot_model(hurdle_binomial_negbin_noint, type = "pred", terms = c('medicaid'))
+```
+
+<br/>
+The effect of other predictors is much weaker; family income has surprisingly little effect in particular.
+<br/>
+
+
+```{r,message = FALSE,warning=FALSE,echo=FALSE}
+
+plot_model(hurdle_binomial_negbin_noint, type = "pred", terms = c('region'))
+plot_model(hurdle_binomial_negbin_noint, type = "pred", terms = c('black'))
+plot_model(hurdle_binomial_negbin_noint, type = "pred", terms = c('gender'))
+plot_model(hurdle_binomial_negbin_noint, type = "pred", terms = c('employed'))
+plot_model(hurdle_binomial_negbin_noint, type = "pred", terms = c('faminc'))
+```
+
+<br/>
+With these plots, we conclude the Fourth Circle: Count Regression. 
+
+In the end of this project, I would like to point out that that these first four circles formed a somewhat closed thematic circle around main models for typical responses: linear regression (real continuous response), logistic regression (binary response), ordinal regressions (ordinal/multinomial response), and Poisson and negative binomial regression (count response). All of these models belong to a broader family called generalized linear models, which are based on the specification of the conditional mean function $E (Y|X) = g(X\beta)$ and the variance function $\mathrm{Var}(Y|X) = V(\mu)$. 
+
+Most of the time, the whole distribution of $Y|X$ was specified (normal, Bernoulli, multinomial, Poisson, negative binomial, ...), leading to a maximum likelihood approach of estimation. This list of models is definitely not exhaustive, and there are other distributions useful for particular problems, such as gamma, inverse Gaussian, and others.
+
+In addition, we have also encountered a quasi-likelihood approach in quasi-Poisson regression in which just these two moments were specified and not the distribution as a whole. In the first circle, we also had the opportunity to introduce a further generalization in terms of mixed models to deal with correlated observations. We will probably return to both quasi-likelihood models and mixed models in a separate project.
+
+Lastly, we introduced some general techniques of modelling: cross-validation to evaluate generalization of the model to new data, bootstrap to perform statistical tests and compute confidence intervals in cases for which asymptotic theory is not readily available or its assumptions are questionable. Lastly, we looked at imputation methods, which gave us a systematic manner to handle missing data. 
+
+While the first four projects were mostly connected, the following ones will probably be much more disjointed, covering mostly separate topics. 
+<br/>
