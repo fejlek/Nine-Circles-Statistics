@@ -922,7 +922,7 @@ in the Poisson distribution, i.e.,
 $\mathrm{log}  \mu = \mathrm{log}  E(Y|X) = X\beta$ (negative
 binomial regression has the same conditional mean specification as the
 Poisson model). However, the variance function is
-$\mathrm{Var}(Y|X) = \mu + \alpha\mu^2$, where $\theta >0$ (i.e., it is
+$\mathrm{Var}(Y|X) = \mu + \theta\mu^2$, where $\theta >0$ (i.e., it is
 a quadratic function of the mean).
 
 The fit of the negative binomial regression for our data is as follows.
