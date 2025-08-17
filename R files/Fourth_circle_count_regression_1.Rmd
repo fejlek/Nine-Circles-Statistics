@@ -436,7 +436,7 @@ boot_res
 <br/>
 The results of the bootstrap seem to fall between the HC0 and HC4 estimates. Again, some variables appear to be non-significant, namely, **black**, **gender**, **married**, and **faminc**.
 
-The last method, which we will mention in this part, is quasi-Poisson regression. Quasi-Poisson regression has the same conditional mean specification as the Poisson model ($\mathrm{log} \; \mu = \mathrm{log} \; E(Y|X) = X\beta$), but the variance function is assumed to be $\mathrm{Var} (Y|X) = \theta\mu$, where $\theta$
+The last method, which we will mention in this part, is quasi-Poisson regression. Quasi-Poisson regression has the same conditional mean specification as the Poisson model ($\mathrm{log} \mu = \mathrm{log} E(Y|X) = X\beta$), but the variance function is assumed to be $\mathrm{Var} (Y|X) = \theta\mu$, where $\theta$
 is a free dispersion parameter. Quasi-Poisson regression exploits the fact that to obtain estimates of $\beta  s$, we do not need to specify the whole distribution, just the mean and variance (this is an approach fully utilized in generalized estimating equations, so-called GEE). 
 
 Quasi-Poisson regression leads to the same $\beta s$ estimates as Poisson regression. However, the error estimates are modified (*A. Zeileis, C. Kleiber, and S. Jackman. Regression models for count data in R. Journal of statistical software 27.1 (2008): 1-25.*). We can also notice that the scaling parameter for dispersion is based on the aforementioned Pearson statistic.
@@ -497,7 +497,7 @@ This usual interpretation of the negative binomial distribution does not really 
 The $\nu$ represents an observed heterogeneity in the data. Let us assume that  $\nu$ has a gamma distribution (https://en.wikipedia.org/wiki/Gamma_distribution) with the shape parameter $\delta$ equal to the rate parameter. Then, the marginal distribution of the count response (in which $\nu$ is integrated out, i.e., it is essentially an "average" distribution of the count response) is a negative binomial distribution with parameter $\delta$ and $\mu = X\beta$, see *A. C. Cameron and P. K. Trivedi. Microeconometrics: methods and applications. Cambridge university press, 2005.* for more details.
 
 The link function for the negative binomial is usually logarithmic, as in the Poisson distribution, i.e., 
-$\mathrm{log} \; \mu = \mathrm{log} \; E(Y|X) = X\beta$ (negative binomial regression has the same conditional mean specification as the Poisson model). However, the variance function is $\mathrm{Var}(Y|X) = \mu + \alpha\mu^2$,  where $\theta >0$ (i.e., it is a quadratic function of the mean).
+$\mathrm{log} \mu = \mathrm{log} \; E(Y|X) = X\beta$ (negative binomial regression has the same conditional mean specification as the Poisson model). However, the variance function is $\mathrm{Var}(Y|X) = \mu + \alpha\mu^2$,  where $\theta >0$ (i.e., it is a quadratic function of the mean).
 
 The fit of the negative binomial regression for our data is as follows.
 <br/>
