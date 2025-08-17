@@ -167,7 +167,7 @@ The function *anova* refits the model using maximum likelihood instead
 of using restricted maximum likelihood (REML) because restricted
 likelihood functions of distinct models are not comparable if they do
 not have the same *fixed effects*. We should mention here that the
-*fixed effects *(in the context of general mixed models) mean just terms
+*fixed effects* in the context of general mixed models) mean just terms
 in the model that are not random effects (i.e., they are terms that
 would form an ordinary regression model). <br/>
 
