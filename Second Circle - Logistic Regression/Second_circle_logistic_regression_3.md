@@ -314,7 +314,7 @@ comparing models. <br/>
 ### Strictly proper scoring rules (logarithmic score and Brier score)
 
 <br/> We start with the logarithmic scoring rule (log loss):
-$\sum y_i\mathrm{log}\,p_i + (1-y_i)\mathrm{log}\,(1-p_i)$. <br/>
+$\sum y_i\mathrm{log} p_i + (1-y_i)\mathrm{log} (1-p_i)$. <br/>
 
 ``` r
 ls <- sum(y*log(p_pred) + (1-y)*log(1-p_pred))
@@ -333,7 +333,7 @@ logLik(final_model)
 <br/> We used logarithmic scoring to compare nested models throughout
 this presentation via a likelihood ratio test. Alternatively, we could
 use Akaike information criterion which
-$\mathrm{AIC} = 2k - 2\,\mathrm{log}\, L$. For example, using AIC to
+$\mathrm{AIC} = 2k - 2 \mathrm{log} L$. For example, using AIC to
 compare our full model with the model without interactions, we would get
 the difference <br/>
 
@@ -466,7 +466,7 @@ val.prob(p_pred,y)
     ##          Eavg           S:z           S:p 
     ##  4.076230e-03 -2.447687e-02  9.804722e-01
 
-### Decision curve analysis:
+### Decision curve analysis
 
 <br/> The previously mentioned performance and calibration indices did
 not evaluate whether the model is actually any good for making
@@ -498,7 +498,7 @@ The net benefit for the threshold probability $\hat{p}_t$ estimated from
 our data is (*A. J. Vickers and E. B. Elkin. Decision curve analysis: a
 novel method for evaluating prediction models. Medical Decision Making
 26.6 (2006): 565-574.*)
-$$\mathrm{net \;benefit} = \frac{\mathrm{true \;positive \; count} (\hat{p}_t)}{n}  - \frac{\mathrm{false \;positive \; count }(\hat{p}_t)}{n}\frac{\hat{p}_t}{1-\hat{p}_t}$$
+$$\mathrm{net benefit} = \frac{\mathrm{true positive count} (\hat{p}_t)}{n}  - \frac{\mathrm{false positive count }(\hat{p}_t)}{n}\frac{\hat{p}_t}{1-\hat{p}_t}$$
 where true positive and false positive counts are evaluated based on the
 threshold $\hat{p}_t$. <br/>
 

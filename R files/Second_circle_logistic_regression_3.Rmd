@@ -210,7 +210,7 @@ The area under ROC is also known as the *concordance index*. The concordance ind
 ### Strictly proper scoring rules (logarithmic score and Brier score)
 
 <br/>
-We start with the logarithmic scoring rule (log loss): $\sum y_i\mathrm{log}\,p_i + (1-y_i)\mathrm{log}\,(1-p_i)$.
+We start with the logarithmic scoring rule (log loss): $\sum y_i\mathrm{log} p_i + (1-y_i)\mathrm{log} (1-p_i)$.
 <br/>
 
 ```{r}
@@ -226,7 +226,7 @@ logLik(final_model)
 ```
 
 <br/>
-We used logarithmic scoring to compare nested models throughout this presentation via a likelihood ratio test. Alternatively, we could use Akaike information criterion which $\mathrm{AIC} = 2k - 2\,\mathrm{log}\, L$. For example, using AIC to compare our full model with the model without interactions, we would get the difference
+We used logarithmic scoring to compare nested models throughout this presentation via a likelihood ratio test. Alternatively, we could use Akaike information criterion which $\mathrm{AIC} = 2k - 2 \mathrm{log} L$. For example, using AIC to compare our full model with the model without interactions, we would get the difference
 <br/>
 
 ```{r}
