@@ -8,8 +8,9 @@ Jiří Fejlek
 
 <br/> In this project, we will model an ordinal outcome, i.e.,
 categorical data with a natural order. We will mainly cover the ordered
-logit model (proportional odds logistic regression). We will also
-briefly cover the continuation ratio model.
+logit model (proportional odds logistic regression). We will also briefly cover 
+other ordinal outcomes models: the continuation ratio model, the adjacent categories 
+models, and the multinomial logit model.
 
 Our primary goal is to develop a model for predicting students’ math
 final grades, but we will also be interested in identifying predictors
@@ -619,8 +620,8 @@ improve the grades a bit.
 Let us check the model assumptions. Similarly to logistic regression,
 the ordered logit directly models the class probabilities. The
 assumption concerning the probabilities is *proportional odds
-assumption*: $\mathrm{logit}\; P(Y <=j|X_1)$ -
-$\mathrm{logit}\; P(Y <=j|X_2) = (X_2-X_1)\beta$, i.e, the effect of $X$
+assumption*: $\mathrm{logit} P(Y \leq j|X_1)$ -
+$\mathrm{logit} P(Y \leq j|X_2) = (X_2-X_1)\beta$, i.e, the effect of $X$
 on relative odds does not depend on class $j$ since $\beta$ are
 independent of class.
 
@@ -1490,7 +1491,7 @@ no reason to consider deleting observations. <br/>
 ## Continuation ratio model
 
 <br/> Before we conclude the first part of this project, we will take a
-brief look at an alternative models of ordinal response. We start with
+brief look at alternative models of ordinal response. We start with
 the *continuation ratio model*. Unlike the proportional odds model, the
 continuation ratio (CR) model considers conditional probabilities
 $P[Y = k | Y \geq k ] = \mathrm{ilogit}  (\theta_k + X\beta)$.
@@ -1913,7 +1914,7 @@ assumes that there is no particular order for resposne categories. In
 other words, it corresponds to the model in which there are no
 “parallel” terms. Thus, this model has the largest number of parameters.
 The model is described by the equations
-$\mathrm{log}\; \frac{p_i}{p_1} = X\beta_i$, where $i = 2,3,\ldots$.
+$\mathrm{log} \frac{p_i}{p_1} = X\beta_i$, where $i = 2,3,\ldots$.
 <br/>
 
 ``` r

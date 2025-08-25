@@ -1,9 +1,9 @@
 # Nine Circles of Statistical Modeling
 
-The primary focus of this repository is *statistical models*, i.e., models such as linear regression, contingency tables, or survival models (I plan to cover nine models at the time of writing this introduction). I will demonstrate their usage on datasets taken from Kaggle (https://www.kaggle.com). Even though each problem will be mainly focused on one particular model, I expect that due to dealing with more or less realistic datasets, I will have to cover other additional topics as the need emerges, e.g.,  dealing with missing data (multiple imputation) and dealing with dependent/correlated observations. 
+The primary focus of this repository is *statistical models*, i.e., models such as linear regression, contingency tables, or survival models (I plan to cover nine models at the time of writing this introduction). I will demonstrate their usage on datasets taken from Kaggle (https://www.kaggle.com) and other places such as various *R* packages . Even though each problem will be mainly focused on one particular model, I expect that due to dealing with more or less realistic datasets, I will have to cover other additional topics as the need emerges, e.g.,  dealing with missing data (multiple imputation) and dealing with dependent/correlated observations. 
 
 
-The main motivation behind this work is personal: learning, practice, future reference, demonstration of skill, and, last but not least, fun. Still, I think that these small projects can be useful for any reader interested in statistical modeling. Kaggle users usually provide their solutions based on machine learning techniques, so these solutions can be unique, at least in this regard. 
+The main motivation behind this work is personal: learning, practice, future reference, and, last but not least, fun. Still, I think that these small projects can be useful for any reader interested in statistical modeling. Kaggle users usually provide their solutions based on machine learning techniques, so these solutions can be unique, at least in this regard. 
 
 ## Machine learning and statistical models
 

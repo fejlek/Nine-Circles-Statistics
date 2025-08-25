@@ -312,7 +312,7 @@ We can obtain calibration plots and other performance indices by using *val.prob
 val.prob(p_pred,y)
 ```
 
-### Decision curve analysis:
+### Decision curve analysis
 
 <br/>
 The previously mentioned performance and calibration indices did not evaluate whether the model is actually any good for making decisions. Decision curve analysis (*A. J. Vickers and E. B. Elkin. Decision curve analysis: a novel method for evaluating prediction models. Medical Decision Making 26.6 (2006): 565-574.*)
@@ -323,7 +323,7 @@ $p_ta + (1-p_t)b = p_tc + (1-p_t)d$, i.e., $\frac{1-p_t}{p_t} = \frac{a-c}{d-b}$
 Let $\hat{p}$ be the estimated probability of the condition using our model. Let's fix the consequence of false negative result as $a - c = 1$, then the threshold probability $\hat{p}_t$ is given by the
 consequence of the false positive result $d-b = \frac{\hat{p}_t}{1-\hat{p}_t}$. 
 
-The net benefit for the threshold probability $\hat{p}_t$ estimated from our data is (*A. J. Vickers and E. B. Elkin. Decision curve analysis: a novel method for evaluating prediction models. Medical Decision Making 26.6 (2006): 565-574.*) $$\mathrm{net \;benefit} = \frac{\mathrm{true \;positive \; count} (\hat{p}_t)}{n}  - \frac{\mathrm{false \;positive \; count }(\hat{p}_t)}{n}\frac{\hat{p}_t}{1-\hat{p}_t}$$ where true positive and false positive counts are evaluated based on the threshold $\hat{p}_t$.
+The net benefit for the threshold probability $\hat{p}_t$ estimated from our data is (*A. J. Vickers and E. B. Elkin. Decision curve analysis: a novel method for evaluating prediction models. Medical Decision Making 26.6 (2006): 565-574.*) $$\mathrm{netbenefit} = \frac{\mathrm{true positive count} (\hat{p}_t)}{n}  - \frac{\mathrm{false positive  count }(\hat{p}_t)}{n}\frac{\hat{p}_t}{1-\hat{p}_t}$$ where true positive and false positive counts are evaluated based on the threshold $\hat{p}_t$.
 <br/>
 
 ```{r,message=FALSE}
@@ -545,7 +545,7 @@ ggplot(dca_results, aes(x = threshold)) + geom_line(data=dca_results, aes(x=thre
 <br/>
 Validating multivariate single/multiple imputations via chained equations is a bit more involved (multiple imputations were initially intended for inference and not predictions). We observed this by noticing that the *mice* package does not even have *predict* functionality. The core difficulty with using the multiple imputation method for prediction with missing data is that the imputation models used in multiple imputations include the response variable. The value of the response variable is naturally not known for new observations. Thus, the chained equations performed on the original data sets are not directly applicable.  
 
-A way around this is to run a new multiple imputation algorithm using the original dataset and the new observations to impute the missing values of the predictors, see *B. JA Mertens, E. Banzato, and L. C. de Wreede. Construction and assessment of prediction rules for binary outcome in the presence of missing predictor data using multiple imputation and cross‐validation: Methodological approach and data‐based evaluation." Biometrical Journal 62.3 (2020): 724-74 * how to cross-validate such procedure. Of course, an unpleasant consequence of this approach is that obtaining a new prediction is quite computationally expensive.
+A way around this is to run a new multiple imputation algorithm using the original dataset and the new observations to impute the missing values of the predictors, see *B. JA Mertens, E. Banzato, and L. C. de Wreede. Construction and assessment of prediction rules for binary outcome in the presence of missing predictor data using multiple imputation and cross‐validation: Methodological approach and data‐based evaluation." Biometrical Journal 62.3 (2020): 724-74* how to cross-validate such procedure. Of course, an unpleasant consequence of this approach is that obtaining a new prediction is quite computationally expensive.
 
 Let us first evaluate the performance of the multivariate single imputation model on the whole dataset.
 <br/>

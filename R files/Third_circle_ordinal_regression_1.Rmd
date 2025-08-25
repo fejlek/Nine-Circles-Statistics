@@ -13,7 +13,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 <br/>
-In this project, we will model an ordinal outcome, i.e., categorical data with a natural order. We will mainly cover the ordered logit model (proportional odds logistic regression). We will also briefly cover the continuation ratio model. 
+In this project, we will model an ordinal outcome, i.e., categorical data with a natural order. We will mainly cover the ordered logit model (proportional odds logistic regression). We will also briefly cover other ordinal outcomes models: the continuation ratio model, the adjacent categories models, and the multinomial logit model.
 
 Our primary goal is to develop a model for predicting students' math final grades, but we will also be interested in identifying predictors that have the greatest impact. We will split this presentation into two parts. In the first part, we will describe the data preparation and exploration and then fit the models. In the second part, we will validate the final model obtained in the first part and discuss the results.
 <br/>
@@ -268,7 +268,7 @@ dim(model.matrix(grade ~ school + sex + age + address + famsize + Pstatus + trav
 ## Ordered logit model (proportional odds logistic regression) 
 
 <br/>
-To model the ordinal response (in this case, the final grade), we will use the ordered logit model. Ordered logit models cumulative distribution functions $P[Y \leq k ] = \mathrm{ilogit}\, (\theta_k - X\beta)$ for ordinal response $k = 1,2,3, \ldots$. The model is called proportional since the parameter $\beta$ does not depend on class $k$.
+To model the ordinal response (in this case, the final grade), we will first use the ordered logit model. Ordered logit models cumulative distribution functions $P[Y \leq k ] = \mathrm{ilogit} (\theta_k - X\beta)$ for ordinal response $k = 1,2,3, \ldots$. The model is called proportional since the parameter $\beta$ does not depend on class $k$.
 
 We fit the ordered logit model using the *polr* function from the *MASS* package.
 <br/>
@@ -390,7 +390,7 @@ plot_model(full_model_clm, type = "pred", terms = c('teacher'))
 <br/>
 From the plots, we see that the model predicts that **males** perform slightly better. In addition, the predicted probabilities of the F grade increases increases with **schoolsup**, **failures**, and **age**. **studytime**, and a low number of **absences** also seems to improve the grades a bit. 
 
-Let us check the model assumptions. Similarly to logistic regression, the ordered logit directly models the class probabilities. The assumption concerning the probabilities is *proportional odds assumption*:  $\mathrm{logit}\; P(Y <=j|X_1)$ - $\mathrm{logit}\; P(Y <=j|X_2) = (X_2-X_1)\beta$, i.e, the effect of $X$ on relative odds does not depend on class $j$ since $\beta$ are independent of class.
+Let us check the model assumptions. Similarly to logistic regression, the ordered logit directly models the class probabilities. The assumption concerning the probabilities is *proportional odds assumption*:  $\mathrm{logit}  P(Y \leq j|X_1)$ - $\mathrm{logit}  P(Y \leq j|X_2) = (X_2-X_1)\beta$, i.e, the effect of $X$ on relative odds does not depend on class $j$ since $\beta$ are independent of class.
 
 Let us check the reasonability of the proportional odds assumption.First, we use the function *plot.xmean.ordinaly* from the *rms* package, which plots the observed means of predictors versus levels of Y and the estimated expected means of predictors under the proportional odds assumption.
 <br/>
@@ -440,7 +440,7 @@ resid(full_model_lrm , 'score.binary' , pl=TRUE)
 <br/>
 A confidence interval that lies outside of the zero line provides strong evidence against the proportional odds assumption. We observe that **alc** and **traveltime** are borderline.
 
-An alternative to the ordered logit is a model where we allow $\beta$ to vary: $P[Y \leq k ] = \mathrm{ilogit}\, (\theta_k - X\beta_k)$. This model no longer assumes the proportional odds assumption. The price for the generalization is a much larger number of parameters. Thus, it is advisable to relax the proportional odds assumption only for some variables forming the so-called *partial proportional odds model*. The package *ordinal* provides the *nominal_test* function that fits the partial proportional odds model for each variable separately and compares it with the proportional odds model.
+An alternative to the ordered logit is a model where we allow $\beta$ to vary: $P[Y \leq k ] = \mathrm{ilogit}  (\theta_k - X\beta_k)$. This model no longer assumes the proportional odds assumption. The price for the generalization is a much larger number of parameters. Thus, it is advisable to relax the proportional odds assumption only for some variables forming the so-called *partial proportional odds model*. The package *ordinal* provides the *nominal_test* function that fits the partial proportional odds model for each variable separately and compares it with the proportional odds model.
 <br/>
 
 ```{r,message = FALSE,warning=FALSE}
@@ -729,7 +729,7 @@ We do not observe major changes in the fits, thus, there we found no reason to c
 ## Continuation ratio model
 
 <br/>
-Before we conclude the first part of this project, we will take a brief look at an alternative models of ordinal response. We start with the *continuation ratio model*. Unlike the proportional odds model, the continuation ratio (CR) model considers conditional probabilities $P[Y = k | Y \geq k ] = \mathrm{ilogit}\, (\theta_k + X\beta)$. Essentially, the CR model is a
+Before we conclude the first part of this project, we will take a brief look at alternative models of ordinal response. We start with the *continuation ratio model*. Unlike the proportional odds model, the continuation ratio (CR) model considers conditional probabilities $P[Y = k | Y \geq k ] = \mathrm{ilogit} (\theta_k + X\beta)$. Essentially, the CR model is a
 discrete version of the Cox proportional hazards model used in survival analysis.
 
 A nice property of the CR model is that it can be estimated using the logistic regression by an appropriate extension of the design matrix (*F. E. Harrell. Regression modeling strategies: with applications to linear models, logistic regression, and survival analysis. Vol. 608. New York: springer, 2001.*). In R, this approach is implemented in the *rms* package as follows.
@@ -823,7 +823,7 @@ We observe that the difference between the two CR models is not significant, whi
 ## Adjacent categories model 
 
 <br/>
-The next ordinal response model we will discuss here is an adjacent categories model. The probabilities in the model are given as $\mathrm{log} \; \frac{p_k}{p_{k+1}} = \theta_k + X\beta$. The adjacent categories mode can be fitted via the *VGAM* package.
+The next ordinal response model we will discuss here is an adjacent categories model. The probabilities in the model are given as $\mathrm{log} \frac{p_k}{p_{k+1}} = \theta_k + X\beta$. The adjacent categories mode can be fitted via the *VGAM* package.
 <br/>
 
 ```{r,message = FALSE,warning=FALSE}
@@ -871,7 +871,7 @@ Overall, we could repeat all the steps for the adjacent categories model as we d
 ## Multinomial logistic regression
 
 <br/>
-The last model that should be mentioned here is the multinomial logit model. This model assumes nominal categorical response, i.e, it assumes that there is no particular order for resposne categories. In other words, it corresponds to the model in which there are no "parallel" terms. Thus, this model has the largest number of parameters. The model is described by the equations $\mathrm{log}\; \frac{p_i}{p_1} = X\beta_i$, where $i = 2,3,\ldots$.
+The last model that should be mentioned here is the multinomial logit model. This model assumes nominal categorical response, i.e, it assumes that there is no particular order for resposne categories. In other words, it corresponds to the model in which there are no "parallel" terms. Thus, this model has the largest number of parameters. The model is described by the equations $\mathrm{log} \frac{p_i}{p_1} = X\beta_i$, where $i = 2,3,\ldots$.
 <br/>
 
 ```{r,message = FALSE,warning=FALSE}
