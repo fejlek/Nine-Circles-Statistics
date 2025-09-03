@@ -1,3 +1,11 @@
+# The Fifth Circle: Survival Analysis, Part One
+
+<br/>
+Jiří Fejlek
+
+2025-09-01
+<br/>
+
 <br/> This project is concerned with the analysis of survival data.
 Survival analysis involves the investigation of the expected duration of
 time until an event occurs, such as mechanical failure or recurrence of
