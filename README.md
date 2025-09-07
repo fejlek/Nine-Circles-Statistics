@@ -32,3 +32,12 @@ In the solutions provided here, I will (or at least try to) follow  these steps
 ## Technical solution
 
 All solutions will programmed in R and provided as R markdown documents and github markdown documents.
+
+## Finished Circles
+
+1. Linear regression (heteroskedasticity and correlated observations; heteroskedasticity/cluster robust standard errors; random effects models; introduction to various bootstrap methods and cross-validation)
+2. Logistic regression (dealing with missing data via complete case analysis, mean imputation, and multiple imputation; discrimination measures and calibration for binary data; decision curve analysis)
+3. Ordinal regression (proportional odds, continuation ratio, and adjacent categories models; partial ordinal models; discrimination measures for ordinal data)
+4. Count regression (Poisson and negative binomial models; hurdle and zero-inflated models; discrimination measures for count data)
+5. Survival analysis (Kaplan-Meier estimator; Cox proportional hazards model; accelerated failure time models; discrimination measures and calibration for survival data; competing risks (TBD))
+6. Extreme value analysis (TBD)
