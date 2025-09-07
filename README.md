@@ -41,3 +41,4 @@ All solutions will programmed in R and provided as R markdown documents and gith
 4. Count regression (Poisson and negative binomial models; hurdle and zero-inflated models; discrimination measures for count data)
 5. Survival analysis (Kaplan-Meier estimator; Cox proportional hazards model; accelerated failure time models; discrimination measures and calibration for survival data; competing risks (TBD))
 6. Extreme value analysis (TBD)
+7. Quantile regression (TBD)
