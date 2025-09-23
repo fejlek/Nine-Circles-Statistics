@@ -1,0 +1,1790 @@
+---
+title: "The Sixth Circle: Extreme Value Analysis"
+author: "Jiří Fejlek"
+date: "2025-09-017"
+output:
+  md_document:
+    variant: GFM
+code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+<br/>
+In this project, we will have a look at extreme value analysis. Unlike the previous projects in which we modeled expected responses, extreme value analysis is concerned with the modelling of rare events. As far as the dataset in this project is concerned, we will investigate the weather recording data from Clementinum in Prague, which dates back to 1775 and continues uninterrupted till the present day, making it one of the world's longest continuous meteorological records. 
+
+Specifically, we will model maximum yearly temperature at 14:00:00 CET (i.e, 13:00:00 UTC)  based on the Clementinum records  (https://opendata.chmi.cz/meteorology/climate/historical_csv/data/daily/temperature ; dataset dly-0-203-0-11514-T.csv ; 0-203-0-11514 is the Clementinum WIGOS Station Identifier).   
+<br/>
+
+## Clementinum dataset
+
+<br/>
+Let us load the dataset and extract the temperatures we are interested in. We also add Year, Month, and Day columns extracted from the dates. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+library(readr)
+library(dplyr)
+
+Sys.setlocale("LC_TIME", "English")
+
+clementinum_all <- read_csv('C:/Users/elini/Desktop/nine circles/clementinum.csv')
+clementinum_all$TIME <- factor(clementinum_all$TIME)
+
+
+clementinum <- clementinum_all[clementinum_all$TIME == '13:00',]
+clementinum <- clementinum %>% select(-c('WSI','EG_EL_ABBREVIATION','TIME','FLAG1','QUALITY','...8'))
+
+clementinum$Year <- as.numeric(format(as.Date(clementinum$DT, format="%Y-%m-%d"),"%Y"))
+clementinum$Month <- as.numeric(format(as.Date(clementinum$DT, format="%Y-%m-%d"),"%m"))
+clementinum$Day <- as.numeric(format(as.Date(clementinum$DT, format="%Y-%m-%d"),"%d"))
+clementinum$Index <- seq(1,dim(clementinum)[1],1)
+```
+
+<br/>
+Next, we check whether some data is missing.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+any(duplicated(clementinum))
+any(is.na(clementinum))
+```
+
+<br/>
+Let us check the values.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+summary(clementinum$VALUE)
+```
+
+<br/>
+We observe that the maximum recorded temperature at 14:00:00 is 37.60°C, the minimum temperature is -23.80°C, and the mean temperature is 12.45°C.
+
+We plot the whole time series next. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+plot(clementinum$DT,clementinum$VALUE,xlab = 'Date',ylab = 'Temperature', type = 'l')
+```
+
+<br/>
+One important thing to keep in mind is a clear seasonal trend in the temperature time series.
+<br/>
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+plot(clementinum$DT[clementinum$Year >= 2000],clementinum$VALUE[clementinum$Year >= 2000],xlab = 'Date',ylab = 'Temperature', type = "l")
+```
+
+<br/>
+Daily temperatures are also clearly correlated.
+<br/>
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+plot(clementinum$DT[clementinum$Year == 2000],clementinum$VALUE[clementinum$Year == 2000],xlab = 'Date',ylab = 'Temperature', type = "l")
+```
+
+<br/>
+There is also a noticeable overall trend in the time series.
+<br/>
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+years <- seq(1775,2024,1)
+mean_years <- tapply(clementinum$VALUE,as.factor(clementinum$Year),mean)
+var_years <- tapply(clementinum$VALUE,as.factor(clementinum$Year),var)
+
+plot(years,mean_years,xlab = 'Year',ylab = 'Mean (Year) Temperature', type = "l")
+lines(x=years,y=loess(mean_years~years)$fitted,col='red')
+
+plot(years,var_years,xlab = 'Year',ylab = 'Variance (Year) Temperature', type = "l")
+lines(x=years,y=loess(var_years~years)$fitted,col='red')
+```
+
+## Block Maxima Method
+
+<br/>
+Before we move to modelling, we start with a brief introduction to extreme value analysis. Let $X_1, \ldots X_n$ be i.i.d. with the distribution $F$. We denote the maximum $M_n = \max \{X_1, \ldots X_n \}$. The probability $P[M_n \leq m] = P[X_1 \leq m, \ldots, X_n \leq m]$ is equal to $F^n(m)$. However, since $F$ is usually unknown and must be estimated, $F^n$ would be very inaccurate in practice to estimate the distribution of $M_n$.
+
+The extreme value analysis is based on the so-called Fisher–Tippett–Gnedenko theorem [1]. If there exists sequences of constants $(a_n)$ and $(b_n)$ such that $P[\frac{M_n - b_n}{a_n} \leq m] \rightarrow G(m)$ as $n \rightarrow + \infty$ where $G$ is some  non-degenerate distribution function. Then $G$ is a member of the *generalized extreme value* family of distributions. 
+
+Thus, the Fisher–Tippett–Gnedenko theorem is an analogue to the central limit theorem, which describes the asymptotic distribution of $\sum_{i = 1}^n X_i$. Although the central limit theorem is a bit stronger providing sufficient conditions of convergence, e.g., $X_1, \ldots X_n$  i.i.d. with finite variance whereas Fisher–Tippett–Gnedenko *assumes* the convergence.
+
+The generalized extreme value (GEV) family includes distributions $G(m) = \mathrm{exp} \{ - [1+\xi(m-\mu)/\sigma ]^{-1/\xi}\},$ where $\mu,\xi \in \mathbb{R}$, $\sigma >0$ and $m$ lies in the set $\{m \mid 1+\xi(m-\mu)/\sigma  > 0\}$. Depending on the value of the shape parameter $\xi$, these distributions are also known as the Gumbel distribution (or Type I, $\xi = 0$), the Fréchet distribution (or Type II, $\xi >0$), or the  Weibull distribution (or Type III, $\xi < 0$). 
+
+Since $P[\frac{M_n-b_n}{b_n} \leq m] \approx G(m)$ for large enough $n$, it holds that  $P[M_n \leq m] \approx G(\frac{m - b_n}{a_n}) = G^*(m)$ where G^* is another GEV distribution. This fact implies that, in practice, we can estimate the distribution of $M_n$ directly by considering sequences of maxima computed from, e.g., observations corresponding to a time period of length one year [1].
+
+The Fisher–Tippett–Gnedenko theorem theorem assumes i.i.d. observations. This is too strict an assumption, since analysis of time series is often of interest (as in our case), and these will rarely consist of a series of independent observations. Fortunately, there is a generalization to stationary time series $X_1, X_2, \ldots$. Stationarity means that temporal statistical characteristics  of the time series (such as mean and variance) stay constant in time, or more formally, joint probability distribution remains the same when shifted in time, i.e., $F(x_{t_1},\ldots,x_{t_n}) = F(x_{t_1+h},\ldots,x_{t_n+h})$ for all $t_1,\ldots,t_n, h, n\in\mathbb{N}$ 
+
+The Fisher–Tippett–Gnedenko theorem still holds for stationary time series [1], provided that the extreme events are almost independent if they are sufficiently distant in time (see $D(u_n)$ condition  [1, Definition 5.1]). This observation gives us a theoretical justification to use GEV distributions for modelling so-called block maxima in practice. 
+<br/>
+
+### Initial fit
+
+<br/>
+In this section, we will use the Fisher–Tippett–Gnedenko theorem to estimate the distribution of yearly temperature maxima. We reduce our attention to the summer months, June to August, to reduce the effect of seasonal trends. We will ignore for now a trend in the yearly means that we observed in our data exploration, and we will assume for now that the time series of daily summer temperatures is stationary. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+clementinum_summer <- clementinum[clementinum$Month > 5 & clementinum$Month < 9,]
+```
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+clementinum_summer$Index <- seq(1,dim(clementinum_summer)[1],1)
+plot(clementinum_summer$VALUE[clementinum_summer$Year >= 2000],xlab = 'Summer days',ylab = 'Temperature', type = 'l',main = 'Summer temperatures 2000-2024')
+```
+
+<br/>
+We can also check that no daily record is missing.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+summary(tapply(clementinum_summer $Index, as.factor(clementinum_summer $Year), length))
+```
+
+<br/>
+Let us compute the year maxima. A one-year period should be enough to ensure that the maxima are independent. Remember that we are investigating merely summer temperatures and thus the values for each year are clearly separated. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+clementinum_summer_max <- tapply(clementinum_summer$VALUE,as.factor(clementinum_summer$Year),max)
+years <- seq(1775,2024,1)
+plot(years,clementinum_summer_max,xlab = 'Year',ylab = 'Temperature',main = 'Maximum summer temperatures')
+```
+
+<br/>
+Next, we fit the block maxima GEV model using the *extRemes* package.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+library(extRemes)
+bm_stationary <- fevd(clementinum_summer_max)
+summary(bm_stationary)
+```
+
+<br/>
+Parameter estimates are computed via the maximum likelihood method, and thus, we can obtain the confidence intervals for the parameters $\mu,\sigma,\xi$ based on normal approximation. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+ci.fevd(bm_stationary, type = 'parameter')
+```
+
+<br/>
+Alternatively, we can use a parametric bootstrap (percentile-based confidence intervals).
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+ci.fevd(bm_stationary, type = 'parameter',method = 'boot',R = 1000)
+```
+
+<br/>
+We are primarily interested in the predictions of the model. First, we compute the probabilities $P[M_n > T]$ based on the block maxima GEV model.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+pextRemes(bm_stationary,lower.tail = FALSE, q = seq(25,35,1))
+# We can obtain these values directly by evaluating 1-cdf of the GEV
+library(evd)
+bm_pars <- distill.fevd(bm_stationary)
+pgev(seq(25,35,1), loc=bm_pars[1], scale=bm_pars[2], shape=bm_pars[3], lower.tail = FALSE)
+```
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+plot(seq(25,35,1),pextRemes(bm_stationary,lower.tail = FALSE, q = seq(25,35,1)),xlab = 'Temperature',ylab = 'P [Year Maximum > Temperature]')
+```
+
+<br/>
+Predictions in survival analysis are usually presented in terms of *return levels*. A return level is a quantile of the GEV distribution, i.e., $x_p$ such that $G(x_p) = 1-p$. This means that, in our case, annual maximum temperature exceeds $x_p$ with probability $p$ and thus, return level $x_p$ is on average exceeded every $1/p$ years (the so-called return period). This is what terms like a 10-year storm or a 1000-year flood refer to.
+
+We should note that return level estimates are almost assuredly extrapolations; time series are often much shorter than the return periods that are being estimated, and thus the predicted return levels are not directly observed even just once. A rule of thumb in [2] recommends a series of at least 50 independent values (i.e., 50 independent maxima) to obtain a reliable GEV fit. As far as quantile estimates are concerned, there is no clear consensus, although a limit of up to approximately five times the observation period is mentioned in [2].
+
+Keeping in mind these limitations in the predictions, let us compute the return levels for return periods up to 1000 years.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+return.level(bm_stationary,return.period = c(2,5,10,20,50,100,500,1000))
+qgev(c(0.5,0.2,0.1,0.05,0.02,0.01,0.002,0.001), loc=bm_pars[1], scale=bm_pars[2], shape=bm_pars[3], lower.tail = FALSE)
+plot(bm_stationary,'rl',main = 'GEV model (stationary)')
+```
+  
+<br/> 
+We observe that the predicted 1000-year temperature for our model is 37.3°C. We notice from the plot that we actually observed "1000-year temperature" according to our model, since the maximum temperature in 1984 was 37.6°C. 
+
+Confidence intervals for the return periods are as follows. 
+<br/>  
+
+```{r, message=FALSE, warning=FALSE}  
+# normal confidence intervals
+ci.fevd(bm_stationary,return.period = c(2,5,10,20,50,100,500,1000))
+
+# parametric bootstrap
+ci.fevd(bm_stationary,return.period = c(2,5,10,20,50,100,500,1000),method = 'boot',R = 1000)
+```
+
+### Model diagnostics
+
+<br/>
+Let us assess the fit. Since the GEV model is without covariates, we can directly compare the observed distribution with the theoretical one. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+plot(bm_stationary,'probprob', main = 'GEV model (stationary)')
+plot(bm_stationary,'qq', main = 'GEV model (stationary)')
+plot(bm_stationary,'qq2')
+plot(bm_stationary,'density', main = 'GEV model (stationary)')
+plot(bm_stationary,'rl', main = 'GEV model (stationary)')
+```
+
+<br/>
+We observe that the model fits the observed data reasonably well. However, we also have to check the assumptions of our model. We assumed that the series of summer temperatures is stationary.
+<br/>
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+library(ggplot2)
+ggplot(clementinum_summer, aes(x = Index, y = VALUE)) + geom_line() + geom_smooth(formula = y~x,colour='red',method = 'loess', se = FALSE) + xlab('Summer days (1775-2024)') +  ylab('Temperature')
+```
+
+<br/>
+As can be seen from the loess regressions of the series, there is a noticeable trend in the yearly mean and variance of the time series. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+clementinum_summer_mean <- tapply(clementinum_summer$VALUE,as.factor(clementinum_summer$Year),mean)
+clementinum_summer_var <- tapply(clementinum_summer$VALUE,as.factor(clementinum_summer$Year),var)
+clementinum_summer_stat <-cbind(years,clementinum_summer_mean,clementinum_summer_var)
+
+ggplot(clementinum_summer_stat, aes(x = years, y = clementinum_summer_mean)) + geom_line() + geom_smooth(formula = y~x,colour='red',method = 'loess', se = FALSE) + xlab('Year') +  ylab('Mean Temperature (June-August)')
+
+ggplot(clementinum_summer_stat, aes(x = years, y = clementinum_summer_var)) + geom_line() + geom_smooth(formula = y~x,colour='red',method = 'loess', se = FALSE) + xlab('Year') +  ylab('Var Temperature (June-August)')
+```
+
+<br/>
+We can use a formal test to detect monotonic trends, the Mann-Kendall test [2].
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+library(Kendall)
+MannKendall(clementinum_summer$VALUE)
+```
+
+<br/>
+The test is clearly significant. Similarly, the series of yearly maxima should have no trend, and the observations should be independent.
+<br/>
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+ggplot(as.data.frame(clementinum_summer_max), aes(x = years, y = clementinum_summer_max)) + geom_line() + geom_smooth(formula = y~x,colour='red',method = 'loess', se = FALSE) + xlab('Year') +  ylab('Maximum temperature')
+```
+
+```{r, message=FALSE, warning=FALSE}
+MannKendall(clementinum_summer_max)
+```
+
+<br/>
+We observe a noticeable increasing trend in the yearly maxima. We can also test the dependence in the series by estimating the autocorrelation function plot.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+acf(clementinum_summer_max)
+```
+
+<br/>
+Some correlations appear significant. However, all the correlations are positive, which hints that these are caused by the observed increasing trend in the series of yearly maxima. Overall, the stationary model is not justified, and we need to account for the fact that the series is not stationary.
+<br/>
+
+
+### Non-stationary model (GEP model with time-dependent parameters)
+
+<br/>
+The first approach to deal with the non-stationarity of the time series involves considering a GEV model with time-varying parameters. 
+
+We will fit several block maxima GEV models that assume polynomial (linear, quadratic, and frestricted cubic splines) trends in the location and the log scale ($\phi = \mathrm{log} \sigma$) parameters (log transformation of the scale ensures that the scale is always positive). We will assume that the shape is constant, which is an usual assumption [2].
+
+One justification is an observation that trends of the time series in the mean and variance do not change the shape of the GEV distribution. $Y(t) = \frac{X(t) - m(t)}{s(t)}$ and the maxima of $Y(t)$ follow $\mathrm{GEV}(\mu_Y(t),\sigma_Y(t),\xi_Y(t))$, then the maxima of $X(t)$ have distribution $\mathrm{GEV}(\mu_X(t),\sigma_X(t),\xi_X(t))$, where $\xi_X(t) = \xi_Y(t)$, $\sigma_X(t) = \sigma_Y(t)s(t)$, $\mu_X(t) = m(t) + \mu_Y(t)s(t)$ [3].
+
+Another, more pragmatic reason is that extreme value model shape parameters are difficult to estimate with precision, so it is often unrealistic to model them as a smooth function of time [1]. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+library(rms)
+# use.phi = TRUE to use phi = log sigma parametrization
+
+clementinum_summer_max_data <- as.data.frame(cbind(clementinum_summer_max,years))
+clementinum_summer_max_data$years <- (clementinum_summer_max_data$years - 1774)/250
+colnames(clementinum_summer_max_data) <- c('summer_max','year')
+
+bm_nonstationary_1 <- fevd(summer_max,data = clementinum_summer_max_data, location.fun = ~ year)
+bm_nonstationary_2 <- fevd(summer_max,data = clementinum_summer_max_data, location.fun = ~ year + I(year^2))
+bm_nonstationary_3 <- fevd(summer_max,data = clementinum_summer_max_data, location.fun = ~ rcs(year,5))
+
+bm_nonstationary_4 <- fevd(summer_max,data = clementinum_summer_max_data, scale.fun = ~ year,use.phi = TRUE)
+bm_nonstationary_5 <- fevd(summer_max,data = clementinum_summer_max_data, scale.fun = ~ year + I(year^2),use.phi = TRUE)
+bm_nonstationary_6 <- fevd(summer_max,data = clementinum_summer_max_data, scale.fun = ~ rcs(year,5),use.phi = TRUE)
+
+
+bm_nonstationary_7 <- fevd(summer_max,data = clementinum_summer_max_data, location.fun = ~ year, scale.fun = ~ year,use.phi = TRUE)
+bm_nonstationary_8 <- fevd(summer_max,data = clementinum_summer_max_data, location.fun = ~ year + I(year^2), scale.fun = ~ year,use.phi = TRUE)
+bm_nonstationary_9 <- fevd(summer_max,data = clementinum_summer_max_data, location.fun = ~ rcs(year,5), scale.fun = ~ year,use.phi = TRUE)
+
+bm_nonstationary_10 <- fevd(summer_max,data = clementinum_summer_max_data, location.fun = ~ year, scale.fun = ~ year + I(year^2),use.phi = TRUE)
+bm_nonstationary_11 <- fevd(summer_max,data = clementinum_summer_max_data, location.fun = ~ year + I(year^2), scale.fun = ~ year + I(year^2),use.phi = TRUE)
+bm_nonstationary_12 <- fevd(summer_max,data = clementinum_summer_max_data, location.fun = ~ rcs(year,5), scale.fun = ~ year + I(year^2),use.phi = TRUE)
+
+
+bm_nonstationary_13 <- fevd(summer_max,data = clementinum_summer_max_data, location.fun = ~ year, scale.fun = ~ rcs(year,5),use.phi = TRUE)
+bm_nonstationary_14 <- fevd(summer_max,data = clementinum_summer_max_data, location.fun = ~ year + I(year^2), scale.fun = ~ rcs(year,5),use.phi = TRUE)
+bm_nonstationary_15 <- fevd(summer_max,data = clementinum_summer_max_data, location.fun = ~ year + rcs(year,5), scale.fun = ~ rcs(year,5),use.phi = TRUE)
+```
+
+<br/>
+We will choose the best-fitting model using the AIC.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+AIC_stat <- c(summary(bm_stationary,silent = TRUE)$AIC, # stationary model
+summary(bm_nonstationary_1,silent = TRUE)$AIC,
+summary(bm_nonstationary_2,silent = TRUE)$AIC,
+summary(bm_nonstationary_3,silent = TRUE)$AIC,
+summary(bm_nonstationary_4,silent = TRUE)$AIC,
+summary(bm_nonstationary_5,silent = TRUE)$AIC,
+summary(bm_nonstationary_6,silent = TRUE)$AIC,
+summary(bm_nonstationary_7,silent = TRUE)$AIC,
+summary(bm_nonstationary_8,silent = TRUE)$AIC,
+summary(bm_nonstationary_9,silent = TRUE)$AIC,
+summary(bm_nonstationary_10,silent = TRUE)$AIC,
+summary(bm_nonstationary_11,silent = TRUE)$AIC,
+summary(bm_nonstationary_12,silent = TRUE)$AIC,
+summary(bm_nonstationary_13,silent = TRUE)$AIC,
+summary(bm_nonstationary_14,silent = TRUE)$AIC)
+# summary(bm_nonstationary_15,silent = TRUE)$AIC  did not converged
+
+names(AIC_stat) <- c('stationary',seq(1,14,1))
+AIC_stat
+```
+
+<br/>
+We observe that model 8 (quadratic in location, linear in log shape) attained the lowest value of AIC. Let us plot the trends in the parameters for model 8, model 12 (rcs in location, quadratic in log shape), and the model with constant parameters.
+<br/>
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+plot(seq(1,23000,92),findpars(bm_nonstationary_8)$location,col = 'red',type = 'l',lwd = 2,xlab = 'Summer days',ylab = 'Location parameter')
+lines(seq(1,23000,92),findpars(bm_stationary)$location,col = 'green',lwd = 2)
+lines(seq(1,23000,92),findpars(bm_nonstationary_12)$location,col = 'blue',lwd = 2)
+
+
+plot(seq(1,23000,92),findpars(bm_nonstationary_8)$scale,col = 'red',type = 'l',lwd = 2,xlab = 'Summer days',ylab = 'Location parameter')
+lines(seq(1,23000,92),findpars(bm_stationary)$scale,col = 'green',lwd = 2)
+lines(seq(1,23000,92),findpars(bm_nonstationary_12)$scale,col = 'blue',lwd = 2)
+```
+
+<br/>
+We observe that the trends in both location and scale are clearly significant. We can formally test these hypotheses via the likelihood ratio tests.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+lr.test(bm_stationary, bm_nonstationary_3) # location 
+lr.test(bm_stationary, bm_nonstationary_6) # scale
+```
+
+<br/>
+Let us check the diagnostics plot for model 8.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+plot(bm_nonstationary_8,'probprob', main = 'GEV model (time-dependent parameters)')
+plot(bm_nonstationary_8,'qq', main = 'GEV model (time-dependent parameters)')
+plot(bm_nonstationary_8,'qq2')
+plot(bm_nonstationary_8,'density', main = 'GEV model (time-dependent parameters)')
+```
+
+<br/
+We observe that this model fits the data fairly well. Let us compute the confidence intervals for the parameters.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+ci.fevd(bm_nonstationary_8, type = 'parameter')
+ci.fevd(bm_nonstationary_8, type = 'parameter',method = 'boot',R = 1000)
+```
+
+<br/>
+The predicted return levels for the year 2024 are as follows.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+return_levels <- rbind(return.level(bm_stationary,return.period = c(2,5,10,20,50,100,500,1000)),
+                       return.level(bm_nonstationary_8,return.period = c(2,5,10,20,50,100,500,1000))[250,])
+
+rownames(return_levels) <- c('stationary','time-dependent parameters')
+return_levels
+
+# or 
+# bm_nonstationary_pars <- distill.fevd(bm_nonstationary_8)
+# qgev(c(0.5,0.2,0.1,0.05,0.02,0.01,0.002,0.001), loc=bm_nonstationary_pars[1] + bm_nonstationary_pars[2] + bm_nonstationary_pars[3], scale=exp(bm_nonstationary_pars[4] + bm_nonstationary_pars[5]), shape=bm_nonstationary_pars[6], lower.tail = FALSE)
+```
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+par(mfrow = c(1, 2))
+bm_nonstationary_pars <- distill.fevd(bm_nonstationary_8)
+plot(seq(25,40,1),pextRemes(bm_stationary,lower.tail = FALSE, q = seq(25,40,1)),xlab = 'Temperature',ylab = 'P [Year Maximum > Temperature]', main = 'Stationary model')
+plot(seq(25,40,1),pgev(seq(25,40,1), loc=bm_nonstationary_pars[1] + bm_nonstationary_pars[2] + bm_nonstationary_pars[3], scale=exp(bm_nonstationary_pars[4] + bm_nonstationary_pars[5]), shape=bm_nonstationary_pars[6], lower.tail = FALSE),xlab = 'Temperature',ylab = 'P [Year Maximum > Temperature]', main = 'Time-dependent paramaters model (year 2024)')
+```
+
+<br/>
+The return level predictions for the year 2024 are higher for the time-dependent parameter model than for the stationary model. Let us compute the confidence intervals of the return levels for the time-dependent parameter model. We note that the parametric confidence intervals are not implemented in *extRemes*. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+# normal CI
+cov_values <- make.qcov(bm_nonstationary_8, vals = c(1,1,1,1,1,1), nr = 1)
+ci.fevd(bm_nonstationary_8,return.period = c(2,5,10,20,50,100,500,1000),qcov = cov_values)
+
+# parametric bootstrap CI
+set.seed(123)
+nb <- 500
+return_levels_boot <- matrix(0,nb,8)
+bm_nonstationary_pars_all <- findpars(bm_nonstationary_8)
+
+for (j in 1:nb){
+  
+clementinum_summer_max_new <- clementinum_summer_max
+
+for (i in 1:250){
+
+  clementinum_summer_max_new[i] <- rgev(1, loc=bm_nonstationary_pars_all$location[i], scale=bm_nonstationary_pars_all$scale[i], shape=bm_nonstationary_pars_all$shape[i])
+}
+
+  bm_nonstationary_new <- fevd(clementinum_summer_max_new,data = clementinum_summer_max_data, location.fun = ~ year + I(year^2), scale.fun = ~ year,use.phi = TRUE)
+  
+  if (any(is.null(parcov.fevd(bm_nonstationary_new))) == FALSE){
+  return_levels_boot[j,] <- return.level(bm_nonstationary_new,return.period = c(2,5,10,20,50,100,500,1000))[250,]
+  }
+  else
+    {return_levels_boot[j,] <- NA}
+}
+
+t(apply(return_levels_boot,2,function(x) quantile(x,c(0.025,0.975), na.rm= TRUE)))
+```
+
+<br/>
+Since we fitted the parametric model, we can actually predict the future values of the return levels.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+future_returns <- matrix(0,5,8)
+years_returns <- c(2024,2034,2054,2074,2124)
+
+for (j in 1:5){
+mult <- years_returns[j] - 2024
+future_returns[j,] <-   qgev(c(0.5,0.2,0.1,0.05,0.02,0.01,0.002,0.001), loc=bm_nonstationary_pars[1] + bm_nonstationary_pars[2]*(1 + 0.004*mult) + bm_nonstationary_pars[3]*(1 + 0.004*mult)^2, scale=exp(bm_nonstationary_pars[4] + bm_nonstationary_pars[5]*(1 + 0.004*mult)), shape=bm_nonstationary_pars[6], lower.tail = FALSE)
+}
+
+rownames(future_returns) <- years_returns
+colnames(future_returns) <- c(2,5,10,20,50,100,500,1000)
+future_returns
+```
+
+<br/>
+Return periods/ return levels assume a stationary series, and they do not retain their meaning for the non-stationary series. In [2], the return level for non-stationary series is defined as $E[X_t > x_p \mid t_0 \leq t \leq T \Delta] = 1$, i.e., the expectation of exceeding $x_p$ in the following $T$ periods of length $\Delta$ is 1.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+# return level (non-stationary) for 2024-2124
+
+return_level_nonstat <- function(loc0,loc1,loc2,scale0,scale1,shape0,t0,nperiod,temp) {
+  
+prob <-0
+
+for(i in 0:nperiod){
+  prob <- prob + pgev(temp, loc=loc0 + loc1*(t0+i/250) + loc2*(t0+i/250)^2, scale=exp(scale0 + scale1*(t0+i/250)), shape=shape0, lower.tail = FALSE)
+}
+return (prob)
+}
+
+return_level_nonstat(bm_nonstationary_pars[1],bm_nonstationary_pars[2],bm_nonstationary_pars[3],bm_nonstationary_pars[4],bm_nonstationary_pars[5],bm_nonstationary_pars[6],1,100,39.1406)
+```
+
+<br/>
+We observe that this value (39.1°C) is between the 100-year temperature for 2024 (37.3°C) and the 100-year temperature for 2124 (40.1°C).
+<br/>
+
+
+## Threshold Excess Method
+
+<br/>
+The threshold excess model is an alternative to the model based on block maxima. The disadvantage of block maxima is that it is quite wasteful in terms of data. The threshold excess model considers modelling the series excess over a given threshold instead of modelling the series maxima. This allows the model to consider a larger quantity of observations and, subsequently, obtain a more precise fit.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+num_exces <- numeric(15)
+
+for (i in 1:15){
+  num_exces[i] <- sum(clementinum_summer$VALUE>19+i)
+}
+
+names(num_exces) <- c('>20','>21','>22','>23','>24','>25','>26','>27','>28','>29','>30','>31','>32','>33','>34')
+num_exces
+```
+
+<br/>
+The model of excesses is based on the following theorem [1]. Let $X_1\ldots, X_n$ be i.i.d. and let $M_n = \max \{X_1\,\ldots, X_n\}$ and let $X_1\ldots, X_n$ meet Fisher–Tippett–Gnedenko theorem, i.e, the distribution of $M_n$ converges to $\mathrm{GEV}(\mu,\sigma,\xi)$. Then the distribution of excesses $y = x-u$ such that $y > 0$  converges for large enough $u$ to the generalized Pareto distribution (GP) $P[Y\leq y] = 1-(1+\frac{\xi y}{\tilde\sigma})^{-1/\xi}$, where $\tilde{\sigma} = \sigma + \xi(u-\mu)$. 
+
+The theorem implies that instead of block maxima, we can model the distribution of excesses for large enough thresholds using the GP distribution. Graphical methods can help us choose a suitable threshold. For example, if an excess GP model is valid, $E(X-u\mid X > u)$ should be linear function of $u$ [1], and thus, the mean residual life plot (the plot u vs $\frac{1}{\# x > u} \sum_{x > u} x - u$) should be approximately linear.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+par(mfrow = c(1, 1))
+mrlplot(clementinum_summer$VALUE, xlim = c(15, 35))
+```
+
+<br/>
+Another graphical method is based on the evolution of parameters of the GP distribution. Provided that the threshold $u_0$ is large enough such that the distribution of excesses is approximately GP, then the parameters of the GP model for thresholds $u>u_0$ should $\xi$ stay constant and $\sigma_u = \sigma_{u_0} + \xi(u-u_0)$ [1].
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+threshrange.plot(clementinum_summer$VALUE, r = c(15, 35), nint = 21)
+```
+
+<br/>
+Based on these plots, we choose a threshold of 28°C.
+
+Now, similarly to the GEV models for block maxima, the threshold excess models can be generalized to stationary series (see [Theorem 6.2,2]). However, there is a noticeable difference between block maxima and threshold excesses to consider. Block maxima are computed over large enough periods. Hence, unless these maxima can be positioned near the endpoints of the time intervals, we can consider these individual maxima as independent observations. Threshold excesses do not meet in general. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE,echo =FALSE}
+par(mfrow = c(1, 1))
+plot(clementinum_summer$DT[clementinum_summer$Year == 2000],clementinum_summer$VALUE[clementinum_summer$Year == 2000],xlab = 'Year 2000',ylab = 'Temperature')
+abline(28,0)
+```
+
+<br/>
+Since the temperature observations are correlated in time, we see that the threshold excesses are not always independent and form clusters. More formally, the presence of such clusters at high levels for the time series can be investigated via the auto-tail dependence function [5]. Assume $X_1\,\ldots X_n$ identically distributed, then auto–tail dependence function at level $u$ is $\rho(h,u) = P[X_{h+i} > F^{-1}(u) \mid X_i > F^{-1}(u)]$ (rho should be small for $u$ close to one, if the tails excesses are independent) 
+
+Let us plot the auto-tail dependence function for the 0.9 quantile of summer temperatures (28.3°C).
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+quantile(clementinum_summer$VALUE,0.9)
+atdf(clementinum_summer$VALUE, 0.9)
+```
+
+<br/>
+We see clearly that clusters are present at high levels. The second value $\bar{\rho}$ is an alternative definition of the auto-tail dependence function [5] $\bar{\rho}(u,h) = \frac{2 \mathrm{log} P[X_i > F^{-1}(u)]}{\mathrm{log} P[X_i > F^{-1}(u), X_{h+i} > F^{-1}(u)]} - 1$, and hence, the values of  $\bar{\rho}(u,h)$ should be below zero.
+
+To get the excesses that are independent, we need to separate them using *declustering*.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+VALUE_decl <- as.numeric(decluster(clementinum_summer$VALUE, 28))
+```
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+par(mfrow = c(1, 1))
+plot(clementinum_summer$DT[clementinum_summer$Year == 2000],VALUE_decl[clementinum_summer$Year == 2000],xlab = 'Date',ylab = 'Temperature (declustered)')
+abline(28,0)
+```
+
+<br/>
+Let us compute the auto-tail dependence function for declustered values.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+atdf(VALUE_decl, 0.9)
+```
+
+<br/>
+We can notice that $\bar{\rho}(u,1) = -1$. This is due to declustering; the next observations after exceeding the threshold will not exceed the threshold, thus the fraction in the definition $\bar{\rho}(u,h)$ equals 0. 
+<br/>
+
+### Initial fit
+
+<br/>
+Having obtained independent threshold excesses, we can fit the GP model. At the start, we assume a simple model for a stationary time series. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+te_stationary  <- fevd(VALUE_decl[VALUE_decl>28], threshold = 28, type = 'GP') 
+summary(te_stationary)
+```
+
+<br/>
+The confidence intervals for the parameters are as follows.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+ci.fevd(te_stationary, type = 'parameter')
+ci.fevd(te_stationary, type = 'parameter',method = 'boot',R = 1000)
+```
+
+<br/>
+As far as predictions are concerned, the GP model naturally provides threshold excesses probabilities $P[X > T \mid X > u]$ [1]
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+library(SpatialExtremes)
+
+te_pars <- distill.fevd(te_stationary)
+
+pextRemes(te_stationary,lower.tail = FALSE, q = seq(25,35,1))
+# or using cdf of generalized Pareto distribution
+pgpd(q = seq(25,35,1), loc = 28, scale = te_pars[1], shape = te_pars[2], lower.tail = FALSE)
+```
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+par(mfrow = c(1, 1))
+plot(seq(25,35,1),pextRemes(te_stationary,lower.tail = FALSE, q = seq(25,35,1)),xlab = 'Temperature Threshold',ylab ='P[Temp. > Threshold | Temp. > 28]')
+```
+
+<br/>
+However, we are interested in the estimation of return levels/return periods. The return levels are equal to 
+$x_m = u + \frac{\hat\sigma}{\xi}[(m\zeta_u)^\xi+1]$ [1] where $\zeta_u = P[X > u]$. Hence, to evaluate the return levels, we need an estimate of marginal probabilities $P[X > u]$. A natural estimate of $P[X > u]$ is $n_u/n$, where $n_u$ is the number of cluster excesses.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+# extRemes package requires an estimate of the number of excesses per year to compute the return levels 
+n_excess <- tapply(VALUE_decl,as.factor(clementinum_summer$Year),function(x) sum(x>28))
+mean(n_excess)
+
+te_stationary  <- fevd(VALUE_decl[VALUE_decl>28], threshold = 28, type = 'GP',time.units = '5.144/year') 
+return.level(te_stationary,return.period = c(2,5,10,20,50,100,500,1000))
+
+# or using the formula directly
+p_exceed <- sum(VALUE_decl>28)/length(VALUE_decl)
+28 + te_pars[1]/te_pars[2]*
+  (((c(2,5,10,20,50,100,500,1000)*92*p_exceed)^te_pars[2])-1)
+```
+
+<br/>
+The package *extRemes* provides merely the normal confidence intervals for the return levels of the GP model.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+# normal CI
+ci.fevd(te_stationary,return.period = c(2,5,10,20,50,100,500,1000))
+```
+
+<br/>
+We also compute the confidence intervals via moving block bootstrap [4] on the summer temperature series (this allows us to include the choice of the threshold, declustering, and estimation of $\zeta_u = P[X > u]$ into the CI estimate). Note that in our simple model, we assume that the summer temperature series is stationary and thus the moving block bootstrap is appropriate. To perform the moving block bootstrap, we first need to examine the autocorrelation function of summer temperatures.   
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+acf(clementinum_summer$VALUE, main ='ACF of the residual series')
+```
+
+<br/>
+The correlation in summer temperatures is relatively weak for blocks beyond 30. We will use blocks of 40, as it splits the series into 575 blocks of the same length. The moving block bootstrap resamples the temperature time series by replacing each block of length 40 in the original series with a block that starts from a random time instant in the original series.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+# moving block bootstrap CI
+set.seed(123)
+nb <- 500
+return_levels_boot2 <- matrix(0,nb,8)
+m <- c(2,5,10,20,50,100,500,1000)*92
+
+for (j in 1:nb){
+new_series <- clementinum_summer$VALUE
+
+for (i in 1:575){
+  rand_ind <- sample(seq(1,22961,1),1)
+  new_series[(40*(i-1)+1):(40*i)] <- clementinum_summer$VALUE[rand_ind:(rand_ind+39)]
+}
+
+threshold_new <- quantile(new_series,0.9)
+VALUE_decl_new <- as.numeric(decluster(new_series, threshold_new))
+te_stationary_new  <- fevd(VALUE_decl_new, threshold = threshold_new, type = 'GP')
+p_exceed <- sum(VALUE_decl>threshold_new)/length(VALUE_decl)
+te_pars_new <- distill.fevd(te_stationary_new)
+
+return_levels_boot2[j,] <- threshold_new + te_pars_new[1]/te_pars_new[2]*
+  (((m*p_exceed)^te_pars_new[2])-1)
+}
+
+t(apply(return_levels_boot2,2,function(x) quantile(x,c(0.025,0.975))))
+```
+
+<br/>
+Lastly, we can compare the stationary block maxima model and the stationary threshold excess model.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+
+return_levels_stationary <- rbind(return.level(bm_stationary,return.period = c(2,5,10,20,50,100,500,1000)),
+return.level(te_stationary,return.period = c(2,5,10,20,50,100,500,1000)))
+rownames(return_levels_stationary) <- c('Block maxima (stat.)','Threshold excess (stat.)')
+return_levels_stationary
+
+cbind(ci.fevd(bm_stationary,return.period = c(2,5,10,20,50,100,500,1000))[,c(1,3)],
+ci.fevd(te_stationary,return.period = c(2,5,10,20,50,100,500,1000))[,c(1,3)])
+
+cbind(ci.fevd(bm_stationary,return.period = c(2,5,10,20,50,100,500,1000),method = 'boot', R = 1000)[,c(1,3)],
+t(apply(return_levels_boot2,2,function(x) quantile(x,c(0.025,0.975)))))
+```
+
+<br/>
+We observe that differences in estimates of return levels are minimal. The normal confidence intervals are a bit narrower for the threshold excess method (remember, the threshold excess model has more observations to fit). However, in our case, the benefit is relatively small. The bootstrap confidence intervals are almost of the same width. Although, the confidence interval for the block maxima model is parametric, whereas the bootstrap for the threshold excess is nonparametric. 
+<br/>
+
+### Model diagnostics
+
+<br/>
+Let us start with the main diagnostics plots.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+plot(te_stationary  ,'probprob', main = 'GP model (stationary)')
+plot(te_stationary  ,'qq', main = 'GP model (stationary)')
+plot(te_stationary  ,'qq2', main = 'GP model')
+plot(te_stationary  ,'density', main = 'GP model (stationary)')
+```
+
+<br/>
+Again, this plot shows that the model fits the data fairly well. Still, as we investigated the block maxima model, there is a trend in the temperature series. To assess this fact for the threshold excess model, we will have a look  
+at the number of excess clusters per year.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+plot(seq(1775,2024,1),n_excess,xlab = 'Year',ylab='Number of exceedances')
+```
+
+<br/>
+The number of clusters should asymptotically follow the Poisson distribution [Theorem 6.2,2].
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+library(fitdistrplus)
+plotdist(as.numeric(n_excess))
+
+n_excess_poisson_fit <- fitdist(as.numeric(n_excess), "pois")
+
+par(mfrow = c(2, 2))
+qqcomp(n_excess_poisson_fit)
+denscomp(n_excess_poisson_fit)
+cdfcomp(n_excess_poisson_fit)
+ppcomp(n_excess_poisson_fit)
+```
+
+<br/>
+Moreover, the intervals between consecutive clusters should be asymptotically exponential [2], i.e., the cluster maxima converge to a Poisson point process.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+differ <- diff(seq(1,23000,1)[VALUE_decl > 28])
+plotdist(differ)
+
+differ_fit <- fitdist(differ, "exp")
+
+par(mfrow = c(2, 2))
+qqcomp(differ_fit)
+denscomp(differ_fit)
+cdfcomp(differ_fit)
+ppcomp(differ_fit)
+```
+
+<br/>
+We observe noticeable discrepancies from the expected distributions. The reason is again the presence of a trend; in this case, in the threshold excesses.
+<br/>
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+par(mfrow = c(1, 1))
+plot(years,n_excess,xlab = 'Year',ylab = 'Number of excesses', type = "l")
+lines(x=years,y=loess(n_excess~years)$fitted,col='red')
+
+
+plot(seq(1,length(differ),1),differ,xlab = 'Index',ylab = 'Number of indeces between excesses', type = "l")
+lines(x=seq(1,length(differ),1),y=loess(differ~seq(1,length(differ),1))$fitted,col='red')
+```
+
+<br/>
+We clearly observe that the number of excesses increases in time and thus, the intervals between the excesses shorten in time. Thus, similarly to the block maxima approach, we need to consider a non-stationary model. 
+<br/>
+
+
+### Non-stationary model (GP model with time-dependent parameters)
+
+<br/>
+Analogously to the block maxima approach, we can consider a generalized Pareto model with time-dependent parameters. However, unlike the GEV models, the GP model has only two parameters: the scale parameter and the shape parameter. In addition, we already discussed that, provided the trend in the time series can be characterized by the trend in the mean and variance, the shape parameter can be considered constant. Thus, we have just one parameter to modify.
+
+Let us fit these models. We will consider linear, quadratic, and the restricted cubic spline trend in time. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+clementinum_summer_exc_data <- as.data.frame(cbind(VALUE_decl,years))
+clementinum_summer_exc_data$years <- (clementinum_summer$Year - 1774)/250
+colnames(clementinum_summer_exc_data) <- c('summer_exc','year')
+clementinum_summer_exc_data <- as.data.frame(clementinum_summer_exc_data)
+
+te_nonstationary_1  <- fevd(VALUE_decl[VALUE_decl>28], data = clementinum_summer_exc_data[VALUE_decl>28,], threshold = 28, type = 'GP',scale.fun = ~ year,use.phi = TRUE)
+
+te_nonstationary_2  <- fevd(VALUE_decl[VALUE_decl>28], data = clementinum_summer_exc_data[VALUE_decl>28,], threshold = 28, type = 'GP',scale.fun = ~ year + I(year^2),use.phi = TRUE)
+
+te_nonstationary_3  <- fevd(VALUE_decl[VALUE_decl>28], data = clementinum_summer_exc_data[VALUE_decl>28,], threshold = 28, type = 'GP',scale.fun = ~rcs(year,5),use.phi = TRUE)
+```
+
+<br/>
+Let us compare these models using the AIC.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+AIC_te_all <- c(summary(te_stationary,silent = TRUE)$AIC,
+summary(te_nonstationary_1,silent = TRUE)$AIC,
+summary(te_nonstationary_2,silent = TRUE)$AIC,
+summary(te_nonstationary_3,silent = TRUE)$AIC)
+
+names(AIC_te_all) <- c('stationary',1,2,3)
+AIC_te_all
+```
+
+<br/>
+We observe that the quadratic model minimizes the AIC. Let us perform the likelihood ratio tests to formally test whether the trend in the scale is significant.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+lr.test(te_stationary,te_nonstationary_3)
+```
+
+<br/>
+The trend in the scale parameter is clearly significant. Diagnostic plots for the model are as follows.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+par(mfrow = c(1, 2))
+plot(te_nonstationary_3  ,'probprob', main = 'GP model (time-dependent parameters)')
+plot(te_nonstationary_3  ,'qq', main = 'GP model (time-dependent parameters)')
+par(mfrow = c(1, 1))
+plot(te_nonstationary_3  ,'qq2', main = 'GP model (time-dependent parameters)')
+```
+
+<br/>
+Now, we were discussing that the GP model is a two-parameter model. However, it is actually not, since to compute the return levels, we need to estimate the number of excess events per year, i.e., the intensity of the underlying Poisson process. Assuming that the intensity of the Poisson process is constant, we get the following estimate of the return levels.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+te_nonstationary_2  <- fevd(VALUE_decl[VALUE_decl>28], data = clementinum_summer_exc_data[VALUE_decl>28,], threshold = 28, type = 'GP',scale.fun = ~ year + I(year^2),time.units = '5.144/year',use.phi = TRUE)
+
+return.level(te_nonstationary_2,return.period = c(2,5,10,20,50,100,500,1000))[sum(n_excess),]
+```
+
+<br/>
+We observe that the number of return periods again increased significantly.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+return_levels_2 <- rbind(return.level(bm_stationary,return.period = c(2,5,10,20,50,100,500,1000)),
+                       return.level(bm_nonstationary_8,return.period = c(2,5,10,20,50,100,500,1000))[250,],
+                       return.level(te_stationary,return.period = c(2,5,10,20,50,100,500,1000)),
+                       return.level(te_nonstationary_2,return.period = c(2,5,10,20,50,100,500,1000))[sum(n_excess),]
+                       )
+rownames(return_levels_2 ) <- c('BM (stationary)','BM (time-dependent parameters)', 'TE (stationary)','TE (time-dependent parameters)')
+return_levels_2 
+```
+
+<br/>
+We can compute the confidence intervals using the parametric bootstrap.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+# parametric bootstrap CI
+set.seed(123)
+nb <- 500
+return_levels_boot3 <- matrix(0,nb,8)
+te_nonstationary_pars_all <- findpars(te_nonstationary_2)
+
+for (j in 1:nb){
+  
+  VALUE_decl_new <- VALUE_decl[VALUE_decl>28]
+  
+  for (i in 1:length(VALUE_decl_new)){
+  
+  VALUE_decl_new[i] <- rgpd(1, loc = 0, scale = te_nonstationary_pars_all$scale[i], shape =
+                              te_nonstationary_pars_all$shape[i]) + 28
+    }
+
+  te_nonstationary_new <- fevd(VALUE_decl_new, data = clementinum_summer_exc_data[VALUE_decl>28,], threshold = 28, type = 'GP',scale.fun = ~ year + I(year^2),time.units = '5.144/year',use.phi = TRUE)
+  
+  if (any(is.null(parcov.fevd(te_nonstationary_new))) == FALSE){
+  return_levels_boot3[j,] <- return.level(te_nonstationary_new,
+                                         return.period = c(2,5,10,20,50,100,500,1000))[sum(n_excess),]
+  }
+  else
+    {return_levels_boot3[j,] <- NA}
+}
+
+t(apply(return_levels_boot3,2,function(x) quantile(x,c(0.025,0.975), na.rm= TRUE)))
+```
+
+<br/>
+The GP model models the size of the excesses; however, it does not consider the number of excesses. As we saw from the data, the number of excesses increases over time. Thus, we consider the number of excesses per year to be also time-varying. Let us fit the corresponding Poisson models.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+poisson_data <- as.data.frame(cbind(n_excess,(years-1774)/250))
+colnames(poisson_data) <- c('n_excess','year') 
+
+poisson1 <- glm(n_excess~1,data = poisson_data, family ='poisson')
+poisson2 <- glm(n_excess~year,data = poisson_data, family ='poisson')
+poisson3 <- glm(n_excess~year + I(year^2),data = poisson_data, family ='poisson')
+poisson4 <- glm(n_excess~rcs(year,5),data = poisson_data, family ='poisson')
+```
+
+<br/>
+We can compare these models via the AIC. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+AIC(poisson1)
+AIC(poisson2)
+AIC(poisson3)
+AIC(poisson4)
+```
+
+<br/>
+The restricted cubic spline model seems to fit the data best.
+<br/>
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+plot(years,n_excess,xlab = 'Years',ylab = 'Number of excesses')
+lines(years,predict(poisson1,type = 'response'),col = 'green',lwd = 2)
+lines(years,predict(poisson4,type = 'response'),col = 'red',lwd = 2)
+lines(years,predict(poisson2,type = 'response'),col = 'blue',lwd = 2)
+```
+
+<br/>
+We can formally test that the trend is significant. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+anova(poisson1,poisson4)
+```
+
+<br/>
+Return levels for the year 2024 are then modified as follows.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+timeunit <- paste(predict(poisson4,type = 'response')[250],'/year')
+
+te_nonstationary_2_alt  <- fevd(VALUE_decl[VALUE_decl>28], data = clementinum_summer_exc_data[VALUE_decl>28,], threshold = 28, type = 'GP',scale.fun = ~ year + I(year^2),time.units = timeunit, use.phi = TRUE )
+
+
+pars <- findpars(te_nonstationary_2_alt)
+
+
+28 + pars$scale[1286]/pars$shape[1286]*(((c(2,5,10,20,50,100,500,1000)*10.61)^pars$shape[1286])-1)
+
+return_levels_3 <- rbind(return.level(bm_stationary,return.period = c(2,5,10,20,50,100,500,1000)),
+                       return.level(bm_nonstationary_8,return.period = c(2,5,10,20,50,100,500,1000))[250,],
+                       return.level(te_stationary,return.period = c(2,5,10,20,50,100,500,1000)),
+                       return.level(te_nonstationary_2,return.period 
+                                    = c(2,5,10,20,50,100,500,1000))[sum(n_excess),],
+                       return.level(te_nonstationary_2_alt,return.period 
+                                    = c(2,5,10,20,50,100,500,1000))[sum(n_excess),]
+                       )
+
+rownames(return_levels_3 ) <- c('BM (stationary)','BM (time-dependent parameters)', 'TE (stationary)','TE (lambda const., scale time-dep)','TE (lambda time-dep., scale time-dep.)')
+return_levels_3 
+```
+
+<br/>
+To compute the confidence interval, we will combine two parametric bootstraps: one for the Poisson model and one for the GP model. We first simulate new yearly numbers of excesses using the Poisson model and then model their value via the GP model.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+# parametric bootstrap CI
+set.seed(123)
+nb <- 500
+return_levels_boot4 <- matrix(0,nb,8)
+te_nonstationary_pars_all <- distill.fevd(te_nonstationary_2)
+
+predict_poisson <- predict(poisson4,type = 'response')
+
+for (j in 1:nb){
+  
+  n_excess_new <- numeric(250)
+  
+  for (i in 1:250){
+    n_excess_new[i] <- rpois(1,predict_poisson[i])
+  }
+  
+  VALUE_decl_new <- numeric(sum(n_excess_new))
+  year_new <- numeric(sum(n_excess_new))
+  
+  l <- 1
+  for (i in 1:250){
+    
+    te_nonstationary_scale <-  exp(te_nonstationary_pars_all[1] + 
+                                     te_nonstationary_pars_all[2]*i/250 + te_nonstationary_pars_all[3]*(i/250)^2)
+    te_nonstationary_shape <-  te_nonstationary_pars_all[4]
+    
+    for (k in 1:n_excess_new[i]){
+      VALUE_decl_new[l] <- rgpd(1, loc = 0, scale = te_nonstationary_scale, shape =te_nonstationary_shape) + 28
+      year_new[l] <- i/250
+      l <- l + 1
+    }
+  }
+  
+  poisson_data_new <- poisson_data
+  poisson_data_new$n_excess <- n_excess_new
+  poisson_new <- glm(n_excess~rcs(year,5),data = poisson_data_new, family ='poisson')
+  timeunit_new <- predict(poisson_new,type = 'response')[250]
+  
+  
+  clementinum_summer_exc_data_new <- cbind(VALUE_decl_new,year_new)
+  colnames(clementinum_summer_exc_data_new) <- c('exc','year')
+  clementinum_summer_exc_data_new <- as.data.frame(clementinum_summer_exc_data_new)
+
+  te_nonstationary_new <- fevd(VALUE_decl_new, data = clementinum_summer_exc_data_new, threshold = 28, type = 'GP',scale.fun = ~ year + I(year^2),use.phi = TRUE)
+  
+  if (any(is.null(parcov.fevd(te_nonstationary_new))) == FALSE){
+    
+    te_pars_new <- findpars.fevd(te_nonstationary_new)
+    scale_new <- te_pars_new$scale[sum(n_excess_new)]
+    shape_new <- te_pars_new$shape[sum(n_excess_new)]
+    
+    return_levels_boot4[j,] <- 28 + scale_new/shape_new*(((c(2,5,10,20,50,100,500,1000)*timeunit_new)^shape_new)-1)
+  }
+  else
+    {return_levels_boot4[j,] <- NA}
+}
+
+t(apply(return_levels_boot4,2,function(x) quantile(x,c(0.025,0.975), na.rm= TRUE)))
+```
+
+<br/>
+The method of fitting the GP distribution to model sizes of excesses and the Poisson model to model the frequencies is referred to as the Poisson-GP model. An alternative approach, which we will discuss next, involves fitting both models simultaneously. 
+<br/>
+
+## Poisson Point Process Approach
+
+<br/>
+When we fitted the generalized Pareto model for the threshold excesses, we estimated the frequency of exceeding separately. An alternative way is to estimate the frequency simultaneously with all the remaining parameters using the Poisson point process characterization of extreme events.
+
+We introduced a term, Poisson point process, informally in the previous circle, when we discussed the Poisson and a negative binomial regression, and more specifically, their motivation. Let us introduce the Poisson point process more formally. Let us assume a set $\mathcal{A}$ (usually representing a period of time) and let $N(A)$ be a random variable that denotes the number of events that happened during $A \in \mathcal{A}$. We denote $\Lambda(A) = \mathrm{E} N(A)$ and we assume that $\Lambda(A) = \int_A \lambda(x) \mathrm{d}x$.The function $\lambda(x)$ is called the intensity of the point process [1].
+
+An important point process known to us is *homogeneous Poisson process*, which is defined on $\mathcal{A} \subset \mathbb{R}$ and meets two properties
+
+* 1. For all $A = [t_1,t_2]\subset \mathcal{A}$ is $N(A) \sim \mathrm{Poisson} (\lambda(t_2-t_1))$
+* 2. For non-overlapping subsets $A, B \subset \mathcal{A}$, events $N(A)$ and $N(B)$ are independent.
+
+Non-homogeneous Poisson process is a generalization of homogeneous Poisson process for which the intensity $\lambda$ is not constant, i.e., $N(A) \sim \mathrm{Poisson} (\int_{t_1}^{t_2} \lambda(t) \mathrm{d}t)$ for $A = [t_1,t_2]$. We can generalize even further to a non-homogeneous Poisson process on $\mathcal{A} \subset \mathbb{R}^k$, in which we require $N(A) \sim \mathrm{Poisson} (\int_A \lambda(x) \mathrm{d}x)$.
+
+Let us connect a particular non-homogeneous Poisson process in $\mathbb{R}^2$ to the extreme values. Let $X_1, \ldots, X_n$  be an i.i.d sequence of excesses such that maxima converges to $\mathrm{GEV}(\mu,\sigma,\xi)$. Next, we define a point process in $\mathbb{R}^2$ as $N_n = \{ (i/(n+1),X_i) \mid i = 1, \ldots, n\}$, i.e., the point process consists of events $(\frac{1}{n+1},X_1), (\frac{2}{n+1},X_2), \ldots, (\frac{n}{n+1},X_n)$. Then, due to [Theorem 7.1, 1], this process is on regions $(0,1) \times [u,+\infty)$ for large enough $u$ is approximately Poisson with an intensity measure $\Lambda(A) = (t_2-t_1)[1+\xi\frac{z-\mu}{\sigma}]^{-1/\xi}$ for regions $A = [t_1,t_2] \times [z,+\infty)$.
+
+In practice, this means that the parameters $(\xi,\mu,\sigma)$ of the GEV distribution can be estimated from observations $(t_i,x_i)$ in region $A = (0,1) \times [u,+\infty)$ using the appropriate likelihood function [(7.9),1]. Looking at the shape of the region $A$, these observations are nothing but threshold excesses. 
+
+### Initial fit
+
+<br/>
+We first fit a stationary model. Note that the approach to determine the threshold and declustering would be the same, so we skip that step.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+# time.units to denote observations per year
+pp_stationary  <- fevd(VALUE_decl, data = clementinum_summer_exc_data, threshold = 28, type = 'PP', time.units = '92/year')
+```
+
+<br/>
+We can compare the parameters of all our stationary models. The PP model and the GEV model parameters should be the same (they are both models for 1-year maxima). However, the PP model uses significantly more observations. Moreover, the GP threshold excess model and the PP model use the same data (and almost the same likelihood function, see [Section 7.6,1]). The scale of GP should meet $\tilde\sigma = \sigma + \xi(u - \mu )$ and the shape parameters should be the same. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+distill.fevd(bm_stationary)
+distill.fevd(pp_stationary)
+distill.fevd(te_stationary)
+
+distill.fevd(pp_stationary)[2] + distill.fevd(pp_stationary)[3]*(28-distill.fevd(pp_stationary)[1])
+```
+
+<br/>
+We observe that the values of the parameters of the GP model and the PP model correspond to each other. The values of the parameters of the PP model and the GEV model are close, but not the same. This is expected since the data used for the estimation are slightly different. 
+
+One interesting observation is that the estimate of the expected number of excesses in the PP approach is $[1+\xi\frac{u-\mu}{\sigma}]^{-1/\xi}$,
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+# estimate of yearly Lambda
+(1+ distill.fevd(pp_stationary)[3]*(28-distill.fevd(pp_stationary)[1])/distill.fevd(pp_stationary)[2])^(-1/distill.fevd(pp_stationary)[3])
+
+# mean number of excess per year
+mean(n_excess) 
+```
+
+<br/>
+which is equal to the mean number of excesses, i.e., the PP model and the GP+Poisson model are practically identical. They only differ in parametrization. 
+
+Let us compute the confidence intervals for PP parameters and compare them to the GEV block maxima model.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+ci.fevd(bm_stationary, type = 'parameter')
+ci.fevd(pp_stationary, type = 'parameter')
+
+ci.fevd(bm_stationary, type = 'parameter',method = 'boot',R = 1000)
+ci.fevd(pp_stationary, type = 'parameter',method = 'boot',R = 1000)
+```
+
+<br/>
+We observe that the confidence intervals for the PP model are narrower than expected. Let us have a look at the return levels next.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+return_levels_stationary <- rbind(
+  return.level(bm_stationary,return.period = c(2,5,10,20,50,100,500,1000)),
+  return.level(te_stationary,return.period = c(2,5,10,20,50,100,500,1000)),
+  return.level(pp_stationary,return.period = c(2,5,10,20,50,100,500,1000))
+  )
+
+rownames(return_levels_stationary) <- c('BM(GEV)', 'TE(GP)', 'TE(PP)')
+return_levels_stationary
+
+
+ci.fevd(pp_stationary,return.period = c(2,5,10,20,50,100,500,1000))
+```
+
+<br/>
+We observe that the estimates of the return levels of the GP model and the PP model are identical. The return levels for the PP model are computed from the estimated GEV parameters. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+pp_pars <- distill.fevd(pp_stationary)
+qgev(c(0.5,0.2,0.1,0.05,0.02,0.01,0.002,0.001), loc=pp_pars[1], scale=pp_pars[2], shape=pp_pars[3], lower.tail = FALSE)
+```
+
+<br/>
+We will not perform the complete diagnostics, since we have already identified the trends in excesses.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+
+plot(pp_stationary,'qq', main = 'PP model (stationary)')
+plot(pp_stationary,'qq2')
+plot(pp_stationary,'rl', main = 'PP model (stationary)')
+```
+
+### Non-stationary model (PP model with time-dependent parameters)
+
+<br/>
+We move to the non-stationary models. Again, we fit several models with various polynomial trends (linear, quadratic, restricted cubic spline) in the location parameter and the scale. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+pp_nonstationary_1 <- fevd(VALUE_decl,data = clementinum_summer_exc_data, threshold = 28, type = 'PP', time.units = '92/year', location.fun = ~ year)
+pp_nonstationary_2 <- fevd(VALUE_decl,data = clementinum_summer_exc_data, threshold = 28, type = 'PP', time.units = '92/year', location.fun = ~ year + I(year^2))
+pp_nonstationary_3 <- fevd(VALUE_decl,data = clementinum_summer_exc_data, threshold = 28, type = 'PP', time.units = '92/year', location.fun = ~ rcs(year,5))
+
+pp_nonstationary_4 <- fevd(VALUE_decl,data = clementinum_summer_exc_data, threshold = 28, type = 'PP', time.units = '92/year', scale.fun = ~ year,use.phi = TRUE)
+pp_nonstationary_5 <- fevd(VALUE_decl,data = clementinum_summer_exc_data, threshold = 28, type = 'PP', time.units = '92/year', scale.fun = ~ year + I(year^2),use.phi = TRUE)
+pp_nonstationary_6 <- fevd(VALUE_decl,data = clementinum_summer_exc_data, threshold = 28, type = 'PP', time.units = '92/year', scale.fun = ~ rcs(year,5),use.phi = TRUE)
+
+
+pp_nonstationary_7 <- fevd(VALUE_decl,data = clementinum_summer_exc_data, threshold = 28, type = 'PP', time.units = '92/year', location.fun = ~ year, scale.fun = ~ year,use.phi = TRUE)
+pp_nonstationary_8 <- fevd(VALUE_decl,data = clementinum_summer_exc_data, threshold = 28, type = 'PP', time.units = '92/year', location.fun = ~ year + I(year^2), scale.fun = ~ year,use.phi = TRUE)
+pp_nonstationary_9 <- fevd(VALUE_decl,data = clementinum_summer_exc_data, threshold = 28, type = 'PP', time.units = '92/year', location.fun = ~ rcs(year,5), scale.fun = ~ year,use.phi = TRUE)
+
+pp_nonstationary_10 <- fevd(VALUE_decl,data = clementinum_summer_exc_data, threshold = 28, type = 'PP', time.units = '92/year', location.fun = ~ year, scale.fun = ~ year + I(year^2),use.phi = TRUE)
+pp_nonstationary_11 <- fevd(VALUE_decl,data = clementinum_summer_exc_data, threshold = 28, type = 'PP', time.units = '92/year', location.fun = ~ year + I(year^2), scale.fun = ~ year + I(year^2),use.phi = TRUE)
+pp_nonstationary_12 <- fevd(VALUE_decl,data = clementinum_summer_exc_data, threshold = 28, type = 'PP', time.units = '92/year', location.fun = ~ rcs(year,5), scale.fun = ~ year + I(year^2),use.phi = TRUE)
+
+
+pp_nonstationary_13 <- fevd(VALUE_decl,data = clementinum_summer_exc_data, threshold = 28, type = 'PP', time.units = '92/year', location.fun = ~ year, scale.fun = ~ rcs(year,5),use.phi = TRUE)
+pp_nonstationary_14 <- fevd(VALUE_decl,data = clementinum_summer_exc_data, threshold = 28, type = 'PP', time.units = '92/year', location.fun = ~ year + I(year^2), scale.fun = ~ rcs(year,5),use.phi = TRUE)
+pp_nonstationary_15 <- fevd(VALUE_decl,data = clementinum_summer_exc_data, threshold = 28, type = 'PP', time.units = '92/year', location.fun = ~ year + rcs(year,5), scale.fun = ~ rcs(year,5),use.phi = TRUE)
+```
+
+<br/>
+We will again choose the best-fitting model using the AIC.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+AIC_stat <- c(summary(pp_stationary,silent = TRUE)$AIC, # stationary model
+summary(pp_nonstationary_1,silent = TRUE)$AIC,
+summary(pp_nonstationary_2,silent = TRUE)$AIC,
+summary(pp_nonstationary_3,silent = TRUE)$AIC,
+summary(pp_nonstationary_4,silent = TRUE)$AIC,
+summary(pp_nonstationary_5,silent = TRUE)$AIC,
+summary(pp_nonstationary_6,silent = TRUE)$AIC,
+summary(pp_nonstationary_7,silent = TRUE)$AIC,
+summary(pp_nonstationary_8,silent = TRUE)$AIC,
+summary(pp_nonstationary_9,silent = TRUE)$AIC,
+summary(pp_nonstationary_10,silent = TRUE)$AIC,
+summary(pp_nonstationary_11,silent = TRUE)$AIC,
+summary(pp_nonstationary_12,silent = TRUE)$AIC,
+summary(pp_nonstationary_13,silent = TRUE)$AIC,
+summary(pp_nonstationary_14,silent = TRUE)$AIC)
+# summary(bm_nonstationary_15,silent = TRUE)$AIC  did not converged
+
+names(AIC_stat) <- c('stationary',seq(1,14,1))
+AIC_stat
+```
+
+<br/>
+The lowest value of the AIC is attained by models 3 and 9. Let us compare the models with the varying location parameter and the varying scale parameter with the stationary model. We also compare models 3 and 9.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+lr.test(pp_stationary,pp_nonstationary_3) # location test
+lr.test(pp_stationary,pp_nonstationary_6) # scale test
+
+lr.test(pp_nonstationary_3,pp_nonstationary_9) # 3 vs 9
+```
+
+<br/>
+We observe that when comparing with the stationary model, both scale and shape are significant. However, the difference between models 3 and 9 appears largely non-significant. We can indeed plot the evolution of parameters (red - model 3, blue - model 9, green - stationary model) and see that these models are indeed almost identical.
+<br/>
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+par(mfrow = c(1, 2))
+plot(seq(1,23000,1),findpars(pp_nonstationary_3)$location,col = 'red',type = 'l',lwd = 2,xlab = 'Summer days',ylab = 'Location (GEV) parameter')
+lines(seq(1,23000,1),findpars(pp_nonstationary_9)$location,col = 'blue',type = 'l',lwd = 2)
+lines(seq(1,23000,1),findpars(pp_stationary)$location,col = 'green',type = 'l',lwd = 2) 
+
+
+plot(seq(1,23000,1),findpars(pp_nonstationary_3)$scale,col = 'red',type = 'l',lwd = 2,xlab = 'Summer days',ylab = 'Scale (GEV) parameter')
+lines(seq(1,23000,1),findpars(pp_nonstationary_9)$scale,col = 'blue',type = 'l',lwd = 2)
+lines(seq(1,23000,1),findpars(pp_stationary)$scale,col = 'green',type = 'l',lwd = 2)
+```
+
+<br/>
+Thus, we will keep a simpler model 3 as our final PP model. Next, we can compare how much this PP model differs from the other non-stationary models we fitted. We start with the block maxima GEV models (red: BM GEV (quadratic location, linear shape), blue: PP model 3, green: BM GEV stationary, purple: BM GEV (rcs location, linear shape).
+<br/>
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+par(mfrow = c(1, 2))
+plot(seq(1,23000,92),findpars(bm_nonstationary_8)$location,col = 'red',type = 'l',lwd = 2,xlab = 'Summer days',ylab = 'Location (GEV) parameter')
+lines(seq(1,23000,1),findpars(pp_nonstationary_3)$location,col = 'blue',type = 'l',lwd = 2)
+lines(seq(1,23000,92),findpars(bm_stationary)$location,col = 'green',lwd = 2)
+lines(seq(1,23000,92),findpars(bm_nonstationary_3)$location,col = 'purple',lwd = 2)
+
+
+plot(seq(1,23000,92),findpars(bm_nonstationary_8)$scale,col = 'red',type = 'l',lwd = 2,xlab = 'Summer days',ylab = 'Scale (GEV) parameter')
+lines(seq(1,23000,1),findpars(pp_nonstationary_3)$scale,col = 'blue',type = 'l',lwd = 2)
+lines(seq(1,23000,92),findpars(bm_stationary)$scale,col = 'green',lwd = 2)
+lines(seq(1,23000,92),findpars(bm_nonstationary_3)$scale,col = 'purple',lwd = 2)
+```
+
+<br/>
+Our final non-stationary PP model differs quite a bit from the non-stationary GEV models we fitted. The location trend in the non-stationary PP model appears to capture more accurately the fact that the mean temperature in summer begins to increase significantly in the last third of the examined period. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+par(mfrow = c(1, 1))
+plot(clementinum_summer$Index,clementinum_summer$VALUE,xlab = 'Summer days',ylab = 'Summer temperatures')
+lines(clementinum_summer$Index,loess(clementinum_summer$VALUE~clementinum_summer$Index)$fitted,col = 'red',lwd = 3)
+```
+
+<br/>
+The trend in the yearly maxima is much more pronounced throughout the period, and the BM estimate follows that. However, the trend in cluster excesses is noticeably shallower and follows more closely the trend in the mean. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+par(mfrow = c(1, 2))
+
+plot(years,clementinum_summer_max,xlab = 'Summer days',ylab = 'Yearly temperature maxima')
+lines(years,loess(clementinum_summer_max~years)$fitted,col = 'red',lwd = 3)
+
+index_value_decl <- seq(1,length(VALUE_decl[VALUE_decl>28]),1)
+plot(index_value_decl,VALUE_decl[VALUE_decl>28],xlab = 'Clusters with temperatures > 28',ylab = 'Summer temperatures > 28')
+lines(index_value_decl,loess(VALUE_decl[VALUE_decl>28]~index_value_decl)$fitted,col = 'red',lwd = 3)
+```
+
+<br/>
+We will also compare our PP model with the GP excess model. We again use the relation $\tilde\sigma = \sigma + \xi(u - \mu )$ to compare the estimates of the scale of the GP distribution. We also use the relation $\Lambda = [1+\xi\frac{u-\mu}{\sigma}]^{-1/\xi}$ to derive the estimated number of excesses per year from the PP model (blue: PP model 3, red: GP model (quadratic), purple: GP model (rcs), green: stationary GP.
+<br/>
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+plot(seq(1,23000,1)[VALUE_decl>28],findpars(te_nonstationary_2)$scale,col = 'red',type = 'l',lwd = 2,xlab = 'Summer days',ylab = 'Scale (GP) parameter')
+lines(seq(1,23000,1)[VALUE_decl>28],findpars(te_nonstationary_3)$scale,col = 'purple',type = 'l',lwd = 2)
+lines(seq(1,23000,1)[VALUE_decl>28],findpars(te_stationary)$scale,col = 'green',type = 'l',lwd = 2)
+lines(seq(1,23000,1),
+      findpars(pp_nonstationary_3)$scale + 
+        findpars(pp_nonstationary_3)$shape*(28-findpars(pp_nonstationary_3)$location),
+      col = 'blue',type = 'l',lwd = 2)
+
+
+plot(seq(1,23000,1),(1 + findpars(pp_nonstationary_3)$shape*(28-findpars(pp_nonstationary_3)$location)/
+                       findpars(pp_nonstationary_3)$scale)^(-1/findpars(pp_nonstationary_3)$shape),
+     col = 'blue',type = 'l',lwd = 2,xlab = 'Summer days',
+     ylab = 'Lambda parameter (mean # excesses per year)')
+lines(seq(1,23000,92),predict(poisson4,type = 'response'),col = 'red',lwd = 2)
+lines(seq(1,23000,92),predict(poisson1,type = 'response'),col = 'green',lwd = 2)
+```
+
+<br/>
+We observe that the estimates of the parameters of GEV and GP are very close to each other. In addition, our estimate of
+The expected number of excess based on Poisson regression is almost identical to the estimate from the GEV parameters.
+
+Let us compare return periods for the year 2024 of all models.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+return_levels_all_2024 <- rbind(
+  return.level(bm_stationary,return.period = c(2,5,10,20,50,100,500,1000)),
+  return.level(te_stationary,return.period = c(2,5,10,20,50,100,500,1000)),
+  return.level(pp_stationary,return.period = c(2,5,10,20,50,100,500,1000)),
+  return.level(bm_nonstationary_8,return.period = c(2,5,10,20,50,100,500,1000))[250,],
+  return.level(te_nonstationary_2_alt,return.period = c(2,5,10,20,50,100,500,1000))[sum(VALUE_decl>28),],
+  return.level(pp_nonstationary_3,return.period = c(2,5,10,20,50,100,500,1000))[23000,]
+  )
+rownames(return_levels_all_2024) <- c('BM(GEV) stat.', 'TE(GP) stat.', 'TE(PP) stat.', 'BM(GEV) final', 'TE(GP) final', 'TE(PP) final')
+return_levels_all_2024
+```
+
+<br/>
+All the stationary models, i.e., with constant values of the parameters, are close to each other in terms of the estimates. However, as we thoroughly examined, these are misspecified. The final PP and GP models are very close to each other, as one should expect. 
+
+Let us compute the return levels for the year 1775 to get a clear comparison. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+return_levels_all_1775 <- rbind(
+  return.level(bm_stationary,return.period = c(2,5,10,20,50,100,500,1000)),
+  return.level(te_stationary,return.period = c(2,5,10,20,50,100,500,1000)),
+  return.level(pp_stationary,return.period = c(2,5,10,20,50,100,500,1000)),
+  return.level(bm_nonstationary_8,return.period = c(2,5,10,20,50,100,500,1000))[1,],
+  return.level(te_nonstationary_2_alt,return.period = c(2,5,10,20,50,100,500,1000))[1,],
+  return.level(pp_nonstationary_3,return.period = c(2,5,10,20,50,100,500,1000))[1,]
+  )
+rownames(return_levels_all_1775) <- c('BM(GEV) stat.', 'TE(GP) stat.', 'TE(PP) stat.', 'BM(GEV) final', 'TE(GP) final', 'TE(PP) final')
+return_levels_all_1775
+```
+
+<br/>
+We observe that the return levels are much lower for all non-stationary models. Let us compute the confidence intervals. The normal ones are computed as follows
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+# normal CI 2024
+cov_values <- make.qcov(pp_nonstationary_3, 
+                        vals = c(1,as.numeric(rcs(clementinum_summer_exc_data$year,5)[23000,]),1,1), nr = 1)
+ci.fevd(pp_nonstationary_3,return.period = c(2,5,10,20,50,100,500,1000),qcov = cov_values)
+
+# normal CI 1775
+cov_values <- make.qcov(pp_nonstationary_3, 
+                        vals = c(1,1/250*as.numeric(rcs(clementinum_summer_exc_data$year,5)[1,]),1,1), nr = 1)
+ci.fevd(pp_nonstationary_3,return.period = c(2,5,10,20,50,100,500,1000),qcov = cov_values)
+```
+
+<br/>
+We can also use a parametric bootstrap. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+# parametric bootstrap CI
+set.seed(123)
+nb <- 500
+
+return_levels_boot51 <- matrix(0,nb,8)
+return_levels_boot52 <- matrix(0,nb,8)
+
+pp_nonstationary_pars_all <- findpars(pp_nonstationary_3)
+
+for (j in 1:nb){
+
+  n_excess_new <- numeric(250)
+  VALUE_decl_new <- matrix(0,92,250)
+  
+  for (i in 1:250){
+    
+    pp_location <- pp_nonstationary_pars_all$location[92*(i-1)+1] 
+    pp_scale <- pp_nonstationary_pars_all$scale[92*(i-1)+1] 
+    pp_shape <- pp_nonstationary_pars_all$shape[92*(i-1)+1]
+    pp_lambda <- (1 + pp_shape*(28-pp_location)/pp_scale)^(-1/pp_shape)
+     
+    n_excess_new[i] <- rpois(1,pp_lambda)
+    
+    for (k in 1:n_excess_new[i]){
+      
+      gp_scale <- pp_scale + pp_shape*(28-pp_location)
+      VALUE_decl_new[k,i] <- rgpd(1, loc = 0, scale = gp_scale, shape = pp_shape) + 28
+      
+    }
+  }
+  
+  VALUE_decl_new <- c(VALUE_decl_new)
+  clementinum_summer_exc_data_new <- cbind(VALUE_decl_new,clementinum_summer_exc_data$year)
+  colnames(clementinum_summer_exc_data_new) <- c('exc','year')
+  clementinum_summer_exc_data_new <- as.data.frame(clementinum_summer_exc_data_new)
+
+  pp_nonstationary_new <- fevd(exc,data = clementinum_summer_exc_data_new, threshold = 28, type = 'PP', time.units = '92/year', location.fun = ~ rcs(year,5))
+  
+  if (any(is.null(parcov.fevd(pp_nonstationary_new))) == FALSE){
+
+    pp_nonstationary_pars_all_new <- findpars(pp_nonstationary_new)
+    pp_location_new <- pp_nonstationary_pars_all_new$location[1] 
+    pp_scale_new <- pp_nonstationary_pars_all_new$scale[1] 
+    pp_shape_new <- pp_nonstationary_pars_all_new$shape[1]
+    
+    return_levels_boot51[j,] <- qgev(c(0.5,0.2,0.1,0.05,0.02,0.01,0.002,0.001), 
+                                    loc=pp_location_new, scale=pp_scale_new, shape=pp_shape_new, lower.tail = FALSE)
+    
+    
+    pp_location_new <- pp_nonstationary_pars_all_new$location[23000] 
+    pp_scale_new <- pp_nonstationary_pars_all_new$scale[23000] 
+    pp_shape_new <- pp_nonstationary_pars_all_new$shape[23000]
+    
+    return_levels_boot52[j,] <- qgev(c(0.5,0.2,0.1,0.05,0.02,0.01,0.002,0.001), 
+                                    loc=pp_location_new, scale=pp_scale_new, shape=pp_shape_new, lower.tail = FALSE)
+    
+  }
+  else
+    {return_levels_boot5[j,] <- NA}
+}
+
+t(apply(return_levels_boot51,2,function(x) quantile(x,c(0.025,0.975), na.rm= TRUE)))
+t(apply(return_levels_boot52,2,function(x) quantile(x,c(0.025,0.975), na.rm= TRUE)))
+```
+
+<br/>
+To wrap up this section, we will look at the diagnostics plots.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+par(mfrow = c(1, 1))
+plot(pp_nonstationary_3,'qq', main = 'PP model (time-varying parameters)')
+plot(pp_nonstationary_3,'qq2', main = 'PP model (time-varying parameters)')
+```
+
+## Mean and variance trend approach 
+
+<br/>
+Before we end this project, we will consider an alternative approach to time-varying parameter models [2]. Let  $Y(t)$  be a stationary process and let  $X(t)= s(t) Y(t) + m(t)$. Then the parameters of the GEV distribution of the yearly maxima meet $\xi_X = \xi_Y$, $\sigma_X = \sigma_Y s(t)$, and $\mu_X = m(t) + \sigma_Y m(t)$ [3] and the parameters of the GP distribution of excesses of $X(t)$ meet $\xi_X = \xi_Y$, $\sigma_X = \sigma_Y s(t)$, $u_X(t) = m(t) + u_Ys(t)$ [2]. 
+
+Thus, instead of modelling the time-varying parameters directly, we can try to extract the trends in the mean and the variance of the original series and model the extremes of the residual series that could hopefully be considered stationary. The advantage of this approach is that we can estimate the trends from the whole series and not just its extremes. 
+
+Let us adjust the series of summer temperatures using the default parameters of loess, which seems to fit the trend reasonably well, to create a series that could be considered stationary. We are simplifying this step a bit. Ideally, we should determine the values of the smoothing parameters algorithmically, using, for example, cross-validation [2]. We will return to this point at the end of this section.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+# mean adjust
+loess_fit_mean <- loess(clementinum_summer$VALUE~seq(1,23000,1))$fitted 
+clementinum_summer_mean_adjust <- clementinum_summer$VALUE - loess_fit_mean 
+# variance adjust
+loess_fit_var <- loess(clementinum_summer_mean_adjust^2~seq(1,23000,1))$fitted 
+clementinum_summer_resid <- clementinum_summer_mean_adjust/sqrt(loess_fit_var)
+```
+
+<br/>
+We have obtained a residual temperature series, which is reasonably stationary.
+<br/>
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+par(mfrow = c(1, 1))
+plot(clementinum_summer_resid,type = 'l',ylab = 'Std. summer temperatues', xlab = 'Summer days (1775-2024)')
+```
+```{r, message=FALSE, warning=FALSE}
+MannKendall(clementinum_summer_resid)
+```
+
+<br/>
+First, let us compute the yearly residual maxima.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+clementinum_summer_max_adjust <- tapply(clementinum_summer_resid,
+                                        as.factor(clementinum_summer$Year),max)
+```
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+ggplot(as.data.frame(clementinum_summer_max_adjust), aes(x = years, y = clementinum_summer_max_adjust)) + geom_line() + geom_smooth(formula = y~x,colour='red',method = 'loess', se = FALSE) + xlab('Year') +  ylab('Maximum standardized temperature')
+```
+
+<br/>
+The trend in residual maxima is no longer significant according to the Mann-Kendall test, and the values also no longer appear serially correlated.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+MannKendall(clementinum_summer_max_adjust)
+acf(clementinum_summer_max_adjust)
+```
+
+<br/>
+Still, there appears to be a slight downward trend in the variance of yearly maxima of standardized summer temperatures. Hence, we will also consider models with time-varying parameters. We will model the time-varying trends in parameters via restricted cubic splines. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+clementinum_summer_max_adjust_data <- cbind(clementinum_summer_max_adjust,years)
+colnames(clementinum_summer_max_adjust_data) <- c('summer_max_adjust','year')
+clementinum_summer_max_adjust_data <- as.data.frame(clementinum_summer_max_adjust_data)
+clementinum_summer_max_adjust_data$year <- (clementinum_summer_max_adjust_data$year - 1774)/250
+
+bm_adjust_stationary <- fevd(summer_max_adjust, data =  clementinum_summer_max_adjust_data)
+bm_adjust_nonstationary_1 <- fevd(summer_max_adjust, data =  clementinum_summer_max_adjust_data, location.fun = ~ year)
+bm_adjust_nonstationary_2 <- fevd(summer_max_adjust, data =  clementinum_summer_max_adjust_data, scale.fun = ~ rcs(year,5),use.phi = TRUE)
+```
+
+<br/>
+Let us compare the models using the likelihood ratio tests. 
+<br/>
+  
+```{r, message=FALSE, warning=FALSE}
+lr.test(bm_adjust_stationary,bm_adjust_nonstationary_1)
+lr.test(bm_adjust_stationary,bm_adjust_nonstationary_2)
+```
+
+<br/>
+There is indeed a significant trend in the scale of the parameters, even though we have standardized the series. We can test that the linear trend is actually enough to model the remaining variance. Let us do that, and for a comparison, look at the return levels for the year 2024.
+<br/>
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+bm_adjust_nonstationary <- fevd(summer_max_adjust, data =  clementinum_summer_max_adjust_data, scale.fun = ~ year,use.phi = TRUE)
+lr.test(bm_adjust_nonstationary_2,bm_adjust_nonstationary)
+
+bm_adjust_pars <- distill.fevd(bm_adjust_nonstationary)
+
+return_levels_adjust1 <- rbind(return.level(bm_nonstationary_8,return.period = c(2,5,10,20,50,100,500,1000))[250,],
+                        qgev(c(0.5,0.2,0.1,0.05,0.02,0.01,0.002,0.001),
+                             loc=bm_adjust_pars[1]*sqrt(loess_fit_var[23000]) +loess_fit_mean[23000],
+                             scale=exp(bm_adjust_pars[2]+bm_adjust_pars[3])*sqrt(loess_fit_var[23000]),
+                             shape=bm_adjust_pars[4], lower.tail = FALSE),
+                        return.level(te_nonstationary_2_alt,return.period = 
+                                       c(2,5,10,20,50,100,500,1000))[sum(VALUE_decl>28),],
+                        return.level(pp_nonstationary_3,return.period = c(2,5,10,20,50,100,500,1000))[23000,]
+                        )
+                        
+rownames(return_levels_adjust1) <- c('GEV (time-dependent parameters)','GEV (mean and variance adj.)', 'GP (time-dependent parameters)', 'PP (time-dependent parameters)')
+return_levels_adjust1                        
+```
+
+<br/>
+We can observe that the resulting return levels for the GEV model are actually quite close to the maxima obtained from the excess models. However, since the residual time series is not stationary "enough", obtaining bootstrap confidence intervals for these estimates would be difficult.
+
+Hence, let us check the threshold excesses for the residuals instead.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+num_exces_resid <- numeric(12)
+
+for (i in 1:12){
+  num_exces_resid[i] <- sum(clementinum_summer_resid>0+i/4)
+}
+
+names(num_exces_resid) <- c('>0.25','>0.5','>0.75','>1','>1.25','>1.5','>1.75','>2','>2.25','>2.5','>2.75','>3')
+num_exces_resid
+```
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+par(mfrow = c(1, 1))
+n_excess_resid <- tapply(clementinum_summer_resid,as.factor(clementinum_summer$Year),function(x) sum(x>1.5))
+plot(years,n_excess_resid, main = 'Number of threshold excesses per year', xlab = 'Year', ylab = ' # Standardized threshold excesses')
+lines(years,loess(n_excess_resid~years)$fitted,col = 'red')
+```
+
+<br/>
+Again, we select the threshold using the plots.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+mrlplot(clementinum_summer_resid, xlim = c(0.25, 3))
+threshrange.plot(clementinum_summer_resid, r = c(0.25, 3), nint = 25)
+```
+
+<br/>
+Based on these plots, we select the threshold as 1.5. We decluster the residual series next.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+VALUE_decl_resid <- decluster(clementinum_summer_resid, 1.5)
+VALUE_decl_resid <- as.numeric(VALUE_decl_resid)
+atdf(VALUE_decl_resid, 0.95)
+```
+
+<br/>
+It seems that the declustering was successful. Hence, let us fit the models. We will consider models with constant parameters and with time-varying parameters, since there is no guarantee that our standardization removed all trends in the distribution of the extremes.  
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+te_adjust_1  <- fevd(VALUE_decl_resid[VALUE_decl_resid>1.5], 
+                     data = clementinum_summer_exc_data[VALUE_decl_resid>1.5,], threshold = 1.5, type = 'GP')
+te_adjust_2  <- fevd(VALUE_decl_resid[VALUE_decl_resid>1.5], 
+                     data = clementinum_summer_exc_data[VALUE_decl_resid>1.5,], threshold = 1.5, 
+                     type = 'GP',scale.fun = ~ rcs(year,5),use.phi = TRUE)
+```
+
+<br/>
+Let us compare the two models using the likelihood ratio test. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+lr.test(te_adjust_1,te_adjust_2)
+```
+
+<br/>
+We observe that the test is borderline significant. Let us have a look at the Poisson point process models.  
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+pp_adjust_1 <- fevd(VALUE_decl_resid,data = clementinum_summer_exc_data, threshold = 1.5, type = 'PP', time.units = '92/year')
+pp_adjust_2 <- fevd(VALUE_decl_resid,data = clementinum_summer_exc_data, threshold = 1.5, type = 'PP', time.units = '92/year', location.fun = ~rcs(year,5))
+pp_adjust_3 <- fevd(VALUE_decl_resid,data = clementinum_summer_exc_data, threshold = 1.5, type = 'PP', time.units = '92/year', scale.fun = ~rcs(year,5), use.phi = TRUE)
+pp_adjust_4 <- fevd(VALUE_decl_resid,data = clementinum_summer_exc_data, threshold = 1.5, type = 'PP', time.units = '92/year', location.fun = ~rcs(year,5), scale.fun = ~rcs(year,5), use.phi = TRUE)
+```
+
+<br/>
+Likelihood ratio tests are as follows.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+lr.test(pp_adjust_1,pp_adjust_2)
+lr.test(pp_adjust_1,pp_adjust_3)
+lr.test(pp_adjust_1,pp_adjust_4)
+```
+
+<br/>
+All tests are non-significant. Let us check the diagnostics plot next.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+par(mfrow = c(1, 2))
+plot(pp_adjust_1  ,'qq', main = 'GP model (standardized)')
+plot(pp_adjust_1  ,'qq2', main = 'GP model (standardized)')
+```
+
+<br/>
+We see that the GP model fits the data quite well. Let us compute the return levels using the aforementioned formulas $\xi_X = \xi_Y$, $\sigma_X = \sigma_Y s(t)$, and $\mu_X = m(t) + \sigma_Y m(t)$.
+<br/>
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+# residual GP model parameters
+pp_pars_adjust <- distill.fevd(pp_adjust_1)
+
+# 2024
+return_levels_adjust2 <- rbind(return.level(bm_nonstationary_8,return.period = c(2,5,10,20,50,100,500,1000))[250,],
+                        qgev(c(0.5,0.2,0.1,0.05,0.02,0.01,0.002,0.001),
+                             loc=bm_adjust_pars[1]*sqrt(loess_fit_var[23000]) +loess_fit_mean[23000],
+                             scale=exp(bm_adjust_pars[2]+bm_adjust_pars[3])*sqrt(loess_fit_var[23000]),
+                             shape=bm_adjust_pars[4], lower.tail = FALSE),
+                        return.level(te_nonstationary_2_alt,return.period = 
+                                       c(2,5,10,20,50,100,500,1000))[sum(VALUE_decl>28),],
+                        return.level(pp_nonstationary_3,return.period = c(2,5,10,20,50,100,500,1000))[23000,],
+                        qgev(c(0.5,0.2,0.1,0.05,0.02,0.01,0.002,0.001),
+                             loc=pp_pars_adjust[1]*sqrt(loess_fit_var[23000]) +loess_fit_mean[23000],
+                             scale=pp_pars_adjust[2]*sqrt(loess_fit_var[23000]),
+                             shape=pp_pars_adjust[3], lower.tail = FALSE)
+                        )
+                        
+rownames(return_levels_adjust2) <- c('GEV (time-dependent parameters)','GEV (mean and variance adj.)', 'GP (time-dependent parameters)', 'PP (time-dependent parameters)', 'PP (mean and variance adj.)')
+return_levels_adjust2 
+
+
+# 1775
+return_levels_adjust3 <- rbind(return.level(bm_nonstationary_8,return.period = c(2,5,10,20,50,100,500,1000))[1,],
+                        qgev(c(0.5,0.2,0.1,0.05,0.02,0.01,0.002,0.001),
+                             loc=bm_adjust_pars[1]*sqrt(loess_fit_var[1]) +loess_fit_mean[1],
+                             scale=exp(bm_adjust_pars[2]+bm_adjust_pars[3])*sqrt(loess_fit_var[1]),
+                             shape=bm_adjust_pars[4], lower.tail = FALSE),
+                        return.level(te_nonstationary_2_alt,return.period = 
+                                       c(2,5,10,20,50,100,500,1000))[sum(VALUE_decl>28),],
+                        return.level(pp_nonstationary_3,return.period = c(2,5,10,20,50,100,500,1000))[1,],
+                        qgev(c(0.5,0.2,0.1,0.05,0.02,0.01,0.002,0.001),
+                             loc=pp_pars_adjust[1]*sqrt(loess_fit_var[1]) +loess_fit_mean[1],
+                             scale=pp_pars_adjust[2]*sqrt(loess_fit_var[1]),
+                             shape=pp_pars_adjust[3], lower.tail = FALSE)
+                        )
+                        
+rownames(return_levels_adjust3) <- c('GEV (time-dependent parameters)','GEV (mean and variance adj.)', 'GP (time-dependent parameters)', 'PP (time-dependent parameters)', 'PP (mean and variance adj.)')
+return_levels_adjust3
+```
+
+<br/>
+We observe that the return levels are significantly higher. However, we have to keep in mind that we used loess to estimate the trends in mean and variance. The question is how much our quite arbitrary choice of the smoothing parameter of loess influences our estimates. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+loess_par <- c(0.05,0.1,0.2,0.5,0.7,1,2,5,7,10)
+return_levels_loess <- matrix(0,10,8)
+
+
+for (j in 1:10){
+   loess_fit_mean_alt <- loess(clementinum_summer$VALUE~seq(1,23000,1),span = loess_par[j])$fitted 
+   clementinum_summer_mean_adjust_alt <- clementinum_summer$VALUE - loess_fit_mean_alt   
+   loess_fit_var_alt <- loess(clementinum_summer_mean_adjust_alt^2~seq(1,23000,1),span = loess_par[j])$fitted 
+   clementinum_summer_resid_alt <- clementinum_summer_mean_adjust_alt/sqrt(loess_fit_var_alt)
+   
+   threshold_alt <- quantile(clementinum_summer_resid_alt,0.95)
+   VALUE_decl_resid_alt <- decluster(clementinum_summer_resid_alt, threshold_alt)
+   
+   
+   pp_adjust_alt  <- pp_adjust_1 <- fevd(VALUE_decl_resid_alt,data = clementinum_summer_exc_data, threshold = threshold_alt, type = 'PP', time.units = '92/year')
+   
+   pp_pars_adjust_alt <- distill.fevd(pp_adjust_alt)
+
+  return_levels_loess[j,] <- qgev(c(0.5,0.2,0.1,0.05,0.02,0.01,0.002,0.001),
+                             loc=pp_pars_adjust_alt[1]*sqrt(loess_fit_var[23000]) +loess_fit_mean[23000],
+                             scale=pp_pars_adjust_alt[2]*sqrt(loess_fit_var[23000]),
+                             shape=pp_pars_adjust_alt[3], lower.tail = FALSE)
+}
+
+rownames(return_levels_loess) <- loess_par
+colnames(return_levels_loess) <- 1/c(0.5,0.2,0.1,0.05,0.02,0.01,0.002,0.001)
+return_levels_loess
+```
+
+<br/>
+Our estimates of return levels are actually quite robust to the choice of the smoothing parameter, which increases our confidence in our estimates. Let us finish this section with bootstrap confidence intervals. 
+Since we observed that the residual temperature is approximately stationary (in terms of using the series for the PP model at least), we can consider a moving block bootstrap for the residuals. Again, we will omit smoothing parameter selection from the bootstrap since we did not perform this step algorithmically. Instead, we will use the default choice of the parameters.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+set.seed(123)
+nb <- 500
+return_levels_boot61 <- matrix(0,nb,8)
+return_levels_boot62 <- matrix(0,nb,8)
+
+for (j in 1:nb){
+  clementinum_summer_new <- clementinum_summer
+  
+  for (i in 1:575){
+    rand_ind <- sample(seq(1,22961,1),1)
+    resid <- clementinum_summer_resid[rand_ind:(rand_ind+39)]
+    clementinum_summer_new$VALUE[(40*(i-1)+1):(40*i)] <- loess_fit_mean[(40*(i-1)+1):(40*i)] + resid* sqrt(loess_fit_var[(40*(i-1)+1):(40*i)])
+  }
+  
+  loess_fit_mean_new <- loess(clementinum_summer_new$VALUE~seq(1,23000,1))$fitted 
+  clementinum_summer_mean_adjust_new <- clementinum_summer_new$VALUE - loess_fit_mean_new
+  loess_fit_var_new <- loess(clementinum_summer_mean_adjust_new^2~seq(1,23000,1))$fitted 
+  clementinum_summer_var_adjust_new  <- clementinum_summer_mean_adjust_new/sqrt(loess_fit_var_new)
+  
+  threshold_new <- quantile(clementinum_summer_var_adjust_new,0.95)
+  VALUE_decl_adjust_new <- as.numeric(decluster(clementinum_summer_var_adjust_new, threshold_new))
+
+  pp_adjust_new  <- fevd(VALUE_decl_adjust_new,data = clementinum_summer_exc_data, threshold = threshold_new, type = 'PP', time.units = '92/year')
+  
+  pp_pars_adjust_new <- distill.fevd(pp_adjust_new)
+  
+  return_levels_boot61[j,] <- qgev(c(0.5,0.2,0.1,0.05,0.02,0.01,0.002,0.001),
+                             loc=pp_pars_adjust_new[1]*sqrt(loess_fit_var_new[1]) +loess_fit_mean_new[1],
+                             scale=pp_pars_adjust_new[2]*sqrt(loess_fit_var_new[1]),
+                             shape=pp_pars_adjust_new[3], lower.tail = FALSE)
+  
+  return_levels_boot62[j,] <- qgev(c(0.5,0.2,0.1,0.05,0.02,0.01,0.002,0.001),
+                             loc=pp_pars_adjust_new[1]*sqrt(loess_fit_var_new[23000]) +loess_fit_mean_new[23000],
+                             scale=pp_pars_adjust_new[2]*sqrt(loess_fit_var_new[23000]),
+                             shape=pp_pars_adjust_new[3], lower.tail = FALSE)
+}
+
+t(apply(return_levels_boot61,2,function(x) quantile(x,c(0.025,0.975))))
+t(apply(return_levels_boot62,2,function(x) quantile(x,c(0.025,0.975))))
+``` 
+
+
+
+## Conclusion
+
+<br/>
+Let us conclude this project. One might be surprised that we skipped the usual step of validating the models by evaluating their predictions on the new data. However, the extreme value analysis is different in this regard. Since we are often interested in estimating extreme events that are predicted to happen once every 100 or 1000 years, we simply do not have enough data to validate the model via the usual means. Extreme value analysis is, by its nature, an extrapolation far beyond what the original data can offer, which naturally brings the questions about the validity of the predictions. Still, the predictions of extreme events are necessary, and extreme value analysis employs techniques that have a solid foundation in probability theory.
+
+Concerning our analysis of the Clementinum dataset, we have clearly shown that there is an increasing trend in the maximum summer temperatures (at 14:00:00 CET) between years 1774-2024 at the Clementinum measuring station. We have estimated that the 1000-year maximum increased from about 36°C (bootstrap CI [35.4,36.8]) in 1775 to 39°C (bootstrap CI [38.1,39.6]) in 2024 (based on the threshold excess model). We have also fitted an alternative threshold excess model, based on adjusting the trend in the mean and variance, which estimates that the 1000-year maximum in 2024 is 40°C (bootstrap CI: [39.1, 41.3]). 
+
+These final observations conclude the Sixth Circle: Extreme Value Analysis.
+<br/>
+
+
+##  References
+
+* [1] S. Coles, Stuart. An introduction to statistical modeling of extreme values. Vol. 208. London: Springer, 2001.
+
+* [2] N. Bousquet and Pietro Bernardara. Extreme value theory with applications to natural hazards. Springer International Publishing, 2021.
+
+* [3] S. Parey, Thi Thu Huong Hoang, and D. Dacunha‐Castelle. The importance of mean and variance in predicting changes in temperature extremes. Journal of Geophysical Research: Atmospheres 118.15 (2013): 8285-8296.
+
+* [4] S. N. Lahiri. Resampling methods for dependent data. Springer Science & Business Media, 2013.
+
+* [5] R.-D. Reiss and M. Thomas. Statistical analysis of extreme values: with applications to insurance, finance, hydrology and other fields. Basel: Birkhäuser Basel, 2007.
+
+* [6] E. Gilleland and R. W. Katz. extRemes 2.0: an extreme value analysis package in R. Journal of Statistical Software 72 (2016): 1-39.
