@@ -500,7 +500,8 @@ for(i in 0:nperiod){
 return (prob)
 }
 
-return_level_nonstat(bm_nonstationary_pars[1],bm_nonstationary_pars[2],bm_nonstationary_pars[3],bm_nonstationary_pars[4],bm_nonstationary_pars[5],bm_nonstationary_pars[6],1,100,39.1406)
+# find the solution via optimization
+optimize(function (x) (return_level_nonstat(bm_nonstationary_pars[1],bm_nonstationary_pars[2],bm_nonstationary_pars[3],bm_nonstationary_pars[4],bm_nonstationary_pars[5],bm_nonstationary_pars[6],1,100,x)-1)^2,c(35,45))$minimum
 ```
 
 <br/>
@@ -528,7 +529,7 @@ num_exces
 <br/>
 The model of excesses is based on the following theorem [1]. Let $X_1\ldots, X_n$ be i.i.d. and let $M_n = \max \{X_1\,\ldots, X_n\}$ and let $X_1\ldots, X_n$ meet Fisher–Tippett–Gnedenko theorem, i.e, the distribution of $M_n$ converges to $\mathrm{GEV}(\mu,\sigma,\xi)$. Then the distribution of excesses $y = x-u$ such that $y > 0$  converges for large enough $u$ to the generalized Pareto distribution (GP) $P[Y\leq y] = 1-(1+\frac{\xi y}{\tilde\sigma})^{-1/\xi}$, where $\tilde{\sigma} = \sigma + \xi(u-\mu)$. 
 
-The theorem implies that instead of block maxima, we can model the distribution of excesses for large enough thresholds using the GP distribution. Graphical methods can help us choose a suitable threshold. For example, if an excess GP model is valid, $E(X-u\mid X > u)$ should be linear function of $u$ [1], and thus, the mean residual life plot (the plot u vs $\frac{1}{\# x > u} \sum_{x > u} x - u$) should be approximately linear.
+The theorem implies that instead of block maxima, we can model the distribution of excesses for large enough thresholds using the GP distribution. Graphical methods can help us choose a suitable threshold. For example, if an excess GP model is valid, $E(X-u\mid X > u)$ should be linear function of $u$ [1], and thus, the mean residual life plot (the plot u vs $\frac{1}{\mathrm{count} x > u} \sum_{x > u} x - u$) should be approximately linear.
 <br/>
 
 ```{r, message=FALSE, warning=FALSE}
@@ -1347,7 +1348,35 @@ return_levels_all_1775
 ```
 
 <br/>
-We observe that the return levels are much lower for all non-stationary models. Let us compute the confidence intervals. The normal ones are computed as follows
+We observe that the return levels are much lower for all non-stationary models. We can also reevaluate our estimate of the non-stationary return level in the next 100 year.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+# return level (non-stationary) for 2024-2124
+
+return_level_nonstat2 <- function(model,data,t0,nperiod,temp) {
+
+  pars <- distill.fevd(model) 
+  rcs_spline <- rcs(data$year,5)
+  prob <-0
+  
+  for(i in 0:nperiod){
+    t <- t0+i/250
+    rcs_spline_eval <- rcspline.eval(t,knots = attributes(rcs_spline)$parms,inclx = TRUE)[1,]
+    prob <- prob + pgev(temp, loc=pars[1] + pars[2:5] %*% rcs_spline_eval, scale=pars[6], shape=pars[7], lower.tail = FALSE)
+  }
+return (prob)
+}
+
+# find the solution via optimization
+optimize(function (x) (return_level_nonstat2(pp_nonstationary_3,clementinum_summer_exc_data,1,100,x)-1)^2,c(35,45))$minimum
+optimize(function (x) (return_level_nonstat(bm_nonstationary_pars[1],bm_nonstationary_pars[2],bm_nonstationary_pars[3],bm_nonstationary_pars[4],bm_nonstationary_pars[5],bm_nonstationary_pars[6],1,100,x)-1)^2,c(35,45))$minimum
+```
+
+<br/>
+We predict based on the estimated trends that the the non-stationary 100-year return level (expectation of exceeding the return return level in the next 100 years is one) is 40.7. This is a slightly higher estimate than the one obtained from the block maxima approach (39.1).
+
+Let us compute the confidence intervals. The normal ones are computed as follows
 <br/>
 
 ```{r, message=FALSE, warning=FALSE}
@@ -1373,6 +1402,7 @@ nb <- 500
 
 return_levels_boot51 <- matrix(0,nb,8)
 return_levels_boot52 <- matrix(0,nb,8)
+return_level_nostat_boot <- numeric(nb)
 
 pp_nonstationary_pars_all <- findpars(pp_nonstationary_3)
 
@@ -1423,14 +1453,21 @@ for (j in 1:nb){
     return_levels_boot52[j,] <- qgev(c(0.5,0.2,0.1,0.05,0.02,0.01,0.002,0.001), 
                                     loc=pp_location_new, scale=pp_scale_new, shape=pp_shape_new, lower.tail = FALSE)
     
+    
+    return_level_nostat_boot[j] <- optimize(function (x) (return_level_nonstat2(pp_nonstationary_new,clementinum_summer_exc_data_new,1,100,x)-1)^2,c(35,45))$minimum
+    
   }
   else
-    {return_levels_boot5[j,] <- NA}
+  { return_levels_boot51[j,] <- NA
+    return_levels_boot52[j,] <- NA
+    return_level_nostat_boot[j,] <- NA}
 }
 
 t(apply(return_levels_boot51,2,function(x) quantile(x,c(0.025,0.975), na.rm= TRUE)))
 t(apply(return_levels_boot52,2,function(x) quantile(x,c(0.025,0.975), na.rm= TRUE)))
+quantile(return_level_nostat_boot,c(0.025,0.975), na.rm= TRUE)
 ```
+
 
 <br/>
 To wrap up this section, we will look at the diagnostics plots.
@@ -1762,14 +1799,16 @@ t(apply(return_levels_boot61,2,function(x) quantile(x,c(0.025,0.975))))
 t(apply(return_levels_boot62,2,function(x) quantile(x,c(0.025,0.975))))
 ``` 
 
-
+<br/>
+We will not estimate predicted non-stationary return levels, since loess is not designed for that and thus, we would have to switch to another method to estimate the trend. The computation itself would be analogous to the ones we presented for the Poisson process approach.
+<br/>
 
 ## Conclusion
 
 <br/>
 Let us conclude this project. One might be surprised that we skipped the usual step of validating the models by evaluating their predictions on the new data. However, the extreme value analysis is different in this regard. Since we are often interested in estimating extreme events that are predicted to happen once every 100 or 1000 years, we simply do not have enough data to validate the model via the usual means. Extreme value analysis is, by its nature, an extrapolation far beyond what the original data can offer, which naturally brings the questions about the validity of the predictions. Still, the predictions of extreme events are necessary, and extreme value analysis employs techniques that have a solid foundation in probability theory.
 
-Concerning our analysis of the Clementinum dataset, we have clearly shown that there is an increasing trend in the maximum summer temperatures (at 14:00:00 CET) between years 1774-2024 at the Clementinum measuring station. We have estimated that the 1000-year maximum increased from about 36°C (bootstrap CI [35.4,36.8]) in 1775 to 39°C (bootstrap CI [38.1,39.6]) in 2024 (based on the threshold excess model). We have also fitted an alternative threshold excess model, based on adjusting the trend in the mean and variance, which estimates that the 1000-year maximum in 2024 is 40°C (bootstrap CI: [39.1, 41.3]). 
+Concerning our analysis of the Clementinum dataset, we have clearly shown that there is an increasing trend in the maximum summer temperatures (at 14:00:00 CET) between years 1774-2024 at the Clementinum measuring station. We have estimated that the 1000-year maximum increased from about 36°C (bootstrap CI [35.3,37.1]) in 1775 to 39°C (bootstrap CI [38.0,39.5]) in 2024 (based on the threshold excess model). We also predict using this model that the non-stationary return level for the next 100 years is 40.7°C (bootstrap CI: [39.2, 42.1]). We have also fitted an alternative threshold excess model, based on adjusting the trend in the mean and variance via the loess regression, which estimates that the 1000-year maximum in 2024 is 40°C (bootstrap CI: [39.0, 41.5]).
 
 These final observations conclude the Sixth Circle: Extreme Value Analysis.
 <br/>

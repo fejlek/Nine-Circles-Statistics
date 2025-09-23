@@ -1,4 +1,4 @@
-# The Fifth Circle: Extreme Value Analysis
+# The Sixth Circle: Extreme Value Analysis
 
 <br/>
 Jiří Fejlek
@@ -246,9 +246,9 @@ ci.fevd(bm_stationary, type = 'parameter',method = 'boot',R = 1000)
     ## 1000  iterations
     ## 
     ##                2.5%   Estimate      97.5%
-    ## location 30.8404460 31.1168757 31.4051399
-    ## scale     1.8259877  2.0242361  2.2131820
-    ## shape    -0.3673405 -0.2800013 -0.2135795
+    ## location 30.8475286 31.1168757 31.3795340
+    ## scale     1.8265031  2.0242361  2.2142251
+    ## shape    -0.3650441 -0.2800013 -0.2069121
 
 <br/> We are primarily interested in the predictions of the model.
 First, we compute the probabilities $P[M_n > T]$ based on the block
@@ -358,14 +358,14 @@ ci.fevd(bm_stationary,return.period = c(2,5,10,20,50,100,500,1000),method = 'boo
     ## 1000  iterations
     ## 
     ##               2.5% Estimate    97.5%
-    ## 2-year    31.54748 31.82199 32.11116
-    ## 5-year    33.28919 33.59614 33.89360
-    ## 10-year   34.16323 34.49636 34.78786
-    ## 20-year   34.80060 35.19911 35.50332
-    ## 50-year   35.40758 35.92180 36.29039
-    ## 100-year  35.76521 36.35233 36.79803
-    ## 500-year  36.29378 37.07712 37.69751
-    ## 1000-year 36.43279 37.30116 37.99135
+    ## 2-year    31.56474 31.82199 32.10018
+    ## 5-year    33.29054 33.59614 33.89132
+    ## 10-year   34.14359 34.49636 34.81616
+    ## 20-year   34.79582 35.19911 35.52914
+    ## 50-year   35.41040 35.92180 36.34561
+    ## 100-year  35.74757 36.35233 36.85197
+    ## 500-year  36.24982 37.07712 37.82393
+    ## 1000-year 36.40853 37.30116 38.16332
 
 ### Model diagnostics
 
@@ -631,12 +631,12 @@ ci.fevd(bm_nonstationary_8, type = 'parameter',method = 'boot',R = 1000)
     ## 1000  iterations
     ## 
     ##             2.5%   Estimate      97.5%
-    ## mu0   29.6265309 30.3829594 31.1517047
-    ## mu1   -4.1931595 -1.2534165  1.9168737
-    ## mu2    1.3249253  4.1278611  7.0043476
-    ## phi0  -0.8937970  0.7862979  0.9436307
-    ## phi1  -0.7193703 -0.4379772  0.0000000
-    ## shape -0.3163279 -0.2300259 -0.1564652
+    ## mu0   29.6171672 30.3829594 31.1573231
+    ## mu1   -4.5914007 -1.2534165  2.0158378
+    ## mu2    1.1686701  4.1278611  7.1197360
+    ## phi0  -0.9176962  0.7862979  0.9262175
+    ## phi1  -0.7015715 -0.4379772  0.0000000
+    ## shape -0.3080509 -0.2300259 -0.1605026
 
 <br/> The predicted return levels for the year 2024 are as follows.
 <br/>
@@ -773,11 +773,11 @@ for(i in 0:nperiod){
 return (prob)
 }
 
-return_level_nonstat(bm_nonstationary_pars[1],bm_nonstationary_pars[2],bm_nonstationary_pars[3],bm_nonstationary_pars[4],bm_nonstationary_pars[5],bm_nonstationary_pars[6],1,100,39.1406)
+# find the solution via optimization
+optimize(function (x) (return_level_nonstat(bm_nonstationary_pars[1],bm_nonstationary_pars[2],bm_nonstationary_pars[3],bm_nonstationary_pars[4],bm_nonstationary_pars[5],bm_nonstationary_pars[6],1,100,x)-1)^2,c(35,45))$minimum
 ```
 
-    ##    shape 
-    ## 1.000016
+    ## [1] 39.14059
 
 <br/> We observe that this value (39.1°C) is between the 100-year
 temperature for 2024 (37.3°C) and the 100-year temperature for 2124
@@ -822,8 +822,8 @@ distribution of excesses for large enough thresholds using the GP
 distribution. Graphical methods can help us choose a suitable threshold.
 For example, if an excess GP model is valid, $E(X-u\mid X > u)$ should
 be linear function of $u$ \[1\], and thus, the mean residual life plot
-(the plot u vs $\frac{1}{\# x > u} \sum_{x > u} x - u$) should be
-approximately linear. <br/>
+(the plot u vs $\frac{1}{\mathrm{count} x > u} \sum_{x > u} x - u$)
+should be approximately linear. <br/>
 
 ``` r
 par(mfrow = c(1, 1))
@@ -2116,8 +2116,46 @@ return_levels_all_1775
     ## TE(PP) final  36.23127
 
 <br/> We observe that the return levels are much lower for all
-non-stationary models. Let us compute the confidence intervals. The
-normal ones are computed as follows <br/>
+non-stationary models. We can also reevaluate our estimate of the
+non-stationary return level in the next 100 year. <br/>
+
+``` r
+# return level (non-stationary) for 2024-2124
+
+return_level_nonstat2 <- function(model,data,t0,nperiod,temp) {
+
+  pars <- distill.fevd(model) 
+  rcs_spline <- rcs(data$year,5)
+  prob <-0
+  
+  for(i in 0:nperiod){
+    t <- t0+i/250
+    rcs_spline_eval <- rcspline.eval(t,knots = attributes(rcs_spline)$parms,inclx = TRUE)[1,]
+    prob <- prob + pgev(temp, loc=pars[1] + pars[2:5] %*% rcs_spline_eval, scale=pars[6], shape=pars[7], lower.tail = FALSE)
+  }
+return (prob)
+}
+
+# find the solution via optimization
+optimize(function (x) (return_level_nonstat2(pp_nonstationary_3,clementinum_summer_exc_data,1,100,x)-1)^2,c(35,45))$minimum
+```
+
+    ## [1] 40.72224
+
+``` r
+optimize(function (x) (return_level_nonstat(bm_nonstationary_pars[1],bm_nonstationary_pars[2],bm_nonstationary_pars[3],bm_nonstationary_pars[4],bm_nonstationary_pars[5],bm_nonstationary_pars[6],1,100,x)-1)^2,c(35,45))$minimum
+```
+
+    ## [1] 39.14059
+
+<br/> We predict based on the estimated trends that the the
+non-stationary 100-year return level (expectation of exceeding the
+return return level in the next 100 years is one) is 40.7. This is a
+slightly higher estimate than the one obtained from the block maxima
+approach (39.1).
+
+Let us compute the confidence intervals. The normal ones are computed as
+follows <br/>
 
 ``` r
 # normal CI 2024
@@ -2172,6 +2210,7 @@ nb <- 500
 
 return_levels_boot51 <- matrix(0,nb,8)
 return_levels_boot52 <- matrix(0,nb,8)
+return_level_nostat_boot <- numeric(nb)
 
 pp_nonstationary_pars_all <- findpars(pp_nonstationary_3)
 
@@ -2222,9 +2261,14 @@ for (j in 1:nb){
     return_levels_boot52[j,] <- qgev(c(0.5,0.2,0.1,0.05,0.02,0.01,0.002,0.001), 
                                     loc=pp_location_new, scale=pp_scale_new, shape=pp_shape_new, lower.tail = FALSE)
     
+    
+    return_level_nostat_boot[j] <- optimize(function (x) (return_level_nonstat2(pp_nonstationary_new,clementinum_summer_exc_data_new,1,100,x)-1)^2,c(35,45))$minimum
+    
   }
   else
-    {return_levels_boot5[j,] <- NA}
+  { return_levels_boot51[j,] <- NA
+    return_levels_boot52[j,] <- NA
+    return_level_nostat_boot[j,] <- NA}
 }
 
 t(apply(return_levels_boot51,2,function(x) quantile(x,c(0.025,0.975), na.rm= TRUE)))
@@ -2254,6 +2298,13 @@ t(apply(return_levels_boot52,2,function(x) quantile(x,c(0.025,0.975), na.rm= TRU
     ## [7,] 37.92610 39.29154
     ## [8,] 38.07258 39.50333
 
+``` r
+quantile(return_level_nostat_boot,c(0.025,0.975), na.rm= TRUE)
+```
+
+    ##     2.5%    97.5% 
+    ## 39.20347 42.13141
+
 <br/> To wrap up this section, we will look at the diagnostics plots.
 <br/>
 
@@ -2262,13 +2313,13 @@ par(mfrow = c(1, 1))
 plot(pp_nonstationary_3,'qq', main = 'PP model (time-varying parameters)')
 ```
 
-![](Sixth_circle_extreme_value_analysis_1_files/figure-GFM/unnamed-chunk-91-1.png)<!-- -->
+![](Sixth_circle_extreme_value_analysis_1_files/figure-GFM/unnamed-chunk-92-1.png)<!-- -->
 
 ``` r
 plot(pp_nonstationary_3,'qq2', main = 'PP model (time-varying parameters)')
 ```
 
-![](Sixth_circle_extreme_value_analysis_1_files/figure-GFM/unnamed-chunk-91-2.png)<!-- -->
+![](Sixth_circle_extreme_value_analysis_1_files/figure-GFM/unnamed-chunk-92-2.png)<!-- -->
 
 ## Mean and variance trend approach
 
@@ -2308,7 +2359,7 @@ clementinum_summer_resid <- clementinum_summer_mean_adjust/sqrt(loess_fit_var)
 <br/> We have obtained a residual temperature series, which is
 reasonably stationary. <br/>
 
-![](Sixth_circle_extreme_value_analysis_1_files/figure-GFM/unnamed-chunk-93-1.png)<!-- -->
+![](Sixth_circle_extreme_value_analysis_1_files/figure-GFM/unnamed-chunk-94-1.png)<!-- -->
 
 ``` r
 MannKendall(clementinum_summer_resid)
@@ -2323,7 +2374,7 @@ clementinum_summer_max_adjust <- tapply(clementinum_summer_resid,
                                         as.factor(clementinum_summer$Year),max)
 ```
 
-![](Sixth_circle_extreme_value_analysis_1_files/figure-GFM/unnamed-chunk-96-1.png)<!-- -->
+![](Sixth_circle_extreme_value_analysis_1_files/figure-GFM/unnamed-chunk-97-1.png)<!-- -->
 
 <br/> The trend in residual maxima is no longer significant according to
 the Mann-Kendall test, and the values also no longer appear serially
@@ -2339,7 +2390,7 @@ MannKendall(clementinum_summer_max_adjust)
 acf(clementinum_summer_max_adjust)
 ```
 
-![](Sixth_circle_extreme_value_analysis_1_files/figure-GFM/unnamed-chunk-97-1.png)<!-- -->
+![](Sixth_circle_extreme_value_analysis_1_files/figure-GFM/unnamed-chunk-98-1.png)<!-- -->
 
 <br/> Still, there appears to be a slight downward trend in the variance
 of yearly maxima of standardized summer temperatures. Hence, we will
@@ -2436,7 +2487,7 @@ num_exces_resid
     ## >0.25  >0.5 >0.75    >1 >1.25  >1.5 >1.75    >2 >2.25  >2.5 >2.75    >3 
     ##  9183  7308  5476  3914  2575  1635   927   482   241    87    35    10
 
-![](Sixth_circle_extreme_value_analysis_1_files/figure-GFM/unnamed-chunk-102-1.png)<!-- -->
+![](Sixth_circle_extreme_value_analysis_1_files/figure-GFM/unnamed-chunk-103-1.png)<!-- -->
 
 <br/> Again, we select the threshold using the plots. <br/>
 
@@ -2444,13 +2495,13 @@ num_exces_resid
 mrlplot(clementinum_summer_resid, xlim = c(0.25, 3))
 ```
 
-![](Sixth_circle_extreme_value_analysis_1_files/figure-GFM/unnamed-chunk-103-1.png)<!-- -->
+![](Sixth_circle_extreme_value_analysis_1_files/figure-GFM/unnamed-chunk-104-1.png)<!-- -->
 
 ``` r
 threshrange.plot(clementinum_summer_resid, r = c(0.25, 3), nint = 25)
 ```
 
-![](Sixth_circle_extreme_value_analysis_1_files/figure-GFM/unnamed-chunk-103-2.png)<!-- -->
+![](Sixth_circle_extreme_value_analysis_1_files/figure-GFM/unnamed-chunk-104-2.png)<!-- -->
 
 <br/> Based on these plots, we select the threshold as 1.5. We decluster
 the residual series next. <br/>
@@ -2461,7 +2512,7 @@ VALUE_decl_resid <- as.numeric(VALUE_decl_resid)
 atdf(VALUE_decl_resid, 0.95)
 ```
 
-![](Sixth_circle_extreme_value_analysis_1_files/figure-GFM/unnamed-chunk-104-1.png)<!-- -->
+![](Sixth_circle_extreme_value_analysis_1_files/figure-GFM/unnamed-chunk-105-1.png)<!-- -->
 
 <br/> It seems that the declustering was successful. Hence, let us fit
 the models. We will consider models with constant parameters and with
@@ -2551,7 +2602,7 @@ plot(pp_adjust_1  ,'qq', main = 'GP model (standardized)')
 plot(pp_adjust_1  ,'qq2', main = 'GP model (standardized)')
 ```
 
-![](Sixth_circle_extreme_value_analysis_1_files/figure-GFM/unnamed-chunk-109-1.png)<!-- -->
+![](Sixth_circle_extreme_value_analysis_1_files/figure-GFM/unnamed-chunk-110-1.png)<!-- -->
 
 <br/> We see that the GP model fits the data quite well. Let us compute
 the return levels using the aforementioned formulas $\xi_X = \xi_Y$,
@@ -2718,6 +2769,12 @@ t(apply(return_levels_boot62,2,function(x) quantile(x,c(0.025,0.975))))
     ## [7,] 38.80881 41.13084
     ## [8,] 39.04604 41.45144
 
+<br/> We will not estimate predicted non-stationary return levels, since
+loess is not designed for that and thus, we would have to switch to
+another method to estimate the trend. The computation itself would be
+analogous to the ones we presented for the Poisson process approach.
+<br/>
+
 ## Conclusion
 
 <br/> Let us conclude this project. One might be surprised that we
@@ -2736,12 +2793,14 @@ Concerning our analysis of the Clementinum dataset, we have clearly
 shown that there is an increasing trend in the maximum summer
 temperatures (at 14:00:00 CET) between years 1774-2024 at the
 Clementinum measuring station. We have estimated that the 1000-year
-maximum increased from about 36°C (bootstrap CI \[35.4,36.8\]) in 1775
-to 39°C (bootstrap CI \[38.1,39.6\]) in 2024 (based on the threshold
-excess model). We have also fitted an alternative threshold excess
-model, based on adjusting the trend in the mean and variance, which
-estimates that the 1000-year maximum in 2024 is 40°C (bootstrap CI:
-\[39.1, 41.3\]).
+maximum increased from about 36°C (bootstrap CI \[35.3,37.1\]) in 1775
+to 39°C (bootstrap CI \[38.0,39.5\]) in 2024 (based on the threshold
+excess model). We also predict using this model that the non-stationary
+return level for the next 100 years is 40.7°C (bootstrap CI: \[39.2,
+42.1\]). We have also fitted an alternative threshold excess model,
+based on adjusting the trend in the mean and variance via the loess
+regression, which estimates that the 1000-year maximum in 2024 is 40°C
+(bootstrap CI: \[39.0, 41.5\]).
 
 These final observations conclude the Sixth Circle: Extreme Value
 Analysis. <br/>
