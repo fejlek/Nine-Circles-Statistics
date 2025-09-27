@@ -1,13 +1,12 @@
----
-author: Jiří Fejlek
-code_folding: hide
-date: 2025-05-17
-output:
-  md_document:
-    toc: true
-    variant: GFM
-title: "The First Circle: Linear Regression, Part One"
----
+# The First Circle: Linear Regression, Part Two
+
+<br/>
+Jiří Fejlek
+
+2025-05-17
+<br/>
+
+## Table of Contents
 
 - [Life Expectancy (WHO) dataset](#life-expectancy-who-dataset)
 - [Initial Data Exploration](#initial-data-exploration)
