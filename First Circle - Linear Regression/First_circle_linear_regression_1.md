@@ -1,10 +1,17 @@
-# The First Circle: Linear Regression, Part One
+---
+author: Jiří Fejlek
+code_folding: hide
+date: 2025-05-17
+output:
+  md_document:
+    toc: true
+    variant: GFM
+title: "The First Circle: Linear Regression, Part One"
+---
 
-<br/>
-Jiří Fejlek
-
-2025-05-17
-<br/>
+- [Life Expectancy (WHO) dataset](#life-expectancy-who-dataset)
+- [Initial Data Exploration](#initial-data-exploration)
+- [Redundancy Analysis](#redundancy-analysis)
 
 <br/> In this project, we will demonstrate application of using linear
 regression and some of its extensions (we will eventually move to models
@@ -443,7 +450,7 @@ redun(~.- Life_expectancy - Under_five_deaths - Year - Country  -  Adult_mortali
     ##     Measles + BMI + Polio + Diphtheria + Incidents_HIV + Thinness_ten_nineteen_years + 
     ##     Thinness_five_nine_years + Schooling + Economy_status + Population_log + 
     ##     GDP_log + Under_five_deaths_dif
-    ## <environment: 0x000001fcbfc93268>
+    ## <environment: 0x000001cedfd52d20>
     ## 
     ## n: 2864  p: 16   nk: 4 
     ## 
