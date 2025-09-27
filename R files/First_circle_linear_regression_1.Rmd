@@ -4,6 +4,7 @@ author: "Jiří Fejlek"
 date: "2025-05-17"
 output:
   md_document:
+    toc: true
     variant: GFM
 code_folding: hide
 ---
@@ -266,7 +267,6 @@ hist(life_expectancy$Infant_deaths,xlab = 'Infant deaths',main = NULL)
 hist(life_expectancy$Under_five_deaths,xlab = 'Under five deaths',main = NULL)
 hist(life_expectancy$Under_five_deaths-life_expectancy$Infant_deaths,xlab = 'Under five deaths - Infant deaths',main = NULL)
 ```
-
 
 <br/>
 When faced with a group of collinear predictors, it is recommended to summarize the predictors (e.g., using the principal component analysis) instead of arbitrarily choosing one. In our case, it makes sense to simply split **Infant_deaths** and **Under_five_deaths** that are not **Infant_deaths**.

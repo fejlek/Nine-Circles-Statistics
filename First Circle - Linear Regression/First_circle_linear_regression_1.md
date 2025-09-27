@@ -6,12 +6,6 @@ Jiří Fejlek
 2025-05-17
 <br/>
 
-## Table of Contents
-
-- [Life Expectancy (WHO) dataset](#life-expectancy-who-dataset)
-- [Initial Data Exploration](#initial-data-exploration)
-- [Redundancy Analysis](#redundancy-analysis)
-
 <br/> In this project, we will demonstrate application of using linear
 regression and some of its extensions (we will eventually move to models
 for panel data and the final model will be a mixed effects model). Our
@@ -22,6 +16,12 @@ about life expectancy. We also wish to identify predictors that seem to
 have the greatest effect on life expectancy. We will split this
 presentation into three parts: data preparation & exploration, creating
 a model , and model predictions & discussion. <br/>
+
+## Table of Contents
+
+- [Life Expectancy (WHO) dataset](#life-expectancy-who-dataset)
+- [Initial Data Exploration](#initial-data-exploration)
+- [Redundancy Analysis](#redundancy-analysis)
 
 ## Life Expectancy (WHO) dataset
 
