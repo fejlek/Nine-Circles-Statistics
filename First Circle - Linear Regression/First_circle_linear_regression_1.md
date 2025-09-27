@@ -1,4 +1,4 @@
-# The First Circle: Linear Regression, Part Two
+# The First Circle: Linear Regression, Part One
 
 <br/>
 Jiří Fejlek
