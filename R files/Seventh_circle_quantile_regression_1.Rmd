@@ -1,0 +1,1479 @@
+---
+title: "The Seventh Circle: Quantile Regression"
+author: "Jiří Fejlek"
+date: "2025-10-06"
+output:
+  md_document:
+    toc: true
+    variant: GFM
+code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+<br/>
+This project focuses on quantile regression. In addition, we will also demonstrate the use of several generalized linear models: the log-linear, gamma, and inverse Gaussian models. The uniting theme of these models is dealing with data that is skewed towards more extreme values of the response, which often makes the plain linear regression model inappropriate.
+
+The dataset we will use for the demonstration consists of rental rates for over 4,000 residential properties in India during the spring/summer of 2022.
+<br/>
+
+## Initial Data Exploration
+
+<br/>
+The dataset was initially posted on https://www.kaggle.com/datasets/iamsouravbanerjee/house-rent-prediction-dataset and was sourced from https://www.magicbricks.com/. The dataset contains the following variables.
+<br/>
+
+* **BHK** - number of bedrooms, halls, kitchens
+* **Rent** - rent
+* **Size** - size in square feet
+* **Floor** - houses/apartments/flats situated on which floor and the total number of floors
+* **Area Type** - size calculated on either the super area, carpet area, or build area
+* **Area Locality** - locality 
+* **City** - city
+* **Furnishing Status** - furnishing status, whether it is furnished, semi-furnished, or unfurnished.
+* **Tenant Preferred** - type of tenant preferred by the owner or agent.
+* **Bathroom** - number of bathrooms.
+* **Point of Contact** - contact for more information
+
+<br/>
+We start by loading the data and correcting the data types.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+library(readr)
+library(dplyr)
+
+House_Rent <- read_csv('C:/Users/elini/Desktop/nine circles/House_Rent_Dataset.csv')
+
+colnames(House_Rent) <- c('Posted','BHK','Rent','Size','Floor','Area_type','Area_Locality','City','Furnishing','Pref_Tenant','Bathroom','POC')
+
+House_Rent$Area_type <- factor(House_Rent$Area_type)
+House_Rent$City <- factor(House_Rent$City)
+House_Rent$Furnishing <- factor(House_Rent$Furnishing)
+House_Rent$Pref_Tenant <- factor(House_Rent$Pref_Tenant)
+House_Rent$POC <- factor(House_Rent$POC)
+House_Rent$Area_Locality <- factor(House_Rent$Area_Locality)
+```
+
+<br/>
+The **Floor** and **Maximum_floor** variables are not in the appropriate (numeric) format.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+House_Rent$Floor[1:10]
+```
+
+<br/>
+Consequently, we need to extract the numeric values contained within these expressions. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+floor <- numeric(dim(House_Rent)[1])
+max_floor <- numeric(dim(House_Rent)[1])
+
+for (i in 1:dim(House_Rent)[1]){
+  
+  numbers <- gregexpr("[0-9]+", House_Rent$Floor[i])
+  numbers <- as.numeric(unlist(regmatches(House_Rent$Floor[i], numbers)))
+  
+  if (length(numbers) == 0) {
+    floor[i] <- 0 
+    max_floor[i] <- 0
+  }
+  else if (length(numbers) == 1){
+    floor[i] <- 0
+    max_floor[i] <- numbers[1]
+  }
+  else {
+    floor[i] <- numbers[1]
+    max_floor[i] <- numbers[2]
+  }
+}
+
+# fix inconsistencies
+any(floor>max_floor)
+which(floor>max_floor)
+
+House_Rent$Floor[106]
+House_Rent$Floor[162]
+
+floor[106] <- 5
+max_floor[106] <- 8
+floor[162] <- 1
+max_floor[162] <- 2
+```
+
+<br/>
+Next, we extract years and months from the **Date** variable.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+years  <- as.numeric(format(as.Date(House_Rent$Posted, format="%Y-%m-%d"),"%Y"))
+summary(as.factor(years))
+
+months <- as.numeric(format(as.Date(House_Rent$Posted, format="%Y-%m-%d"),"%m"))
+summary(as.factor(months))
+```
+
+<br/>
+All data are from 2022. However, the months vary. Hence, we can test the inclusion of a trend in the model.
+
+We will add the **Month**, **Floor**, and **Maximum_floor** variables to the dataset and remove the original **Floor** variable and the **Posted** variable.
+<br/>
+
+
+```{r, message=FALSE, warning=FALSE}
+library(tibble)
+House_Rent_orig <- House_Rent
+# House_Rent <- House_Rent_orig
+
+House_Rent <- House_Rent %>% dplyr::select(-c('Posted','Floor')) %>% add_column(floor) %>%  add_column(max_floor)  %>% rename(Floor = floor) %>% rename(Max_Floor = max_floor)
+```
+
+<br/>
+Let us have a look at the **Area Locality** variable next.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+House_Rent$Area_Locality[1:10]
+plot(House_Rent$Area_Locality,xlab = 'Locations',ylab = 'Count',xaxt = 'n')
+```
+
+<br/>
+There are many various locations. Since these represent neighboring observations, we can consider them as clusters later in our analysis to account for the fact that these observations might be dependent. 
+
+Let us check next for missing and duplicated data.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+any(duplicated(House_Rent))
+any(is.na(House_Rent))
+```
+
+<br/>
+Some records are repeated. We can verify that these records pertain to the same properties, but with different posted times.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+any(duplicated(House_Rent_orig))
+House_Rent_orig[which(duplicated(House_Rent)),]
+House_Rent_orig[which(duplicated(House_Rent,fromLast = TRUE)),]
+```
+
+<br/>
+We will remove these duplicate postings.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+months <- months[-which(duplicated(House_Rent))]
+House_Rent <- House_Rent[-which(duplicated(House_Rent)),]
+
+House_Rent <- House_Rent %>% add_column(months) %>% rename(Month = months) 
+```
+
+<br/>
+Let us check the remaining variables. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+summaries <- rbind(summary(House_Rent$Rent),
+summary(House_Rent$BHK),
+summary(House_Rent$Bathroom),
+summary(House_Rent$Floor),
+summary(House_Rent$Max_Floor))
+
+rownames(summaries) <- c('Rent','BHK','Bathroom','Floor','Max_Floor')
+summaries
+```
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+par(mfrow = c(1, 2))
+plot(House_Rent$Area_type, xlab = 'Area_type',ylab = 'Frequency')
+hist(House_Rent$Rent, xlab = 'Rent', main = '')
+hist(House_Rent$BHK, xlab = 'BHK', main = '')
+plot(House_Rent$City, xlab = 'Cities',ylab = 'Frequency')
+plot(House_Rent$Furnishing, xlab = 'Furnishing',ylab = 'Frequency')
+plot(House_Rent$Pref_Tenant, xlab = 'Pref_Tenant',ylab = 'Frequency')
+hist(House_Rent$Bathroom, xlab = 'Bathroom', main = '')
+plot(House_Rent$POC,ylab = 'Frequency')
+hist(House_Rent$Floor, xlab = 'Bathroom', main = '')
+hist(House_Rent$Max_Floor, xlab = 'Max_Floor', main = '')
+plot(as.factor(House_Rent$Month), xlab = 'Month',ylab = 'Frequency')
+```
+
+<br/>
+We observe two main issues. The dependent variable **Rent** has heavy tails. This is an important fact that we need to keep in mind when constructing the model. Additionally, **Area_type** and **POC** have severely underrepresented classes.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+House_Rent$Rent[order(House_Rent$Rent,decreasing = TRUE)][1:250]
+which(House_Rent$POC == 'Contact Builder')
+which(House_Rent$Area_type == 'Built Area')
+```
+
+<br/>
+We will replace 'Contact Builder' with 'Contact Owner' and 'Built Area' with 'Carpet Area' for modelling. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+House_Rent$POC[which(House_Rent$POC == 'Contact Builder')] <- 'Contact Owner'
+House_Rent$Area_type[which(House_Rent$Area_type == 'Built Area')] <- 'Carpet Area'
+```
+
+<br/>
+Finally, we will perform the redundancy analysis.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+library(Hmisc)
+redun(~.- Rent  - Area_Locality - Month,data = House_Rent,nk = 4, r2 = 0.95)
+```
+
+<br/>
+No variable seems overly redundant.
+<br/>
+
+## Linear regression model
+
+<br/>
+We will start the modelling with a simple linear regression model.
+<br/>
+
+### Initial fit
+
+<br/>
+We will consider a linear model with all first-order interactions.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+model_lr <- lm(Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month)^2, data = House_Rent)
+```
+
+<br/>
+This model consists of 142 variable parameters, which are well-supported by 4,738 observations.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+dim(model.matrix(model_lr))
+dim(model.matrix(model_lr))[1]/dim(model.matrix(model_lr))[2]
+```
+
+<br/>
+Let us assess the model's fit. We will compute root mean squared error (RMSE) and the mean absolute error (MAE). We will also compute the quantiles of the absolute errors. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+# RMSE
+sqrt(mean((predict(model_lr) - House_Rent$Rent)^2))
+# MAE
+mean(abs(predict(model_lr) - House_Rent$Rent))
+# quantiles
+quantile(abs(predict(model_lr) - House_Rent$Rent),c(0.05,0.25,0.5,0.75,0.95))
+```
+
+<br/>
+We observe that the RMSE and MAE differ significantly, and the MAE deviates substantially from the median. These observations show that some model errors are pretty extreme in value. Let us check the QQ-plot of residuals.
+<br/>
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+qqnorm(residuals(model_lr))
+qqline(residuals(model_lr))
+```
+
+<br/>
+The distribution of errors has noticeably heavier tails than the assumed normal distribution. By plotting the residuals against the predicted **Rent**, we also notice a clear heteroskedasticity. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+par(mfrow = c(1, 1))
+plot(predict(model_lr),residuals(model_lr), ylab = 'Residuals', xlab = 'Predicted Rent')
+```
+
+<br/>
+We can also check the simulation-based residuals using the *DHARMa* package (https://cran.r-project.org/web/packages/DHARMa/vignettes/DHARMa.html). Provided that the model is correctly specified, these values should have a uniform distribution.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+library(DHARMa)
+simulationOutput <- simulateResiduals(fittedModel = model_lr)
+plotQQunif(simulationOutput,testUniformity = TRUE, testOutliers = FALSE, testDispersion = FALSE)
+plotResiduals(simulationOutput)
+```
+
+<br/>
+We observe that the model is clearly misspecified. We should also note that some predicted rents are negative, which does not make sense.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+summary(predict(model_lr))
+```
+  
+<br/>
+We noticed that the data consists of a significant number of observations with comparably large responses (i.e., **Rent**), which might unduly influence the fit. Let us examine the influential observations by plotting the Cook's distance for each observation.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+quantile(cooks.distance(model_lr), c(0.5,0.75,0.95,0.99))
+
+par(mfrow = c(1, 2))
+plot(cooks.distance(model_lr),ylab = "Cook's distance")
+plot(cooks.distance(model_lr)[cooks.distance(model_lr) < 0.1],ylab = "Cook's distance")
+```
+ 
+<br/>
+We observe that some observations are significantly more influential on the fit than others. Based on the pattern in the Cook's distance plot, we will try to remove 1% of the observations (corresponding to 0.0023 Cook's distance). These mostly correspond to the observations with very high rent.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+House_Rent[cooks.distance(model_lr) > quantile(cooks.distance(model_lr), 0.99),]
+```
+
+```{r, message=FALSE, warning=FALSE}
+model_lr_red <- lm(Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month)^2, data = House_Rent[cooks.distance(model_lr) < quantile(cooks.distance(model_lr), 0.99),])
+```
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+par(mfrow = c(1, 1))
+qqnorm(residuals(model_lr_red))
+qqline(residuals(model_lr_red))
+
+par(mfrow = c(1, 2))
+simulationOutput <- simulateResiduals(fittedModel = model_lr_red)
+plotQQunif(simulationOutput,testUniformity = TRUE, testOutliers = FALSE, testDispersion = FALSE)
+plotResiduals(simulationOutput)
+```
+
+<br/>
+We observe that the fit on the remaining dataset is a bit better, although the model is still clearly misspecified. Let us assess the fit errors on the whole dataset.
+<br/>
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+er_lin <- rbind(
+c(sqrt(mean((predict(model_lr) - House_Rent$Rent)^2)),mean(abs(predict(model_lr) - House_Rent$Rent))),
+c(sqrt(mean((predict(model_lr_red,House_Rent) - House_Rent$Rent)^2)),mean(abs(predict(model_lr_red,House_Rent) - House_Rent$Rent)))
+)
+
+colnames(er_lin) <- c('RMSE','MAE')
+rownames(er_lin) <- c('linear','linear(red)')
+er_lin
+
+quan_lin <-rbind(
+  quantile(abs(predict(model_lr) - House_Rent$Rent),c(0.05,0.25,0.5,0.75,0.95)),
+  quantile(abs(predict(model_lr_red,House_Rent) - House_Rent$Rent),c(0.05,0.25,0.5,0.75,0.95))
+  )
+rownames(quan_lin) <- c('linear','linear(red)')
+quan_lin
+```
+  
+<br/>
+After removing the influential observations, the RMSE worsens (as expected; linear regression optimizes this particular value after all), but the MAE and error quantiles improve, indicating that the model better fits the majority of the data when ignoring the extremes. 
+
+Still, we observed that the model is relatively poor, and thus, we should look for an alternative model.
+<br/>
+
+### Box-Cox transformation and log-linear model
+
+<br/>
+To obtain a model that better fits the data, we will first consider transforming the response to obtain data that will better conform to the fit by ordinary least squares. Namely, we will consider Box-Cox transformation [2] $g_\lambda(y) = \frac{y^\lambda-1}{\lambda}$ for $\lambda \neq 0$ and $g_\lambda(y) = \mathrm{log}$ for $\lambda = 0$.
+
+The Box-Cox transformation is parametrized by $\lambda$, and hence, we can plot the residual sum of squares for various values of $\lambda$ and select the value that best fits the data.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+library(MASS)
+par(mfrow = c(1, 1))
+boxcox(model_lr, plotit=T)
+```
+
+<br/>
+The optimal $ \lambda $ seems to be close to zero. Consequently, we will use the log transformation to maintain the clear interpretability of the model (instead of considering the non-integer value of $\lambda$).
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+log_rent <- log(House_Rent$Rent)
+House_Rent <- House_Rent %>% add_column(log_rent) %>% rename(Log_Rent = log_rent) 
+
+model_lr_log <- lm(Log_Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month)^2, data = House_Rent)
+```
+
+<br/>
+Let us plot the residuals.
+<br/>
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+par(mfrow = c(1, 1))
+qqnorm(residuals(model_lr_log))
+qqline(residuals(model_lr_log))
+
+par(mfrow = c(1, 1))
+plot(predict(model_lr_log),residuals(model_lr_log), ylab = 'Residuals', xlab = 'Predicted log(Rent)')
+```
+
+<br/>
+Heteroskedasticity in log(Rent) appears to be stabilized. The residuals still have heavy tails, but to a lesser degree than the model with the original response. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+simulationOutput <- simulateResiduals(fittedModel = model_lr_log)
+plotQQunif(simulationOutput,testUniformity = TRUE, testOutliers = FALSE, testDispersion = FALSE)
+plotResiduals(simulationOutput)
+```
+
+<br/>
+Simulation-based residuals are fairly uniform. The statistical test still detects significant deviations, but we must keep in mind that we have a substantial number of observations in the dataset (and thus, any slight deviation will be considered significant).
+
+RMSE/MAE in the original scale are as follows.
+<br/>
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+er_log <- rbind(er_lin,
+c(sqrt(mean((exp(predict(model_lr_log)) - House_Rent$Rent)^2)),mean(abs(exp(predict(model_lr_log)) - House_Rent$Rent)))
+)
+
+colnames(er_log) <- c('RMSE','MAE')
+rownames(er_log) <- c('linear','linear(red)','log-linear')
+
+quan_log <- rbind(quan_lin,
+  sqrt(quantile((exp(predict(model_lr_log)) - House_Rent$Rent)^2,c(0.05,0.25,0.5,0.75,0.95)))
+)
+rownames(quan_log) <- c('linear','linear(red)','log-linear')
+
+er_log
+quan_log
+```
+
+<br/>
+We notice that the absolute errors are even smaller than those for the ordinary linear model, from which we removed 1% of the most influential observations from the fit. 
+
+In these predictions, we used a naive prediction: $\hat{Y} = \mathrm{exp}(\mathrm{log}\hat{Y})$. However, $\mathrm{E}h(X) \neq  h(\mathrm{E}X)$ in general. To demonstrate why this is relevant, let us assume that the model is correctly specified, i.e., $\mathrm{log} Y = X\beta + \varepsilon$  and $\mathrm{E}(\varepsilon|X) = 0$. Thus, we obtain that $Y = \mathrm{exp}(X\beta)\mathrm{exp}(\varepsilon)$. 
+The expected value of $Y$ meets $\mathrm{E}(Y|X) = \mathrm{exp}(X\beta)\mathrm{E}(\mathrm{exp}(\varepsilon|X))$. However, $\mathrm{E}(\mathrm{exp}(\varepsilon|X)) > 1 = \mathrm{exp}(\mathrm{E}(\varepsilon|X))$ due to Jensen's inequality, i.e., the naive predictions are biased.
+
+Let us assume that  $\varepsilon \sim \mathrm{N}(0,\sigma^2)$, i.e., $Y$ has a so-called log-normal distribution with parameters $\mu = X\beta$ and $\sigma^2$. Then, $\mathrm{E}(Y) = \mathrm{exp}(X\beta)\mathrm{exp}(\sigma^2/2)$ (because the expected value of the log-normal distribution is $\mu + \sigma^2/2$; https://en.wikipedia.org/wiki/Log-normal_distribution).
+
+We can correct the prediction using the *Smearing retransformation* (https://en.wikipedia.org/wiki/Smearing_retransformation). We will also consider Duan's Smearing retransformation, which attempts to accommodate the fact that the distribution of residuals might not be normal [5].
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+corr <- exp(1/2*(summary(model_lr_log)$sigma)^2)
+corr2 <- mean((exp(residuals(model_lr_log))))
+
+
+er_log2 <- rbind(er_log,
+c(sqrt(mean((corr*exp(predict(model_lr_log)) - House_Rent$Rent)^2)),mean(abs(corr*exp(predict(model_lr_log)) - House_Rent$Rent))),
+c(sqrt(mean((corr2*exp(predict(model_lr_log)) - House_Rent$Rent)^2)),mean(abs(corr2*exp(predict(model_lr_log)) - House_Rent$Rent)))
+)
+
+colnames(er_log2) <- c('RMSE','MAE')
+rownames(er_log2) <- c('linear','linear(red)','log-linear','log-linear (smearing)','log-linear (Duan)')
+
+quan_log2 <- rbind(quan_log,
+  quantile(abs(corr*exp(predict(model_lr_log)) -House_Rent$Rent),c(0.05,0.25,0.5,0.75,0.95)),
+  quantile(abs(corr2*exp(predict(model_lr_log)) -House_Rent$Rent),c(0.05,0.25,0.5,0.75,0.95))
+)
+rownames(quan_log2) <- c('linear','linear(red)','log-linear','log-linear (smearing)','log-linear (Duan)')
+
+er_log2
+quan_log2
+```
+
+
+<br/>
+We observe that neither of the corrections improved the overall predictions. This hints at the fact that the model is still misspecified (the residuals are still heteroskedastic and thus the estimate of $\sigma^2$ is off). 
+
+Next, we can compare the linear and the log-linear models. Naively, we would write the following.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+c(AIC(model_lr),AIC(model_lr_log))
+```
+
+<br/>
+However, these values are incomparable because the responses differ [3]. Still, we can use the fact that the response was merely transformed, citing Hirotugu Akaike [4], "The effect of transforming the variable is represented simply by the multiplication of the likelihood by the corresponding Jacobian ". In our case, the Jacobian is $\frac{\mathrm{d}}{\mathrm{d}y}(\mathrm{log}y) = 1/y$. Thus, we need to add the term $2\sum_i \mathrm{log} y_i$ to the value AIC ($2k - 2\mathrm{log} L$, where $k$ is the number of parameters).
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+c(AIC(model_lr),AIC(model_lr_log) + 2*sum(House_Rent$Log_Rent))
+```
+
+<br/>
+We end the diagnosis of the log-linear model by investigating the influential observations.  
+<br/>
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+quantile(cooks.distance(model_lr_log), c(0.5,0.75,0.95,0.99))
+
+par(mfrow = c(1, 2))
+plot(cooks.distance(model_lr_log),ylab = "Cook's distance")
+plot(cooks.distance(model_lr_log)[cooks.distance(model_lr_log) < quantile(cooks.distance(model_lr_log),0.99)],ylab = "Cook's distance")
+```
+ 
+<br/>
+Let us remove again 1% of the most influential observations, as determined by Cook's distance.
+<br/>
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+model_lr_log_red <- lm(Log_Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month)^2, data = House_Rent[cooks.distance(model_lr_log) < quantile(cooks.distance(model_lr_log),0.99),])
+
+corr <- exp(1/2*(summary(model_lr_log_red)$sigma)^2)
+corr2 <- mean((exp(residuals(model_lr_log_red))))
+
+er_log3 <- rbind(er_log,
+c(sqrt(mean((exp(predict(model_lr_log_red,House_Rent)) - House_Rent$Rent)^2)),mean(abs(exp(predict(model_lr_log_red,House_Rent)) - House_Rent$Rent))),
+c(sqrt(mean((corr*exp(predict(model_lr_log_red,House_Rent)) - House_Rent$Rent)^2)),mean(abs(corr*exp(predict(model_lr_log_red,House_Rent)) - House_Rent$Rent))),
+c(sqrt(mean((corr2*exp(predict(model_lr_log_red,House_Rent)) - House_Rent$Rent)^2)),mean(abs(corr2*exp(predict(model_lr_log_red,House_Rent)) - House_Rent$Rent)))
+)
+
+colnames(er_log3) <- c('RMSE','MAE')
+rownames(er_log3) <- c('linear','linear(red)','log-linear','log-linear (red)','log-linear (red,smearing)','log-linear (red, Duan)')
+
+
+quan_log3 <- rbind(quan_log,
+  (quantile(abs(exp(predict(model_lr_log_red,House_Rent)) -
+                   House_Rent$Rent),c(0.05,0.25,0.5,0.75,0.95))),
+  (quantile(abs(corr*exp(predict(model_lr_log_red,House_Rent)) - 
+                   House_Rent$Rent),c(0.05,0.25,0.5,0.75,0.95))),
+  (quantile(abs(corr2*exp(predict(model_lr_log_red,House_Rent)) -
+                   House_Rent$Rent),c(0.05,0.25,0.5,0.75,0.95)))
+)
+rownames(quan_log3) <- c('linear','linear(red)','log-linear','log-linear (red)','log-linear (red,smearing)','log-linear (red, Duan)')
+
+er_log3
+quan_log3
+```
+
+<br/>
+We observe that the fit did not improve significantly (the MAE is actually worse), demonstrating that the log-linear fit is more robust overall. 
+<br/>
+
+## Generalized linear models
+
+<br/>
+Before we move to the quantile regression model, we will consider generalized linear models as an alternative to the log-linear model. An advantage of the generalized linear models is that they allow us to include the log transformation without biasing the predictions in the original scale. 
+<br/>
+
+
+### Gaussian model with log-link
+
+<br/>
+The simplest generalized model with a log transformation would be the ordinary least squares model with the log link, where the conditional mean is modeled as $\mathrm{E}Y = \mu = \mathrm{log} (X\beta)$. The variance function is constant $\mathrm{Var} Y (\mu) = \sigma^2$.
+
+Now, we know that this model is clearly misspecified for our data; the residuals are not normally distributed, as we observed when analyzing the log-linear model. Still, let us perform the fit.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+model_glm_gaussloglink <- glm(Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month)^2, data = House_Rent, family = gaussian(link = 'log'),maxit = 50)
+```
+
+<br/>
+As we have mentioned, the residuals should be normally distributed with constant variance.
+<br/>
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+par(mfrow = c(1, 1))
+qqnorm(residuals(model_glm_gaussloglink,type = 'response'))
+qqline(residuals(model_glm_gaussloglink,type = 'response'))
+
+par(mfrow = c(1, 1))
+plot(predict(model_glm_gaussloglink, type = 'response'),residuals(model_glm_gaussloglink), ylab = 'Residuals', xlab = 'Rent')
+```
+
+<br/>
+They are clearly not. The simulated residuals also confirm the misspecification.
+<br/>
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+simulationOutput <- simulateResiduals(fittedModel = model_glm_gaussloglink)
+par(mfrow = c(1, 2))
+plotQQunif(simulationOutput,testUniformity = TRUE, testOutliers = FALSE, testDispersion = FALSE)
+plotResiduals(simulationOutput)
+```
+
+<br/>
+We can also check the AIC.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+c(AIC(model_lr),
+AIC(model_lr_log) + 2*sum(log(House_Rent$Rent)),
+AIC(model_glm_gaussloglink))
+```
+
+<br/>
+The prediction errors are as follows.
+<br/>
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+er_glm <- rbind(er_log,
+c(sqrt(mean((exp(predict(model_lr_log_red,House_Rent)) - House_Rent$Rent)^2)),mean(abs(exp(predict(model_lr_log_red,House_Rent)) - House_Rent$Rent))),             c(sqrt(mean((predict(model_glm_gaussloglink, type = 'response') - House_Rent$Rent)^2)),mean(abs(predict(model_glm_gaussloglink, type = 'response') - House_Rent$Rent)))
+)
+
+colnames(er_glm) <- c('RMSE','MAE')
+rownames(er_glm) <- c('linear','linear(red)','log-linear','log-linear (red)','GLM (gauss, log-link)')
+
+quan_glm <- rbind(quan_log,
+                        (quantile(abs(exp(predict(model_lr_log_red,House_Rent)) -
+                                          House_Rent$Rent),c(0.05,0.25,0.5,0.75,0.95))),
+                        (quantile(abs(predict(model_glm_gaussloglink, type = 'response') -
+                                         House_Rent$Rent),c(0.05,0.25,0.5,0.75,0.95)))
+                  
+)
+
+rownames(quan_glm) <- c('linear','linear(red)','log-linear','log-linear (red)','GLM (gauss, log-link)')
+
+er_glm
+quan_glm
+```
+
+<br/>
+We observe that the MAE of the Gaussian GLM is quite comparable to that of linear regression, except for the RMSE, which is quite low. However, this value is heavily influenced by the prediction for the few outlying observations.
+<br/>
+
+### Quasi-Poisson GLM
+
+<br/>
+Since the Gaussian variance function does not correspond to the observed variance in the data, we can consider another model. The quasi-Poisson model is known to us from Circle Four, where we used it to model count data. Its conditional mean is 
+$\mathrm{log} \mu = X\beta$ and the variance function is $\mathrm{Var}Y = \phi\mu$. We should note that the quasi-Poisson model is a quasi-likelihood approach, as it does not correspond to a specific probability distribution.  
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+model_glm_qpoissloglink <- glm(Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month)^2, data = House_Rent, family = quasipoisson, maxit = 50)
+```
+
+<br/>
+Since the quasi-Poisson regression is merely a quasi-likelihood approach, we do not have the AIC available nor the simulated residuals. However,  we can plot the Pearson residuals, which should be homoskedastic under the quasi-Poisson model. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+par(mfrow = c(1, 1))
+qqnorm(residuals(model_glm_qpoissloglink,type = 'pearson'))
+qqline(residuals(model_glm_qpoissloglink,type = 'pearson'))
+```
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+par(mfrow = c(1, 1))
+plot(predict(model_lr_log, type = 'response'),residuals(model_glm_qpoissloglink,type = 'pearson'), ylab = 'Pearson Residuals', xlab = 'Predicted log(Rent)')
+```
+
+<br/>
+We observe a slight heteroskedasticity in the Pearson residuals. This is not surprising since the linear mean-variance relation corresponds to the square-root stabilizing transformation [1]. However, we determined previously that the stabilizing transformation for our data is closer to the logarithm transformation.
+
+Let us evaluate the fit. We will also consider the model in which we remove 1% of the most influential observations according to Cook's distance.
+<br/>
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+model_glm_qpoissloglink_red <- glm(Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month)^2, data = House_Rent[cooks.distance(model_glm_qpoissloglink) < quantile(cooks.distance(model_glm_qpoissloglink), 0.99),], family = quasipoisson, maxit = 50)
+
+er_glm2 <- rbind(er_glm,
+                 c(sqrt(mean((predict(model_glm_qpoissloglink, type = 'response') - House_Rent$Rent)^2)),mean(abs(predict(model_glm_qpoissloglink, type = 'response') - House_Rent$Rent))),   
+                 c(sqrt(mean((predict(model_glm_qpoissloglink_red,House_Rent, type = 'response') - House_Rent$Rent)^2)),mean(abs(predict(model_glm_qpoissloglink_red,House_Rent, type = 'response') - House_Rent$Rent)))
+)
+
+rownames(er_glm2) <- c('linear','linear(red)','log-linear','log-linear (red)','GLM (gauss, log-link)','GLM (quasi-Poisson, log-link)','GLM (quasi-Poisson, log-link, red)')
+
+quan_glm2 <- rbind(quan_glm,
+                   quantile(abs(predict(model_glm_qpoissloglink, type = 'response') -
+                                    House_Rent$Rent),c(0.05,0.25,0.5,0.75,0.95)),
+                   quantile(abs(predict(model_glm_qpoissloglink_red, House_Rent, type = 'response') -
+                                    House_Rent$Rent),c(0.05,0.25,0.5,0.75,0.95))
+)
+
+rownames(quan_glm2) <- c('linear','linear(red)','log-linear','log-linear (red)','GLM (gauss, log-link)','GLM (quasi-Poisson)','GLM (quasi-Poisson, red)')
+
+er_glm2
+quan_glm2
+```
+
+<br/>
+The quasi-Poisson model appears to be slightly inferior to the log-linear model.
+<br/>
+
+### Gamma model with log-link
+
+<br/>
+We consider the gamma model next. The conditional mean is again $\mathrm{log} \mu = X\beta$. The variance function is quadratic in the mean, i.e., $\mathrm{Var}Y = \phi\mu^2$. The gamma model is a standard GLM  full likelihood model with the response having a gamma distribution.   
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+model_glm_gammaloglink <- glm(Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month)^2, data = House_Rent, family = Gamma(link = 'log'), maxit = 50)
+```
+
+<br/>
+Let us compute the AIC criterion.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+c(AIC(model_lr),
+AIC(model_lr_log) + 2*sum(log(House_Rent$Rent)),
+AIC(model_glm_gaussloglink),
+AIC(model_glm_gammaloglink))
+```
+
+<br/>
+The AIC of the gamma model is similar to the log-linear model. We plot the deviance residuals next.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+par(mfrow = c(1, 1))
+plot(predict(model_glm_gammaloglink, type = 'response'),residuals(model_glm_gammaloglink,type = 'deviance'), ylab = 'Residuals', xlab = 'Predicted log(Rent)')
+```
+
+<br/>
+From the plot, the variance function might be a bit strong. Let us check the simulated residuals.
+<br/>
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+simulationOutput <- simulateResiduals(fittedModel = model_glm_gammaloglink)
+plotQQunif(simulationOutput,testUniformity = TRUE, testOutliers = FALSE, testDispersion = FALSE)
+plotResiduals(simulationOutput)
+```
+
+<br/>
+The gamma model fits the data fairly well. Let us check the Cook's distance and compute the model with 1% of the most influential observations deleted.
+<br/>
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+quantile(cooks.distance(model_glm_gammaloglink), c(0.5,0.75,0.95,0.99))
+
+par(mfrow = c(1, 2))
+plot(cooks.distance(model_glm_gammaloglink),ylab = "Cook's distance")
+plot(cooks.distance(model_glm_gammaloglink)[cooks.distance(model_glm_gammaloglink) < 0.25],ylab = "Cook's distance")
+
+
+model_glm_gammaloglink_red <- glm(Rent ~ (BHK + Size + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month)^2, data = House_Rent[cooks.distance(model_glm_gammaloglink) < quantile(cooks.distance(model_glm_gammaloglink), 0.99),], family = Gamma(link = 'log'), maxit = 50)
+```
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+
+er_glm3 <- rbind(er_glm2,
+                 c(sqrt(mean((predict(model_glm_gammaloglink, type = 'response') - House_Rent$Rent)^2)),mean(abs(predict(model_glm_gammaloglink, type = 'response') - House_Rent$Rent))),   
+                 c(sqrt(mean((predict(model_glm_gammaloglink_red,House_Rent, type = 'response') - House_Rent$Rent)^2)),mean(abs(predict(model_glm_gammaloglink_red,House_Rent, type = 'response') - House_Rent$Rent)))
+)
+
+rownames(er_glm3) <- c('linear','linear(red)','log-linear','log-linear (red)','GLM (gauss, log-link)','GLM (quasi-Poisson, log-link)','GLM (quasi-Poisson, log-link)','GLM (gamma, log-link)','GLM (gamma, log-link, red)')
+
+
+quan_glm3 <- rbind(quan_glm2,
+                   sqrt(quantile((predict(model_glm_gammaloglink, type = 'response') -
+                                    House_Rent$Rent)^2,c(0.05,0.25,0.5,0.75,0.95))),
+                   sqrt(quantile((predict(model_glm_gammaloglink_red, House_Rent, type = 'response') -
+                                    House_Rent$Rent)^2,c(0.05,0.25,0.5,0.75,0.95)))
+)
+
+rownames(quan_glm3) <- c('linear','linear(red)','log-linear','log-linear (red)','GLM (gauss, log-link)','GLM (quasi-Poisson)','GLM (quasi-Poisson, red)','GLM (gamma, log-link)','GLM (gamma, log-link, red)')
+
+er_glm3
+quan_glm3
+```
+
+<br/>
+The gamma model is even closer to the log-linear model than the quasi-Poisson model.
+<br/>
+
+### Inverse Gaussian model with log-link
+
+<br/>
+The last model we will consider here is the inverse Gaussion GLM. The inverse Gaussian is again a full likelihood model for which the responses have an inverse Gaussian distribution. The conditional mean is the same; $\mu = \mathrm{log} X\beta$. However, the variance function is even stronger $\mathrm{Var}Y = \phi\mu^3$. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+model_glm_igaussloglink <- glm(Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month)^2, data = House_Rent, family = inverse.gaussian(link = 'log'), maxit = 50)
+```
+
+<br/>
+The AIC is as follows.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+c(AIC(model_lr),
+AIC(model_lr_log) + 2*sum(log(House_Rent$Rent)),
+AIC(model_glm_gaussloglink),
+AIC(model_glm_gammaloglink),
+AIC(model_glm_igaussloglink))
+```
+
+<br/>
+We expect that the variance function will be far too strong. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+par(mfrow = c(1, 1))
+plot(predict(model_glm_igaussloglink, type = 'response'),residuals(model_glm_igaussloglink,type = 'deviance'), ylab = 'Residuals', xlab = 'Predicted log(Rent)')
+```
+
+<br/>
+Indeed, it is. The simulated residuals also show that the model is misspecified.
+<br/>
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+simulationOutput <- simulateResiduals(fittedModel = model_glm_igaussloglink)
+plotQQunif(simulationOutput,testUniformity = TRUE, testOutliers = FALSE, testDispersion = FALSE)
+plotResiduals(simulationOutput)
+```
+
+<br/>
+Let us evaluate the predictions of the model
+<br/>
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+
+er_glm4 <- rbind(er_glm3,
+                 c(sqrt(mean((predict(model_glm_igaussloglink, type = 'response') - House_Rent$Rent)^2)),mean(abs(predict(model_glm_igaussloglink, type = 'response') - House_Rent$Rent))))
+
+rownames(er_glm4) <- c('linear','linear(red)','log-linear','log-linear (red)','GLM (gauss, log-link)','GLM (quasi-Poisson)','GLM (quasi-Poisson, red)','GLM (gamma, log-link)','GLM (gamma, log-link, red)','GLM (inv. gaussian, log-link)')
+
+quan_glm4 <- rbind(quan_glm3,
+                   sqrt(quantile((predict(model_glm_igaussloglink, type = 'response') -
+                                    House_Rent$Rent)^2,c(0.05,0.25,0.5,0.75,0.95))))
+                
+rownames(quan_glm4) <- c('linear','linear(red)','log-linear','log-linear (red)','GLM (gauss, log-link)','GLM (quasi-Poisson)','GLM (quasi-Poisson, red)','GLM (gamma, log-link)','GLM (gamma, log-link, red)','GLM (inv. gaussian, log-link)')
+
+quan_glm4
+er_glm4
+```
+
+<br/>
+Overall, the log-linear model is the best one, with the gamma model being very similar. This is not surprising since both of these models are recommended as close alternatives [1]. 
+<br/>
+
+## Quantile regression
+
+<br/>
+The last family of models we will consider for modelling our data is quantile regression. Quantile regression is a semiparametric method that is quite similar to quasi-likelihood methods; it does not assume a particular family of distributions, but rather parametrizes some of its characteristics. However, instead of moments (mean, variance), quantile regression models quantiles of the distribution. This makes quantile regression inherently more robust than the usual methods that consider the conditional mean [6].
+
+To illustrate the issue of robustness, let us consider the standard linear regression, which is characterized by the conditional mean $\mathrm{E} Y = X\beta$. The estimates is given as a solution of $\hat{\beta} = \mathrm{argmin}_\beta \sum_i{(y_i - x_i^T\beta)^2}$. This estimate, due to the presence of the quadratic term, is quite sensitive to the presence of outliers. It can be shown that a slight contamination, however small, sufficiently far from the center of the data can significantly alter the estimate, taking it far away from its original value [6].
+
+In quantile regression, we model conditional quantiles of $Y$ instead of expected values. For example, the median regression is given as $\mathrm{median} Y = X\beta$. It can be shown, that the estimate $\hat{\beta}$ for conditional quantile $\rho$ can be also found as a solution of some optimization, namely of a linear program $\mathrm{argmin}_\beta\sum_i \rho_\tau (y_i -  x_i^T\beta)$, where $\rho_\tau(u) = u(\tau-I(u <0))$ (piecewise linear function with slopes $\tau - 1$ for negative $u$ and $\tau$ for positive $u$). For the median, this formula reduces to  $\mathrm{argmin}_\beta\sum_i |y_i -  x_i^T\beta|$, i.e., median regression minimizes the mean absolute error (MAE) [6]. This optimization examines the computation of quantiles, giving us another insight into why quantile regression is more robust (we minimize the absolute value of deviations instead of squared deviations).
+
+Another advantage of quantile regression is that we can model multiple quantiles of the distribution of $Y$, providing a more complete picture of the overall distribution than just modeling the mean. This is important, for example, in situations when distributional assumptions are in question (e.g., under heteroskedasticity). Remember from Circle One Part Three that in such a case, we cannot really compute, for example, the prediction intervals for a new observation. Unless the distribution assumptions are met, we merely know the asymptotic distribution of the mean. With quantile regression, we can directly model the prediction interval by considering the corresponding quantiles. 
+
+The last advantage of quantile regression we mention here is that that unlike the mean, quantiles are equivariant to monotone transformation, i.e., $Q_\tau h(Y) = h(Q_\tau Y)$, where $Q_\tau$ denotes $\tau\mathrm{th}$ quantile (the quantiles of the transformed random variable $h(Y)$ are the
+transformed quantiles of the original $Y$) [6].
+<br/>
+
+### Fit
+
+<br/>
+In R, quantile regression is performed using the *quantreg*package. Let us start with the model for the median.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+library(quantreg)
+model_med <- rq(Log_Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month)^2, tau = .5, data = House_Rent)
+```             
+
+<br/>
+Let us evaluate the RMSE and MAE.
+<br/>
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+er_qr <- rbind(er_glm4,
+                 c(sqrt(mean((exp(predict(model_med)) - House_Rent$Rent)^2)),mean(abs(exp(predict(model_med)) - House_Rent$Rent))))
+
+rownames(er_qr) <- c('linear','linear(red)','log-linear','log-linear (red)','GLM (gauss, log-link)','GLM (quasi-Poisson, log-link)','GLM (quasi-Poisson, log-link, red)','GLM (gamma, log-link)','GLM (gamma, log-link, red)','GLM (inv. gaussian, log-link)', 'median regression')
+
+er_qr
+```
+
+<br/>
+We see that the median model is almost identical to the log-linear model in terms of MAE. One could be surprised that the median regression attained has a larger value even though it should minimize it (the functional form is the same for both models). This MAE is, however, computed for the original response; in the log-scale, the median regression minimizes the MAE as expected.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+mean(abs((predict(model_med)) - House_Rent$Log_Rent))
+mean(abs((predict(model_lr_log)) - House_Rent$Log_Rent))
+```
+
+<br/>
+The quantiles of absolute deviations are as follows. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+quan_qr <- rbind(quan_glm4,
+                   sqrt(quantile((exp(predict(model_med)) -
+                                    House_Rent$Rent)^2,c(0.05,0.25,0.5,0.75,0.95)))
+)
+
+rownames(quan_qr) <- c('linear','linear(red)','log-linear','log-linear (red)','GLM (gauss, log-link)','GLM (quasi-Poisson)','GLM (quasi-Poisson, red)','GLM (gamma, log-link)','GLM (gamma, log-link, red)','GLM (inv. gaussian, log-link)', 'median regression')
+quan_qr
+```
+
+<br/>
+The predictions based on median response are slightly better. 
+<br/>
+
+### Inference
+
+<br/>
+Let us now consider the inference in the quantile regression. First, we will consider a model with no interactions for simplicity's sake.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+model_med_simple <- rq(Log_Rent ~ BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month, tau = .5, data = House_Rent)
+```
+
+<br/>
+There are multiple approaches to computing the covariance matrix (and consequently, the standard errors) of model parameter estimates. This is due to the fact that the asymptotics of quantile estimates depend on the reciprocal of a density function of the response evaluated at the quantile of interest (so-called sparsity function [6]). This value must be estimated from the data  (e.g., by kernel estimate, see https://www.rdocumentation.org/packages/quantreg/versions/6.1/topics/summary.rq for all options implemented in *quantreg*). Otherwise, the standard error must be estimated directly via a bootstrap. 
+
+We use two methods mentioned explicitly in [6], the Hendricks–Koenker sandwich and the Powell sandwich. We also include pairs bootstrap estimate of standard errors and pairs cluster bootstrap (clustering by **Area_Locality**).
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+summary(model_med_simple, se = 'nid') # Hendricks and Koenker estimate
+summary(model_med_simple, se = 'ker') # Powell kernel estimate
+summary(model_med_simple, se = 'boot', R = 500, bsmethod = "xy") # pairs bootstrap
+summary(model_med_simple, se = 'boot', R = 500, bsmethod = "cluster",cluster = House_Rent$Area_Locality)  # cluster  bootstrap
+```
+
+<br/>
+We observe that the standard error estimates are pretty similar. As expected, cluster pairs bootstrap provided slightly wider standard errors than pairs bootstrap. The main takeaway is that the **Month** variable is not significant. 
+
+To perform inference for multiple parameters simultaneously, we can use a standard Wald test [6] using the aforementioned estimates of the covariance matrix. For example, we can compute the Wald statistic to test whether the **Month** variable is significant in our full model with all interactions. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+# estimate of covariance matrix for month via Powell estimate
+cov_model <- summary(model_med,covariance = TRUE, se = 'ker')$cov
+index <- grepl('Month',names(coefficients(model_med)))
+V <- cov_model[index,index]
+
+# Wald statistics
+coefficients(model_med)[index] %*% solve(V) %*% coefficients(model_med)[index]/sum(index)
+```
+
+<br/>
+We get the same result using the implemented *anova* function.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+model_no_Month <- rq(Log_Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor)^2, tau = .5, data = House_Rent)
+
+anova(model_med,model_no_Month, test = 'Wald',se = 'ker')
+```
+
+<br/>
+We observe that, indeed, the variable **Month** is not significant. Let us test all variables.
+<br/>
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+model_no_BHK <-  rq(Log_Rent ~ (Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month)^2, tau = .5, data = House_Rent)
+model_no_Size <-  rq(Log_Rent ~ (BHK  + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month)^2, tau = .5, data = House_Rent)
+model_no_Area_type <- rq(Log_Rent ~ BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month, tau = .5, data = House_Rent)
+model_no_City  <- rq(Log_Rent ~ (BHK + Size + Area_type  + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month)^2, tau = .5, data = House_Rent)
+model_no_Fur <- rq(Log_Rent ~ (BHK + Size + Area_type + City + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month)^2, tau = .5, data = House_Rent)
+model_no_PrefT <- rq(Log_Rent ~ (BHK + Size + Area_type + City + Furnishing + Bathroom + POC + Floor + Max_Floor + Month)^2, tau = .5, data = House_Rent)
+model_no_Bath <- rq(Log_Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref_Tenant + POC + Floor + Max_Floor + Month)^2, tau = .5, data = House_Rent)
+model_no_POC <-  rq(Log_Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom  + Floor + Max_Floor + Month)^2, tau = .5, data = House_Rent)
+model_no_Floor <-  rq(Log_Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC  + Max_Floor + Month)^2, tau = .5, data = House_Rent)
+model_no_Max_Floor <- rq(Log_Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Month)^2, tau = .5, data = House_Rent)
+
+
+a1 <- unlist(anova(model_med,model_no_BHK, test = 'Wald', se = 'ker'))
+a2 <- unlist(anova(model_med,model_no_Size, test = 'Wald', se = 'ker'))
+a3 <- unlist(anova(model_med,model_no_Area_type, test = 'Wald', se = 'ker'))
+a4 <- unlist(anova(model_med,model_no_City, test = 'Wald', se = 'ker'))
+a5 <- unlist(anova(model_med,model_no_Fur, test = 'Wald', se = 'ker'))
+a6 <- unlist(anova(model_med,model_no_PrefT, test = 'Wald', se = 'ker'))
+a7 <- unlist(anova(model_med,model_no_Bath, test = 'Wald', se = 'ker'))
+a8 <- unlist(anova(model_med,model_no_POC, test = 'Wald', se = 'ker'))
+a9 <- unlist(anova(model_med,model_no_Floor, test = 'Wald', se = 'ker'))
+a10 <- unlist(anova(model_med,model_no_Max_Floor, test = 'Wald', se = 'ker'))
+a11 <- unlist(anova(model_med,model_no_Month, test = 'Wald', se = 'ker'))
+
+pvalues <- as.numeric(c(a1[4],a2[4],a3[4],a4[4],a5[4],a6[4],a7[4],a8[4],a9[4],a10[4],a11[4]))
+variables <- c('BHK','Size','Area_type','City','Furnishing','Pref_Tenant','Bathroom','POC','Floor','Max_Floor','Month')
+names(pvalues) <- variables
+pvalues
+```
+
+<br/>
+**Floor** and **Month** appear non-significant, **Pref_tenant** is a bit borderline. We can also perform a paired bootstrap Wald test and a cluster paired bootstrap Wald test (to account for the fact that observations from the same locality may be correlated).
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+set.seed(123)
+nb <- 500
+wald_boot <- matrix(NA,11,nb)
+pwald <- numeric(11)
+
+for(i in 1:nb){
+  
+  House_Rent_new <-  House_Rent[sample(nrow(House_Rent) , rep=TRUE),]
+  
+  model_med_new <- rq(Log_Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month)^2, tau = .5, data = House_Rent_new)
+  
+  cov_model_new <- summary(model_med_new,covariance = TRUE, se = 'ker')$cov
+
+  for (j in 1:11){
+    
+    index <- grepl(variables[j],names(coefficients(model_med_new)))
+    # trycatch to skip numerical problems with inversions
+    V <- cov_model_new[index,index]
+    
+    wald_boot[j,i] <- tryCatch((coefficients(model_med_new)[index]-coefficients(model_med)[index]) %*% solve(V) %*% (coefficients(model_med_new)[index]-coefficients(model_med)[index]), error = function(e) {NaN})
+  }
+}
+
+cov_model <- summary(model_med,covariance = TRUE, se = 'ker')$cov
+for (j in 1:11){
+index <- grepl(variables[j],names(coefficients(model_med)))
+V <- cov_model[index,index]
+wald <- coefficients(model_med)[index] %*% solve(V) %*% coefficients(model_med)[index]          
+pwald[j] <- mean(wald_boot[j,] > as.numeric(wald),na.rm = TRUE) # p-value
+}
+
+names(pwald) <- variables
+pwald
+```
+
+```{r, message=FALSE, warning=FALSE}
+set.seed(123)
+nb <- 500
+wald_boot <- matrix(NA,11,nb)
+pwald <- numeric(11)
+
+Area_Loc <- unique(House_Rent$Area_Locality)
+
+for(i in 1:nb){
+  
+  Area_Loc_new <-  Area_Loc[sample(length(Area_Loc) , rep=TRUE)]
+  House_Rent_new <- House_Rent[0,]
+  for (k in 1:length(Area_Loc_new)){
+    House_Rent_new <- rbind(House_Rent_new,House_Rent[House_Rent$Area_Locality == Area_Loc_new[k],])
+
+  }
+  
+  model_med_new <- rq(Log_Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month)^2, tau = .5, data = House_Rent_new)
+  
+  cov_model_new <- summary(model_med_new,covariance = TRUE, se = 'ker')$cov
+
+  for (j in 1:11){
+    
+    index <- grepl(variables[j],names(coefficients(model_med_new)))
+    # trycatch to skip numerical problems with inversions
+    V <- cov_model_new[index,index]
+    
+    wald_boot[j,i] <- tryCatch((coefficients(model_med_new)[index]-coefficients(model_med)[index]) %*% solve(V) %*% (coefficients(model_med_new)[index]-coefficients(model_med)[index]), error = function(e) {NaN})
+  }
+}
+
+cov_model <- summary(model_med,covariance = TRUE, se = 'ker')$cov
+for (j in 1:11){
+index <- grepl(variables[j],names(coefficients(model_med)))
+V <- cov_model[index,index]
+wald <- coefficients(model_med)[index] %*% solve(V) %*% coefficients(model_med)[index]          
+pwald[j] <- mean(wald_boot[j,] > as.numeric(wald),na.rm = TRUE) # p-value
+}
+
+names(pwald) <- variables
+pwald
+```
+
+<br/>
+Using the bootstrap, it is **Month** and **Pref_tenant** that are clearly not significant.
+
+One last statistical test that would be clearly of interest is the comparison between cities. Even without modelling, we could look at the mean and median rents based on our data.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+tapply(House_Rent$Rent,House_Rent$City,mean)
+tapply(House_Rent$Rent,House_Rent$City,median)
+```
+
+<br/>
+We observe that rents in Mumbai are significantly higher. However, our regression model allows us to adjust for other covariates in the model (perhaps the data for Mumbai includes properties that contribute to expensive rents in Mumbai).
+
+We will use the package *emmeans* to perform this comparison. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+library(emmeans)
+plot(lsmeans(model_med, pairwise~ City))
+```
+
+<br/>
+It seems that rents in Mumbai are indeed more expensive than in other cities. Now, we must be cautious with our conclusions, as interactions are present (see https://cran.r-project.org/web/packages/emmeans/vignettes/interactions.html for more details). The marginal effects are estimated in the average values of numeric variables and then averaged over the levels of factors. Let us plot the marginal effects at the levels of the factors.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+plot(lsmeans(model_med, pairwise~ City|Area_type))
+plot(lsmeans(model_med, pairwise~ City|Furnishing))
+plot(lsmeans(model_med, pairwise~ City|Pref_Tenant))
+plot(lsmeans(model_med, pairwise~ City|POC))
+```
+
+<br/>
+For numerical variables, we can specify the levels manually.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+plot(lsmeans(model_med, pairwise~ City|Size, at = list(Size = c(500,1000,5000))))
+plot(lsmeans(model_med, pairwise~ City|BHK, at = list(BHK = c(1,2,4))))
+plot(lsmeans(model_med, pairwise~ City|Bathroom, at = list(Bathroom = c(1,2))))
+plot(lsmeans(model_med, pairwise~ City|Floor, at = list(Floor = c(0,5,10,20))))
+plot(lsmeans(model_med, pairwise~ City|Max_Floor, at = list(Max_Floor = c(0,5,10,20))))
+
+plot(lsmeans(model_med, pairwise~ City|Size + Area_type + POC, at = list(Size = c(500,1000,5000))))
+```
+
+<br/>
+We observe that predictions for Mumbai are consistently higher. We can also evaluate the slopes for numerical predictors, e.g., **Size**
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+emtrends(model_med, pairwise ~ City, var = "Size")$emtrends
+```
+
+<br/>
+We observe that the average slope of **Size** for Mumbai is noticeably higher than for other cities, and **Size** is naturally a crucial factor in determining rent. Overall, it seems that it is fair to say that rents in Mumbai are more expensive than in other cities.
+<br/>
+
+### Predictions
+
+<br/>
+A notable strength of quantile regression is the fact that we can model other quantiles.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+model_025 <- rq(Log_Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month)^2, tau = .025, data = House_Rent)
+model_05 <- rq(Log_Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month)^2, tau = .05, data = House_Rent)
+model_25 <- rq(Log_Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month)^2, tau = .25, data = House_Rent)
+model_75 <- rq(Log_Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month)^2, tau = .75, data = House_Rent)
+model_95 <- rq(Log_Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month)^2, tau = .95, data = House_Rent)
+model_975 <- rq(Log_Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month)^2, tau = .975, data = House_Rent)
+```
+
+<br/>
+When computing predictions, we typically rely solely on confidence intervals, such as the one shown below for the median of the first observation.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+predict(model_med,House_Rent[1,],interval = "confidence",level = .95, se = 'ker')
+```
+
+<br/>
+However, thanks to the other quantile regressions, we can compute the 95%-prediction interval using the 2.5% and 97.5% quantiles.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+predict(model_025,House_Rent[1,],interval = "confidence",level = .95, se = 'ker')
+predict(model_975,House_Rent[1,],interval = "confidence",level = .95, se = 'ker')
+```
+
+<br/>
+Let us plot the effects of predictors using the quantile models.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+library(sjPlot)
+library(ggplot2)
+
+plot1 <- plot_model(model_med, type = "pred", terms = c('Size', 'City [Kolkata]'))
+plot2 <- plot_model(model_05, type = "pred", terms = c('Size', 'City [Kolkata]'))
+plot3 <- plot_model(model_25, type = "pred", terms = c('Size', 'City [Kolkata]')) 
+plot4 <- plot_model(model_75, type = "pred", terms = c('Size', 'City [Kolkata]')) 
+plot5 <- plot_model(model_95, type = "pred", terms = c('Size', 'City [Kolkata]'))
+
+ggplot() +
+  geom_line(data = plot1$data,aes(x = x, y = predicted, color = "0.5 quantile")) +
+  geom_ribbon(data = plot1$data,aes(ymin = conf.low, ymax = conf.high, x = x, fill = "0.5 quantile"),alpha = 0.1, linewidth = 0, show.legend = FALSE) +
+  geom_line(data = plot2$data,aes(x = x, y = predicted, color = "0.05 quantile")) +
+  geom_ribbon(data = plot2$data,aes(ymin = conf.low, ymax = conf.high, x = x, fill = "0.05 quantile"),alpha = 0.1, linewidth = 0, show.legend = FALSE) +
+  geom_line(data = plot3$data,aes(x = x, y = predicted, color = "0.25 quantile")) +
+  geom_line(data = plot4$data,aes(x = x, y = predicted, color = "0.75 quantile")) +
+  geom_line(data = plot5$data,aes(x = x, y = predicted, color = "0.95 quantile")) + 
+geom_ribbon(data = plot5$data,aes(ymin = conf.low, ymax = conf.high, x = x, fill = "0.95 quantile"),alpha = 0.1, linewidth = 0, show.legend = FALSE) + labs(title="Kolkata", x="Size", y="Predicted Log Rent")
+```
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+plot1 <- plot_model(model_med, type = "pred", terms = c('Size', 'City [Delhi]'))
+plot2 <- plot_model(model_05, type = "pred", terms = c('Size', 'City [Delhi]'))
+plot3 <- plot_model(model_25, type = "pred", terms = c('Size', 'City [Delhi]')) 
+plot4 <- plot_model(model_75, type = "pred", terms = c('Size', 'City [Delhi]')) 
+plot5 <- plot_model(model_95, type = "pred", terms = c('Size', 'City [Delhi]'))
+
+ggplot() +
+  geom_line(data = plot1$data,aes(x = x, y = predicted, color = "0.5 quantile")) +
+  geom_ribbon(data = plot1$data,aes(ymin = conf.low, ymax = conf.high, x = x, fill = "0.5 quantile"),alpha = 0.1, linewidth = 0, show.legend = FALSE) +
+  geom_line(data = plot2$data,aes(x = x, y = predicted, color = "0.05 quantile")) +
+  geom_ribbon(data = plot2$data,aes(ymin = conf.low, ymax = conf.high, x = x, fill = "0.05 quantile"),alpha = 0.1, linewidth = 0, show.legend = FALSE) +
+  geom_line(data = plot3$data,aes(x = x, y = predicted, color = "0.25 quantile")) +
+  geom_line(data = plot4$data,aes(x = x, y = predicted, color = "0.75 quantile")) +
+  geom_line(data = plot5$data,aes(x = x, y = predicted, color = "0.95 quantile")) + 
+geom_ribbon(data = plot5$data,aes(ymin = conf.low, ymax = conf.high, x = x, fill = "0.95 quantile"),alpha = 0.1, linewidth = 0, show.legend = FALSE) + labs(title="Delhi", x="Size", y="Predicted Log Rent")
+```
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+# Floor
+plot1 <- plot_model(model_med, type = "pred", terms = c('Floor', 'City [Mumbai]'))
+plot2 <- plot_model(model_05, type = "pred", terms = c('Floor', 'City [Mumbai]'))
+plot3 <- plot_model(model_25, type = "pred", terms = c('Floor', 'City [Mumbai]')) 
+plot4 <- plot_model(model_75, type = "pred", terms = c('Floor', 'City [Mumbai]')) 
+plot5 <- plot_model(model_95, type = "pred", terms = c('Floor', 'City [Mumbai]'))
+
+ggplot() +
+  geom_line(data = plot1$data,aes(x = x, y = predicted, color = "0.5 quantile")) +
+  geom_ribbon(data = plot1$data,aes(ymin = conf.low, ymax = conf.high, x = x, fill = "0.5 quantile"),alpha = 0.1, linewidth = 0, show.legend = FALSE) +
+  geom_line(data = plot2$data,aes(x = x, y = predicted, color = "0.05 quantile")) +
+  geom_ribbon(data = plot2$data,aes(ymin = conf.low, ymax = conf.high, x = x, fill = "0.05 quantile"),alpha = 0.1, linewidth = 0, show.legend = FALSE) +
+  geom_line(data = plot3$data,aes(x = x, y = predicted, color = "0.25 quantile")) +
+  geom_line(data = plot4$data,aes(x = x, y = predicted, color = "0.75 quantile")) +
+  geom_line(data = plot5$data,aes(x = x, y = predicted, color = "0.95 quantile")) + 
+geom_ribbon(data = plot5$data,aes(ymin = conf.low, ymax = conf.high, x = x, fill = "0.95 quantile"),alpha = 0.1, linewidth = 0, show.legend = FALSE) + labs(title="Mumbai", x="Floor", y="Predicted Log Rent")
+
+# Max_Floor 
+plot1 <- plot_model(model_med, type = "pred", terms = c('Max_Floor', 'City [Bangalore]'))
+plot2 <- plot_model(model_05, type = "pred", terms = c('Max_Floor', 'City [Bangalore]'))
+plot3 <- plot_model(model_25, type = "pred", terms = c('Max_Floor', 'City [Bangalore]')) 
+plot4 <- plot_model(model_75, type = "pred", terms = c('Max_Floor', 'City [Bangalore]')) 
+plot5 <- plot_model(model_95, type = "pred", terms = c('Max_Floor', 'City [Bangalore]'))
+
+ggplot() +
+  geom_line(data = plot1$data,aes(x = x, y = predicted, color = "0.5 quantile")) +
+  geom_ribbon(data = plot1$data,aes(ymin = conf.low, ymax = conf.high, x = x, fill = "0.5 quantile"),alpha = 0.1, linewidth = 0, show.legend = FALSE) +
+  geom_line(data = plot2$data,aes(x = x, y = predicted, color = "0.05 quantile")) +
+  geom_ribbon(data = plot2$data,aes(ymin = conf.low, ymax = conf.high, x = x, fill = "0.05 quantile"),alpha = 0.1, linewidth = 0, show.legend = FALSE) +
+  geom_line(data = plot3$data,aes(x = x, y = predicted, color = "0.25 quantile")) +
+  geom_line(data = plot4$data,aes(x = x, y = predicted, color = "0.75 quantile")) +
+  geom_line(data = plot5$data,aes(x = x, y = predicted, color = "0.95 quantile")) + 
+geom_ribbon(data = plot5$data,aes(ymin = conf.low, ymax = conf.high, x = x, fill = "0.95 quantile"),alpha = 0.1, linewidth = 0, show.legend = FALSE) + labs(title="Bangalore", x="Max_Floor", y="Predicted Log Rent")
+
+# City
+plot1 <- plot_model(model_med, type = "pred", terms = c('City'))
+plot2 <- plot_model(model_05, type = "pred", terms = c('City'))
+plot3 <- plot_model(model_25, type = "pred", terms = c('City')) 
+plot4 <- plot_model(model_75, type = "pred", terms = c('City')) 
+plot5 <- plot_model(model_95, type = "pred", terms = c('City'))
+
+ggplot() +
+  geom_point(data = plot1$data,aes(x = x, y = predicted, color = "0.5 quantile")) +
+  geom_ribbon(data = plot1$data,aes(ymin = conf.low, ymax = conf.high, x = x, fill = "0.5 quantile"),alpha = 0.1, linewidth = 0, show.legend = FALSE) +
+  geom_point(data = plot2$data,aes(x = x, y = predicted, color = "0.05 quantile")) +
+  geom_ribbon(data = plot2$data,aes(ymin = conf.low, ymax = conf.high, x = x, fill = "0.05 quantile"),alpha = 0.1, linewidth = 0, show.legend = FALSE) +
+  geom_point(data = plot3$data,aes(x = x, y = predicted, color = "0.25 quantile")) +
+  geom_point(data = plot4$data,aes(x = x, y = predicted, color = "0.75 quantile")) +
+  geom_point(data = plot5$data,aes(x = x, y = predicted, color = "0.95 quantile")) + 
+geom_ribbon(data = plot5$data,aes(ymin = conf.low, ymax = conf.high, x = x, fill = "0.95 quantile"),alpha = 0.1, linewidth = 0, show.legend = FALSE) + labs(title="Kolkata", x="City", y="Predicted Log Rent") +
+ scale_x_continuous(breaks=seq(1,6,1),labels=c('Bangalore','Delhi','Hyderabad','Chennai','Kolkata','Mumbai')) 
+```
+
+<br/>
+Interestingly, the quantile regression lines actually cross for some predictions, which is, of course, impossible for the actual values of the quantiles. It can be shown that the quantile estimates are always monotonic for the centroid of the data. Thus, such crossings (which are a consequence of independent estimation of quantiles) usually happen merely in outlying regions of the data [6].
+
+
+Additionally, the regression lines for the quantiles are not parallel in some plots. This so-called location shift test [6] can be tested more formally via the Wald test.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+anova(model_med,model_025,model_05,model_25,model_75,model_95,model_975, se = 'ker')
+```
+
+## Validation
+
+<br/>
+Lastly, we will validate the accuracy of our models' predictions through cross-validation. Let us consider the absolute errors first.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+library(caret)
+
+set.seed(123)
+
+## Number of repetitions and folds
+rep <- 1
+folds <- 10
+
+ae_mde <- matrix(NA,rep*folds,5)
+ae_lr <- matrix(NA,rep*folds,5)
+ae_lr_red <- matrix(NA,rep*folds,5)
+ae_lr_log <- matrix(NA,rep*folds,5)
+ae_lr_log_red <- matrix(NA,rep*folds,5)
+ae_gaussloglink <- matrix(NA,rep*folds,5)
+ae_gaussloglink_red <- matrix(NA,rep*folds,5)
+ae_qpoissloglink <- matrix(NA,rep*folds,5)
+ae_qpoissloglink_red <- matrix(NA,rep*folds,5)
+ae_gammaloglink <- matrix(NA,rep*folds,5)
+ae_gammaloglink_red <- matrix(NA,rep*folds,5) 
+ae_igaussloglink <- matrix(NA,rep*folds,5) 
+ae_igaussloglink_red<- matrix(NA,rep*folds,5)
+
+k <- 1
+
+for(j in 1:rep){
+  
+  d <- createFolds(seq(1,dim(House_Rent)[1],1), k = folds)
+
+  for(i in 1:folds){
+    train_set <- House_Rent[-unlist(d[i]),]
+    test_set <- House_Rent[unlist(d[i]),]
+    
+    
+    model_med_cv <- rq(Log_Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month)^2, tau = .5, data = train_set)
+
+     model_lr_cv <- lm(Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month)^2, data = train_set)
+    model_lr_red_cv <- lm(Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month)^2, data = train_set[cooks.distance(model_lr_cv) < quantile(cooks.distance(model_lr_cv), 0.99),])
+    
+    model_lr_log_cv <- lm(Log_Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month)^2, data = train_set)
+    
+    model_lr_log_red_cv <- lm(Log_Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month)^2, data = train_set[cooks.distance(model_lr_log_cv) < quantile(cooks.distance(model_lr_log_cv),0.99,na.rm = TRUE),])
+    
+    model_glm_gaussloglink_cv <- glm(Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month)^2, data = train_set, family = gaussian(link = 'log'),maxit = 50)
+    
+    model_glm_gaussloglink_red_cv <- glm(Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month)^2, data = train_set[cooks.distance(model_glm_gaussloglink_cv) < quantile(cooks.distance(model_glm_gaussloglink_cv), 0.99,na.rm = TRUE),], family = gaussian(link = 'log'),maxit = 50)
+    
+    model_glm_qpoissloglink_cv <- glm(Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month)^2, data = train_set, family = quasipoisson, maxit = 50)
+    
+    model_glm_qpoissloglink_red_cv <- glm(Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month)^2, data = train_set[cooks.distance(model_glm_qpoissloglink_cv) < quantile(cooks.distance(model_glm_qpoissloglink_cv), 0.99,na.rm = TRUE),], family = quasipoisson, maxit = 50)
+    
+    model_glm_gammaloglink_cv <- glm(Rent ~ (BHK + Size + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month)^2, data = train_set, family = Gamma(link = 'log'), maxit = 50)
+    
+    model_glm_gammaloglink_red_cv <- glm(Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month)^2, data = train_set[cooks.distance(model_glm_gammaloglink_cv) < quantile(cooks.distance(model_glm_gammaloglink_cv), 0.99,na.rm = TRUE),], family = Gamma(link = 'log'), maxit = 50)
+    
+    model_glm_igaussloglink_cv <- glm(Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month)^2, data = train_set, family = inverse.gaussian(link = 'log'), maxit = 100)
+    
+    model_glm_igaussloglink_red_cv <- glm(Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month)^2, data = train_set[cooks.distance(model_glm_igaussloglink_cv) < quantile(cooks.distance(model_glm_igaussloglink_cv), 0.99,na.rm = TRUE),], family = inverse.gaussian(link = 'log'), maxit = 100)
+    
+ 
+    ae_mde[k,] <- quantile(abs(exp(predict(model_med_cv,test_set))- 
+                                     test_set$Rent),c(0.05,0.25,0.5,0.75,0.95))
+    ae_lr[k,] <- quantile(abs((predict(model_lr_cv,test_set)) -
+                                    test_set$Rent),c(0.05,0.25,0.5,0.75,0.95))
+    ae_lr_red[k,] <- quantile(abs((predict(model_lr_red_cv,test_set)) -
+                                   test_set$Rent),c(0.05,0.25,0.5,0.75,0.95))
+    
+    ae_lr_log[k,] <- quantile(abs(exp(predict(model_lr_log_cv,test_set))- 
+                                    test_set$Rent),c(0.05,0.25,0.5,0.75,0.95))
+    
+    ae_lr_log_red[k,] <- quantile(abs(exp(predict(model_lr_log_red_cv,test_set))- 
+                                     test_set$Rent),c(0.05,0.25,0.5,0.75,0.95))
+    ae_gaussloglink[k,] <- quantile(abs(exp(predict(model_glm_gaussloglink_cv,test_set))- 
+                                     test_set$Rent),c(0.05,0.25,0.5,0.75,0.95))
+    
+    ae_gaussloglink_red[k,] <- quantile(abs(exp(predict(model_glm_gaussloglink_red_cv,test_set)) -
+                                    test_set$Rent),c(0.05,0.25,0.5,0.75,0.95))
+    
+    ae_qpoissloglink[k,] <- quantile(abs(exp(predict(model_glm_qpoissloglink_cv,test_set))- 
+                                     test_set$Rent),c(0.05,0.25,0.5,0.75,0.95))
+    
+    ae_qpoissloglink_red[k,] <- quantile(abs(exp(predict(model_glm_qpoissloglink_red_cv,test_set)) -
+                                    test_set$Rent),c(0.05,0.25,0.5,0.75,0.95))
+    
+    ae_gammaloglink[k,] <- quantile(abs(exp(predict(model_glm_gammaloglink_cv,test_set))- 
+                                     test_set$Rent),c(0.05,0.25,0.5,0.75,0.95))
+    
+    ae_gammaloglink_red[k,] <- quantile(abs(exp(predict(model_glm_gammaloglink_red_cv,test_set)) -
+                                    test_set$Rent),c(0.05,0.25,0.5,0.75,0.95))
+    
+    ae_igaussloglink[k,] <- quantile(abs(exp(predict(model_glm_igaussloglink_cv,test_set))- 
+                                     test_set$Rent),c(0.05,0.25,0.5,0.75,0.95))
+    
+    ae_igaussloglink_red[k,] <- quantile(abs(exp(predict(model_glm_igaussloglink_red_cv,test_set)) -
+                                    test_set$Rent),c(0.05,0.25,0.5,0.75,0.95))
+    
+    k <-  k +1
+  }
+}
+
+cv_res <- (rbind(apply(ae_mde,2,mean),
+apply(ae_lr,2,mean),
+apply(ae_lr_red,2,mean),
+apply(ae_lr_log,2,mean),
+apply(ae_lr_log_red,2,mean),
+apply(ae_gaussloglink,2,mean),
+apply(ae_gaussloglink_red,2,mean),
+apply(ae_qpoissloglink,2,mean),
+apply(ae_qpoissloglink_red,2,mean),
+apply(ae_gammaloglink,2,mean),
+apply(ae_gammaloglink_red,2,mean),
+apply(ae_igaussloglink,2,mean),
+apply(ae_igaussloglink_red,2,mean)))
+
+colnames(cv_res) <- c('5%','25%','50%','75%','95%')
+rownames(cv_res) <- c('median','linear','linear(red)','log-linear','log-linear (red)','GLM (gauss)','GLM (gauss,red)', 'GLM(quasi-Poisson)','GLM (quasi-Poisson, red)','GLM (gamma)','GLM (gamma, red)','GLM (inv. gaussian)', 'GLM (inv. gaussian, red)')
+cv_res
+```
+
+<br/>
+We observe that the median model is best for predictions (in terms of the median absolute error). However, the differences between the median model and the log-linear model are minor. The other models are significantly worse.
+
+The second cross-validation we will consider is the accuracy of the prediction intervals. Namely, we will calculate the proportion of predictions that fall within the prediction interval. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+set.seed(123)
+
+## Number of repetitions and folds
+rep <- 100
+folds <- 10
+
+accu_mde <- matrix(NA,rep*folds,1)
+accu_lr_log <- matrix(NA,rep*folds,1)
+
+k <- 1
+
+for(j in 1:rep){
+  
+  d <- createFolds(seq(1,dim(House_Rent)[1],1), k = folds)
+
+  for(i in 1:folds){
+    
+    train_set <- House_Rent[-unlist(d[i]),]
+    test_set <- House_Rent[unlist(d[i]),]
+    
+    
+    model_975_cv <- rq(Log_Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month)^2, tau = .975, data = train_set)
+    
+    model_025_cv <- rq(Log_Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month)^2, tau = .025, data = train_set)
+    
+    model_lr_log_cv <- lm(Log_Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month)^2, data = train_set)
+
+    lr_log_pred <- predict(model_lr_log_cv,test_set, interval = "confidence",level = .95)
+    
+    lb <- lr_log_pred[,2]
+    ub <- lr_log_pred[,3]
+    accu_lr_log[k] <- sum(test_set$Log_Rent > (lb + qnorm(0.025,0,summary(model_lr_log_cv)$sigma)) &  test_set$Log_Rent < (ub - qnorm(0.025,0,summary(model_lr_log_cv)$sigma)))/dim(test_set)[1]
+    
+    
+    lb <- predict(model_025,test_set,interval = "confidence",level = .95, se = 'ker')[,2]
+    ub <- predict(model_975,test_set,interval = "confidence",level = .95, se = 'ker')[,3]
+    
+
+    accu_mde[k] <- sum(test_set$Log_Rent > lb &  test_set$Log_Rent < ub)/dim(test_set)[1]
+    
+    k <-  k +1
+  }
+}
+```
+
+```{r, message=FALSE, warning=FALSE}
+# quantile PI
+apply(accu_mde,2,mean)
+# log-linear PI
+apply(accu_lr_log,2,mean)
+```
+
+<br/>
+We observe that predictions of new observations fell within the prediction intervals based on 2.5% and 97.5% quantile estimates in 99% of cases. Thus, these estimates are a bit more conservative on average. The prediction intervals for the log-linear model, based on the assumption of normal errors, also have the stated coverage; on average, the observations fell within the prediction interval in 97.5% of cases.  
+<br/>
+
+## Conclusion
+
+In this project, we analyzed the rents of over 4,000 residential properties in India during the spring/summer of 2022. Based on the cross-validation, the best-performing model in terms of prediction was the median regression model for the logarithm of rent. Other models we compared included a log-linear regression model and various generalized linear models (Gaussian with log link, quasi-Poisson, gamma, inverse Gaussian).
+
+We also performed hypothesis testing for the median model. Namely, we observed no significant trend over the four-month period for which we have available data. We also investigated the marginal effects of the cities. We found that the median rent in Mumbai is significantly higher than in other cities, even after adjusting for other covariates in the model. Indeed, this issue of high rents seems to have noticeable effects on the affordability of housing in Mumbai (see, e.g., https://www.livemint.com/news/india/brain-drain-in-mumbai-due-to-ever-rising-real-estate-prices-people-earn-rs-4-49-lakh-to-pay-rs-5-18-lakh-for-re-11729244633576.html  and https://www.ndtv.com/offbeat/rs-50-70-000-for-1-bhk-lawyers-post-on-high-prices-of-rented-flats-in-mumbai-5856671)  
+
+
+## References
+
+* [1] FARAWAY, Julian J. *Extending the linear model with R: generalized linear, mixed effects and nonparametric regression models.* Chapman and Hall/CRC, 2016.
+
+* [2] FARAWAY, Julian J. *Linear Models with R (2nd ed.).* Chapman and Hall/CRC, 2015.
+
+* [3] BURNHAM, Kenneth P.; ANDERSON, David R. (ed.). *Model selection and multimodel inference: a practical information-theoretic approach.* New York, NY: Springer New York, 2002.
+
+* [4] AKAIKE, Hirotugu. On the likelihood of a time series model. *Journal of the Royal Statistical Society: Series D (The Statistician)*, 1978, 27.3-4: 217-235.
+
+* [5] DUAN, Naihua. Smearing estimate: a nonparametric retransformation method. *Journal of the American Statistical Association*, 1983, 78.383: 605-610.
+
+* [6] KOENKER, Roger. *Quantile regression.* Cambridge University Press, 2005.
