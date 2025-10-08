@@ -349,7 +349,7 @@ redun(~.- Rent  - Area_Locality - Month,data = House_Rent,nk = 4, r2 = 0.95)
     ## 
     ## ~BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + 
     ##     POC + Floor + Max_Floor
-    ## <environment: 0x00000189f5cbcd28>
+    ## <environment: 0x000001597fa4a4d0>
     ## 
     ## n: 4738  p: 10   nk: 4 
     ## 
@@ -1207,24 +1207,24 @@ summary(model_med_simple, se = 'boot', R = 500, bsmethod = "xy") # pairs bootstr
     ## 
     ## Coefficients:
     ##                             Value     Std. Error t value   Pr(>|t|) 
-    ## (Intercept)                   8.91307   0.06651  134.01032   0.00000
-    ## BHK                           0.21978   0.01846   11.90331   0.00000
-    ## Size                          0.00043   0.00003   17.25533   0.00000
-    ## Area_typeSuper Area          -0.03636   0.01657   -2.19418   0.02827
-    ## CityDelhi                     0.20885   0.03436    6.07766   0.00000
-    ## CityHyderabad                -0.14336   0.01877   -7.63869   0.00000
-    ## CityChennai                  -0.03904   0.02135   -1.82906   0.06745
-    ## CityKolkata                  -0.29332   0.02409  -12.17387   0.00000
-    ## CityMumbai                    0.91184   0.02847   32.02441   0.00000
-    ## FurnishingSemi-Furnished     -0.16895   0.02671   -6.32497   0.00000
-    ## FurnishingUnfurnished        -0.27549   0.02630  -10.47643   0.00000
-    ## Pref_TenantBachelors/Family  -0.01991   0.01886   -1.05545   0.29127
-    ## Pref_TenantFamily            -0.06201   0.02752   -2.25355   0.02427
-    ## Bathroom                      0.14612   0.01946    7.50868   0.00000
-    ## POCContact Owner             -0.33496   0.02111  -15.86654   0.00000
-    ## Floor                         0.00335   0.00199    1.68393   0.09226
-    ## Max_Floor                     0.00492   0.00150    3.28378   0.00103
-    ## Month                         0.00785   0.00805    0.97571   0.32926
+    ## (Intercept)                   8.91307   0.06867  129.80483   0.00000
+    ## BHK                           0.21978   0.01634   13.45308   0.00000
+    ## Size                          0.00043   0.00002   17.39732   0.00000
+    ## Area_typeSuper Area          -0.03636   0.01590   -2.28585   0.02231
+    ## CityDelhi                     0.20885   0.03340    6.25211   0.00000
+    ## CityHyderabad                -0.14336   0.01832   -7.82494   0.00000
+    ## CityChennai                  -0.03904   0.02016   -1.93689   0.05282
+    ## CityKolkata                  -0.29332   0.02248  -13.05032   0.00000
+    ## CityMumbai                    0.91184   0.02647   34.45232   0.00000
+    ## FurnishingSemi-Furnished     -0.16895   0.02545   -6.63750   0.00000
+    ## FurnishingUnfurnished        -0.27549   0.02554  -10.78475   0.00000
+    ## Pref_TenantBachelors/Family  -0.01991   0.01879   -1.05930   0.28952
+    ## Pref_TenantFamily            -0.06201   0.02701   -2.29592   0.02172
+    ## Bathroom                      0.14612   0.01804    8.10157   0.00000
+    ## POCContact Owner             -0.33496   0.02025  -16.54385   0.00000
+    ## Floor                         0.00335   0.00201    1.66891   0.09520
+    ## Max_Floor                     0.00492   0.00151    3.25235   0.00115
+    ## Month                         0.00785   0.00847    0.92748   0.35373
 
 ``` r
 summary(model_med_simple, se = 'boot', R = 500, bsmethod = "cluster",cluster = House_Rent$Area_Locality)  # cluster  bootstrap
@@ -1239,24 +1239,24 @@ summary(model_med_simple, se = 'boot', R = 500, bsmethod = "cluster",cluster = H
     ## 
     ## Coefficients:
     ##                             Value     Std. Error t value   Pr(>|t|) 
-    ## (Intercept)                   8.91307   0.07299  122.10784   0.00000
-    ## BHK                           0.21978   0.01728   12.71576   0.00000
-    ## Size                          0.00043   0.00003   16.98386   0.00000
-    ## Area_typeSuper Area          -0.03636   0.01746   -2.08248   0.03735
-    ## CityDelhi                     0.20885   0.04826    4.32770   0.00002
-    ## CityHyderabad                -0.14336   0.02413   -5.94098   0.00000
-    ## CityChennai                  -0.03904   0.02731   -1.42962   0.15289
-    ## CityKolkata                  -0.29332   0.02950   -9.94200   0.00000
-    ## CityMumbai                    0.91184   0.03871   23.55662   0.00000
-    ## FurnishingSemi-Furnished     -0.16895   0.02715   -6.22285   0.00000
-    ## FurnishingUnfurnished        -0.27549   0.02819   -9.77422   0.00000
-    ## Pref_TenantBachelors/Family  -0.01991   0.02251   -0.88412   0.37668
-    ## Pref_TenantFamily            -0.06201   0.02976   -2.08336   0.03727
-    ## Bathroom                      0.14612   0.01872    7.80511   0.00000
-    ## POCContact Owner             -0.33496   0.02875  -11.64958   0.00000
-    ## Floor                         0.00335   0.00209    1.60471   0.10863
-    ## Max_Floor                     0.00492   0.00194    2.53070   0.01142
-    ## Month                         0.00785   0.00838    0.93727   0.34867
+    ## (Intercept)                   8.91307   0.07686  115.96768   0.00000
+    ## BHK                           0.21978   0.01896   11.59257   0.00000
+    ## Size                          0.00043   0.00003   16.28714   0.00000
+    ## Area_typeSuper Area          -0.03636   0.01787   -2.03411   0.04200
+    ## CityDelhi                     0.20885   0.05001    4.17629   0.00003
+    ## CityHyderabad                -0.14336   0.02522   -5.68500   0.00000
+    ## CityChennai                  -0.03904   0.02716   -1.43758   0.15062
+    ## CityKolkata                  -0.29332   0.03198   -9.17294   0.00000
+    ## CityMumbai                    0.91184   0.03870   23.56377   0.00000
+    ## FurnishingSemi-Furnished     -0.16895   0.02753   -6.13749   0.00000
+    ## FurnishingUnfurnished        -0.27549   0.02849   -9.66930   0.00000
+    ## Pref_TenantBachelors/Family  -0.01991   0.02218   -0.89747   0.36952
+    ## Pref_TenantFamily            -0.06201   0.03120   -1.98754   0.04692
+    ## Bathroom                      0.14612   0.01952    7.48531   0.00000
+    ## POCContact Owner             -0.33496   0.02834  -11.82093   0.00000
+    ## Floor                         0.00335   0.00217    1.54638   0.12208
+    ## Max_Floor                     0.00492   0.00213    2.30948   0.02096
+    ## Month                         0.00785   0.00866    0.90656   0.36468
 
 <br/> We observe that the standard error estimates are pretty similar.
 As expected, cluster pairs bootstrap provided slightly wider standard
@@ -1528,7 +1528,38 @@ emtrends(model_med, pairwise ~ City, var = "Size")$emtrends
 <br/> We observe that the average slope of **Size** for Mumbai is
 noticeably higher than for other cities, and **Size** is naturally a
 crucial factor in determining rent. Overall, it seems that it is fair to
-say that rents in Mumbai are more expensive than in other cities. <br/>
+say that rents in Mumbai are more expensive than in other cities.
+
+Another interesting observation is about point of contact. Looking just
+at the data, the rents negotiated through agents are more expensive.
+<br/>
+
+``` r
+tapply(House_Rent$Rent,House_Rent$POC,mean)
+```
+
+    ##   Contact Agent Contact Builder   Contact Owner 
+    ##        73501.77              NA        16704.46
+
+``` r
+tapply(House_Rent$Rent,House_Rent$POC,median)
+```
+
+    ##   Contact Agent Contact Builder   Contact Owner 
+    ##           45000              NA           12500
+
+<br/> However, again this comparison does not take into consideration
+what kind of properties are offered through agents. Still, a small price
+increase can be detected even after adjusting for covariates from our
+model (again due to presence of interactions we should look into this
+observation in more detail as we did for comparrison between cities)
+<br/>
+
+``` r
+plot(lsmeans(model_med, pairwise~ POC))
+```
+
+![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-74-1.png)<!-- -->
 
 ### Predictions
 
@@ -1572,18 +1603,19 @@ predict(model_975,House_Rent[1,],interval = "confidence",level = .95, se = 'ker'
     ##       fit    lower   higher
     ## 1 9.99688 9.747218 10.24654
 
-<br/> Let us plot the effects of predictors using the quantile models.
-<br/>
+<br/> Let us plot the effects of predictors (we plot them for Delhi)
+using the quantile models. <br/>
 
 ``` r
 library(sjPlot)
 library(ggplot2)
 
-plot1 <- plot_model(model_med, type = "pred", terms = c('Size', 'City [Kolkata]'))
-plot2 <- plot_model(model_05, type = "pred", terms = c('Size', 'City [Kolkata]'))
-plot3 <- plot_model(model_25, type = "pred", terms = c('Size', 'City [Kolkata]')) 
-plot4 <- plot_model(model_75, type = "pred", terms = c('Size', 'City [Kolkata]')) 
-plot5 <- plot_model(model_95, type = "pred", terms = c('Size', 'City [Kolkata]'))
+# Size
+plot1 <- plot_model(model_med, type = "pred", terms = c('Size', 'City [Delhi]'))
+plot2 <- plot_model(model_05, type = "pred", terms = c('Size', 'City [Delhi]'))
+plot3 <- plot_model(model_25, type = "pred", terms = c('Size', 'City [Delhi]')) 
+plot4 <- plot_model(model_75, type = "pred", terms = c('Size', 'City [Delhi]')) 
+plot5 <- plot_model(model_95, type = "pred", terms = c('Size', 'City [Delhi]'))
 
 ggplot() +
   geom_line(data = plot1$data,aes(x = x, y = predicted, color = "0.5 quantile")) +
@@ -1593,14 +1625,12 @@ ggplot() +
   geom_line(data = plot3$data,aes(x = x, y = predicted, color = "0.25 quantile")) +
   geom_line(data = plot4$data,aes(x = x, y = predicted, color = "0.75 quantile")) +
   geom_line(data = plot5$data,aes(x = x, y = predicted, color = "0.95 quantile")) + 
-geom_ribbon(data = plot5$data,aes(ymin = conf.low, ymax = conf.high, x = x, fill = "0.95 quantile"),alpha = 0.1, linewidth = 0, show.legend = FALSE) + labs(title="Kolkata", x="Size", y="Predicted Log Rent")
+geom_ribbon(data = plot5$data,aes(ymin = conf.low, ymax = conf.high, x = x, fill = "0.95 quantile"),alpha = 0.1, linewidth = 0, show.legend = FALSE) + labs(title="Delhi", x="Size", y="Predicted Log Rent")
 ```
 
-![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-76-1.png)<!-- -->
+![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-78-1.png)<!-- -->
 
-![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-77-1.png)<!-- -->
-
-![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-78-1.png)<!-- -->![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-78-2.png)<!-- -->![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-78-3.png)<!-- -->
+![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-79-1.png)<!-- -->![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-79-2.png)<!-- -->![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-79-3.png)<!-- -->![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-79-4.png)<!-- -->![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-79-5.png)<!-- -->![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-79-6.png)<!-- -->![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-79-7.png)<!-- -->![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-79-8.png)<!-- -->![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-79-9.png)<!-- -->
 
 <br/> Interestingly, the quantile regression lines actually cross for
 some predictions, which is, of course, impossible for the actual values
@@ -1609,9 +1639,9 @@ monotonic for the centroid of the data. Thus, such crossings (which are
 a consequence of independent estimation of quantiles) usually happen
 merely in outlying regions of the data \[6\].
 
-Additionally, the regression lines for the quantiles are not parallel in
-some plots. This so-called location shift test \[6\] can be tested more
-formally via the Wald test. <br/>
+Additionally, the regression lines for the quantiles are clearly not
+parallel in some plots. This so-called location shift test \[6\] can be
+tested more formally via the Wald test. <br/>
 
 ``` r
 anova(model_med,model_025,model_05,model_25,model_75,model_95,model_975, se = 'ker')
@@ -1639,7 +1669,7 @@ library(caret)
 set.seed(123)
 
 ## Number of repetitions and folds
-rep <- 1
+rep <- 100
 folds <- 10
 
 ae_mde <- matrix(NA,rep*folds,5)
@@ -1752,20 +1782,34 @@ rownames(cv_res) <- c('median','linear','linear(red)','log-linear','log-linear (
 cv_res
 ```
 
-    ##                                5%      25%      50%          75%          95%
-    ## median                   283.7658 1451.256 3505.135 8.956025e+03 4.127155e+04
-    ## linear                   597.0387 3076.717 7296.349 1.556262e+04 4.975670e+04
-    ## linear(red)              447.9187 2260.136 5017.435 1.126735e+04 4.278015e+04
-    ## log-linear               285.7348 1534.880 3600.474 8.722116e+03 4.123905e+04
-    ## log-linear (red)         280.9822 1530.148 3557.441 8.707730e+03 3.946672e+04
-    ## GLM (gauss)              580.4878 2804.569 7218.501 1.549687e+04 5.381197e+04
-    ## GLM (gauss,red)          370.9490 1923.333 4692.325 1.111128e+04 4.384186e+04
-    ## GLM(quasi-Poisson)       345.4033 1828.374 4582.280 1.111955e+04 4.598972e+04
-    ## GLM (quasi-Poisson, red) 353.1354 1687.315 4014.393 9.733315e+03 4.174644e+04
-    ## GLM (gamma)              380.7123 1713.324 4037.425 9.615375e+03 4.276105e+04
-    ## GLM (gamma, red)         341.7479 1625.298 3768.801 9.098808e+03 4.002579e+04
-    ## GLM (inv. gaussian)      334.0413 1665.332 3954.396 9.661329e+03 5.172285e+04
-    ## GLM (inv. gaussian, red) 840.4019 2621.970 7272.742 3.553043e+14 1.062558e+46
+    ##                                5%      25%          50%          75%
+    ## median                   287.9638 1456.397 3.483316e+03 8.962253e+03
+    ## linear                   617.0724 3136.930 7.194133e+03 1.504896e+04
+    ## linear(red)              472.8810 2298.307 5.074300e+03 1.112721e+04
+    ## log-linear               311.3545 1547.194 3.582950e+03 8.846755e+03
+    ## log-linear (red)         300.9721 1520.389 3.543039e+03 8.867376e+03
+    ## GLM (gauss)              573.1751 2928.911 7.194695e+03 1.546188e+04
+    ## GLM (gauss,red)          396.6920 1978.806 4.672102e+03 1.086010e+04
+    ## GLM(quasi-Poisson)       364.8897 1857.600 4.556798e+03 1.095006e+04
+    ## GLM (quasi-Poisson, red) 343.7397 1692.762 4.019445e+03 9.669215e+03
+    ## GLM (gamma)              370.1083 1733.445 4.026270e+03 9.668425e+03
+    ## GLM (gamma, red)         343.0732 1636.993 3.778628e+03 9.203344e+03
+    ## GLM (inv. gaussian)      458.6545 1947.052 2.637807e+14 1.013312e+41
+    ## GLM (inv. gaussian, red) 433.6739 1821.876 3.762557e+07 9.135204e+29
+    ##                                   95%
+    ## median                   4.283747e+04
+    ## linear                   5.069895e+04
+    ## linear(red)              4.176100e+04
+    ## log-linear               4.158895e+04
+    ## log-linear (red)         4.126698e+04
+    ## GLM (gauss)              5.555214e+04
+    ## GLM (gauss,red)          4.403197e+04
+    ## GLM(quasi-Poisson)       4.818721e+04
+    ## GLM (quasi-Poisson, red) 4.218132e+04
+    ## GLM (gamma)              4.341822e+04
+    ## GLM (gamma, red)         4.132954e+04
+    ## GLM (inv. gaussian)      4.735348e+68
+    ## GLM (inv. gaussian, red) 5.484853e+62
 
 <br/> We observe that the median model is best for predictions (in terms
 of the median absolute error). However, the differences between the
