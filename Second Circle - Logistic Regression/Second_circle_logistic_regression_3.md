@@ -18,7 +18,7 @@ case analysis (i.e., with no missing data). In the previous part, we
 considered the following logistic regression model of the probability of
 **TCHD**. <br/>
 
-``` r
+```r
 framingham_complete <- framingham[rowSums(is.na(framingham)) == 0,]
 
 full_model <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + rcs(Cig,4) + Meds + Stroke + Hyp + Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4) + Age:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc) + Sex:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc), family = binomial, framingham_complete)
@@ -765,7 +765,7 @@ values of the predictors, see *B. JA Mertens, E. Banzato, and L. C. de
 Wreede. Construction and assessment of prediction rules for binary
 outcome in the presence of missing predictor data using multiple
 imputation and cross‐validation: Methodological approach and data‐based
-evaluation.” Biometrical Journal 62.3 (2020): 724-74 * how to
+evaluation.” Biometrical Journal 62.3 (2020): 724-74* how to
 cross-validate such procedure. Of course, an unpleasant consequence of
 this approach is that obtaining a new prediction is quite
 computationally expensive.
