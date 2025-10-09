@@ -13,12 +13,12 @@ Jiří Fejlek
     model](#box-cox-transformation-and-log-linear-model)
 - [Generalized linear models](#generalized-linear-models)
   - [Gaussian model with log-link](#gaussian-model-with-log-link)
-  - [Quasi-Poisson GLM](#quasi-poisson-glm)
+  - [Quasi-Poisson model](#quasi-poisson-model)
   - [Gamma model with log-link](#gamma-model-with-log-link)
   - [Inverse Gaussian model with
     log-link](#inverse-gaussian-model-with-log-link)
 - [Quantile regression](#quantile-regression)
-  - [Fit](#fit)
+  - [Model fit](#model-fit)
   - [Inference](#inference)
   - [Predictions](#predictions)
 - [Validation](#validation)
@@ -349,7 +349,7 @@ redun(~.- Rent  - Area_Locality - Month,data = House_Rent,nk = 4, r2 = 0.95)
     ## 
     ## ~BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + 
     ##     POC + Floor + Max_Floor
-    ## <environment: 0x000001597fa4a4d0>
+    ## <environment: 0x0000013c78c3c4d8>
     ## 
     ## n: 4738  p: 10   nk: 4 
     ## 
@@ -797,7 +797,7 @@ that of linear regression, except for the RMSE, which is quite low.
 However, this value is heavily influenced by the prediction for the few
 outlying observations. <br/>
 
-### Quasi-Poisson GLM
+### Quasi-Poisson model
 
 <br/> Since the Gaussian variance function does not correspond to the
 observed variance in the data, we can consider another model. The
@@ -911,16 +911,26 @@ observations deleted. <br/>
     ## GLM (gamma, log-link)         78442.29 13208.78
     ## GLM (gamma, log-link, red)    80696.97 12756.59
 
-    ##                                  5%      25%      50%       75%      95%
-    ## linear                     543.1598 2981.431 6872.966 14170.417 47454.49
-    ## linear(red)                457.5159 2260.159 4992.613 10758.330 38965.36
-    ## log-linear                 293.1116 1501.829 3471.372  8499.362 38838.71
-    ## log-linear (red)           283.3274 1479.404 3422.906  8448.426 38478.45
-    ## GLM (gauss, log-link)      564.6077 2832.127 7000.000 15099.103 46968.89
-    ## GLM (quasi-Poisson)        341.7867 1778.027 4447.695 10465.704 43357.17
-    ## GLM (quasi-Poisson, red)   330.5470 1654.658 3913.441  9320.795 37729.66
-    ## GLM (gamma, log-link)      332.1732 1688.041 3958.569  9241.624 40709.90
-    ## GLM (gamma, log-link, red) 337.1819 1600.093 3692.537  8870.524 38637.25
+    ##                                     5%         25%          50%          75%
+    ## linear                        543.1598    2981.431     6872.966    14170.417
+    ## linear(red)                   457.5159    2260.159     4992.613    10758.330
+    ## log-linear                    293.1116    1501.829     3471.372     8499.362
+    ## log-linear (red)              283.3274    1479.404     3422.906     8448.426
+    ## GLM (gauss, log-link)         564.6077    2832.127     7000.000    15099.103
+    ## GLM (quasi-Poisson)           341.7867    1778.027     4447.695    10465.704
+    ## GLM (quasi-Poisson, red)      330.5470    1654.658     3913.441     9320.795
+    ## GLM (gamma, log-link)      110339.0403 2849481.331 15670272.133 85407609.820
+    ## GLM (gamma, log-link, red) 113691.6297 2560297.660 13634831.029 78686199.462
+    ##                                     95%
+    ## linear                     4.745449e+04
+    ## linear(red)                3.896536e+04
+    ## log-linear                 3.883871e+04
+    ## log-linear (red)           3.847845e+04
+    ## GLM (gauss, log-link)      4.696889e+04
+    ## GLM (quasi-Poisson)        4.335717e+04
+    ## GLM (quasi-Poisson, red)   3.772966e+04
+    ## GLM (gamma, log-link)      1.657296e+09
+    ## GLM (gamma, log-link, red) 1.492837e+09
 
 <br/> The gamma model is even closer to the log-linear model than the
 quasi-Poisson model. <br/>
@@ -949,7 +959,7 @@ AIC(model_glm_igaussloglink))
 
     ## [1] 117405.99  98108.52 110172.24  98976.81  98986.14
 
-<br/> We expect that the variance function will be far too strong. <br/>
+<br/> We expect that the variance function will be way too strong. <br/>
 
 ![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-54-1.png)<!-- -->
 
@@ -960,17 +970,28 @@ misspecified. <br/>
 
 <br/> Let us evaluate the predictions of the model <br/>
 
-    ##                                     5%      25%      50%       75%      95%
-    ## linear                        543.1598 2981.431 6872.966 14170.417 47454.49
-    ## linear(red)                   457.5159 2260.159 4992.613 10758.330 38965.36
-    ## log-linear                    293.1116 1501.829 3471.372  8499.362 38838.71
-    ## log-linear (red)              283.3274 1479.404 3422.906  8448.426 38478.45
-    ## GLM (gauss, log-link)         564.6077 2832.127 7000.000 15099.103 46968.89
-    ## GLM (quasi-Poisson)           341.7867 1778.027 4447.695 10465.704 43357.17
-    ## GLM (quasi-Poisson, red)      330.5470 1654.658 3913.441  9320.795 37729.66
-    ## GLM (gamma, log-link)         332.1732 1688.041 3958.569  9241.624 40709.90
-    ## GLM (gamma, log-link, red)    337.1819 1600.093 3692.537  8870.524 38637.25
-    ## GLM (inv. gaussian, log-link) 324.4820 1622.435 3884.023  9183.590 49022.23
+    ##                                        5%         25%          50%          75%
+    ## linear                           543.1598    2981.431     6872.966    14170.417
+    ## linear(red)                      457.5159    2260.159     4992.613    10758.330
+    ## log-linear                       293.1116    1501.829     3471.372     8499.362
+    ## log-linear (red)                 283.3274    1479.404     3422.906     8448.426
+    ## GLM (gauss, log-link)            564.6077    2832.127     7000.000    15099.103
+    ## GLM (quasi-Poisson)              341.7867    1778.027     4447.695    10465.704
+    ## GLM (quasi-Poisson, red)         330.5470    1654.658     3913.441     9320.795
+    ## GLM (gamma, log-link)         110339.0403 2849481.331 15670272.133 85407609.820
+    ## GLM (gamma, log-link, red)    113691.6297 2560297.660 13634831.029 78686199.462
+    ## GLM (inv. gaussian, log-link)    324.4819    1622.435     3884.023     9183.589
+    ##                                        95%
+    ## linear                        4.745449e+04
+    ## linear(red)                   3.896536e+04
+    ## log-linear                    3.883871e+04
+    ## log-linear (red)              3.847845e+04
+    ## GLM (gauss, log-link)         4.696889e+04
+    ## GLM (quasi-Poisson)           4.335717e+04
+    ## GLM (quasi-Poisson, red)      3.772966e+04
+    ## GLM (gamma, log-link)         1.657296e+09
+    ## GLM (gamma, log-link, red)    1.492837e+09
+    ## GLM (inv. gaussian, log-link) 4.902218e+04
 
     ##                                    RMSE      MAE
     ## linear                         56427.15 14351.65
@@ -1043,7 +1064,7 @@ $\tau\mathrm{th}$ quantile (the quantiles of the transformed random
 variable $h(Y)$ are the transformed quantiles of the original $Y$)
 \[6\]. <br/>
 
-### Fit
+### Model fit
 
 <br/> In R, quantile regression is performed using the
 *quantreg*package. Let us start with the model for the median. <br/>
@@ -1089,18 +1110,30 @@ mean(abs((predict(model_lr_log)) - House_Rent$Log_Rent))
 
 <br/> The quantiles of absolute deviations are as follows. <br/>
 
-    ##                                     5%      25%      50%       75%      95%
-    ## linear                        543.1598 2981.431 6872.966 14170.417 47454.49
-    ## linear(red)                   457.5159 2260.159 4992.613 10758.330 38965.36
-    ## log-linear                    293.1116 1501.829 3471.372  8499.362 38838.71
-    ## log-linear (red)              283.3274 1479.404 3422.906  8448.426 38478.45
-    ## GLM (gauss, log-link)         564.6077 2832.127 7000.000 15099.103 46968.89
-    ## GLM (quasi-Poisson)           341.7867 1778.027 4447.695 10465.704 43357.17
-    ## GLM (quasi-Poisson, red)      330.5470 1654.658 3913.441  9320.795 37729.66
-    ## GLM (gamma, log-link)         332.1732 1688.041 3958.569  9241.624 40709.90
-    ## GLM (gamma, log-link, red)    337.1819 1600.093 3692.537  8870.524 38637.25
-    ## GLM (inv. gaussian, log-link) 324.4820 1622.435 3884.023  9183.590 49022.23
-    ## median regression             117.3394 1248.287 3210.823  8326.745 38878.08
+    ##                                        5%         25%          50%          75%
+    ## linear                           543.1598    2981.431     6872.966    14170.417
+    ## linear(red)                      457.5159    2260.159     4992.613    10758.330
+    ## log-linear                       293.1116    1501.829     3471.372     8499.362
+    ## log-linear (red)                 283.3274    1479.404     3422.906     8448.426
+    ## GLM (gauss, log-link)            564.6077    2832.127     7000.000    15099.103
+    ## GLM (quasi-Poisson)              341.7867    1778.027     4447.695    10465.704
+    ## GLM (quasi-Poisson, red)         330.5470    1654.658     3913.441     9320.795
+    ## GLM (gamma, log-link)         110339.0403 2849481.331 15670272.133 85407609.820
+    ## GLM (gamma, log-link, red)    113691.6297 2560297.660 13634831.029 78686199.462
+    ## GLM (inv. gaussian, log-link)    324.4819    1622.435     3884.023     9183.589
+    ## median regression                117.3394    1248.287     3210.823     8326.745
+    ##                                        95%
+    ## linear                        4.745449e+04
+    ## linear(red)                   3.896536e+04
+    ## log-linear                    3.883871e+04
+    ## log-linear (red)              3.847845e+04
+    ## GLM (gauss, log-link)         4.696889e+04
+    ## GLM (quasi-Poisson)           4.335717e+04
+    ## GLM (quasi-Poisson, red)      3.772966e+04
+    ## GLM (gamma, log-link)         1.657296e+09
+    ## GLM (gamma, log-link, red)    1.492837e+09
+    ## GLM (inv. gaussian, log-link) 4.902218e+04
+    ## median regression             3.887808e+04
 
 <br/> The predictions based on median response are slightly better.
 <br/>
@@ -1207,24 +1240,24 @@ summary(model_med_simple, se = 'boot', R = 500, bsmethod = "xy") # pairs bootstr
     ## 
     ## Coefficients:
     ##                             Value     Std. Error t value   Pr(>|t|) 
-    ## (Intercept)                   8.91307   0.06867  129.80483   0.00000
-    ## BHK                           0.21978   0.01634   13.45308   0.00000
-    ## Size                          0.00043   0.00002   17.39732   0.00000
-    ## Area_typeSuper Area          -0.03636   0.01590   -2.28585   0.02231
-    ## CityDelhi                     0.20885   0.03340    6.25211   0.00000
-    ## CityHyderabad                -0.14336   0.01832   -7.82494   0.00000
-    ## CityChennai                  -0.03904   0.02016   -1.93689   0.05282
-    ## CityKolkata                  -0.29332   0.02248  -13.05032   0.00000
-    ## CityMumbai                    0.91184   0.02647   34.45232   0.00000
-    ## FurnishingSemi-Furnished     -0.16895   0.02545   -6.63750   0.00000
-    ## FurnishingUnfurnished        -0.27549   0.02554  -10.78475   0.00000
-    ## Pref_TenantBachelors/Family  -0.01991   0.01879   -1.05930   0.28952
-    ## Pref_TenantFamily            -0.06201   0.02701   -2.29592   0.02172
-    ## Bathroom                      0.14612   0.01804    8.10157   0.00000
-    ## POCContact Owner             -0.33496   0.02025  -16.54385   0.00000
-    ## Floor                         0.00335   0.00201    1.66891   0.09520
-    ## Max_Floor                     0.00492   0.00151    3.25235   0.00115
-    ## Month                         0.00785   0.00847    0.92748   0.35373
+    ## (Intercept)                   8.91307   0.06761  131.82877   0.00000
+    ## BHK                           0.21978   0.01807   12.16494   0.00000
+    ## Size                          0.00043   0.00003   16.46378   0.00000
+    ## Area_typeSuper Area          -0.03636   0.01633   -2.22690   0.02600
+    ## CityDelhi                     0.20885   0.03410    6.12420   0.00000
+    ## CityHyderabad                -0.14336   0.01862   -7.69916   0.00000
+    ## CityChennai                  -0.03904   0.02046   -1.90825   0.05642
+    ## CityKolkata                  -0.29332   0.02311  -12.69402   0.00000
+    ## CityMumbai                    0.91184   0.02754   33.11121   0.00000
+    ## FurnishingSemi-Furnished     -0.16895   0.02629   -6.42694   0.00000
+    ## FurnishingUnfurnished        -0.27549   0.02668  -10.32413   0.00000
+    ## Pref_TenantBachelors/Family  -0.01991   0.01874   -1.06246   0.28808
+    ## Pref_TenantFamily            -0.06201   0.02450   -2.53123   0.01140
+    ## Bathroom                      0.14612   0.01952    7.48610   0.00000
+    ## POCContact Owner             -0.33496   0.02116  -15.82871   0.00000
+    ## Floor                         0.00335   0.00201    1.67180   0.09463
+    ## Max_Floor                     0.00492   0.00147    3.34261   0.00084
+    ## Month                         0.00785   0.00781    1.00621   0.31437
 
 ``` r
 summary(model_med_simple, se = 'boot', R = 500, bsmethod = "cluster",cluster = House_Rent$Area_Locality)  # cluster  bootstrap
@@ -1239,24 +1272,24 @@ summary(model_med_simple, se = 'boot', R = 500, bsmethod = "cluster",cluster = H
     ## 
     ## Coefficients:
     ##                             Value     Std. Error t value   Pr(>|t|) 
-    ## (Intercept)                   8.91307   0.07686  115.96768   0.00000
-    ## BHK                           0.21978   0.01896   11.59257   0.00000
-    ## Size                          0.00043   0.00003   16.28714   0.00000
-    ## Area_typeSuper Area          -0.03636   0.01787   -2.03411   0.04200
-    ## CityDelhi                     0.20885   0.05001    4.17629   0.00003
-    ## CityHyderabad                -0.14336   0.02522   -5.68500   0.00000
-    ## CityChennai                  -0.03904   0.02716   -1.43758   0.15062
-    ## CityKolkata                  -0.29332   0.03198   -9.17294   0.00000
-    ## CityMumbai                    0.91184   0.03870   23.56377   0.00000
-    ## FurnishingSemi-Furnished     -0.16895   0.02753   -6.13749   0.00000
-    ## FurnishingUnfurnished        -0.27549   0.02849   -9.66930   0.00000
-    ## Pref_TenantBachelors/Family  -0.01991   0.02218   -0.89747   0.36952
-    ## Pref_TenantFamily            -0.06201   0.03120   -1.98754   0.04692
-    ## Bathroom                      0.14612   0.01952    7.48531   0.00000
-    ## POCContact Owner             -0.33496   0.02834  -11.82093   0.00000
-    ## Floor                         0.00335   0.00217    1.54638   0.12208
-    ## Max_Floor                     0.00492   0.00213    2.30948   0.02096
-    ## Month                         0.00785   0.00866    0.90656   0.36468
+    ## (Intercept)                   8.91307   0.06895  129.25967   0.00000
+    ## BHK                           0.21978   0.01865   11.78329   0.00000
+    ## Size                          0.00043   0.00003   16.59171   0.00000
+    ## Area_typeSuper Area          -0.03636   0.01880   -1.93423   0.05314
+    ## CityDelhi                     0.20885   0.04900    4.26260   0.00002
+    ## CityHyderabad                -0.14336   0.02307   -6.21301   0.00000
+    ## CityChennai                  -0.03904   0.02719   -1.43593   0.15109
+    ## CityKolkata                  -0.29332   0.02981   -9.83848   0.00000
+    ## CityMumbai                    0.91184   0.03672   24.83469   0.00000
+    ## FurnishingSemi-Furnished     -0.16895   0.02513   -6.72245   0.00000
+    ## FurnishingUnfurnished        -0.27549   0.02739  -10.05929   0.00000
+    ## Pref_TenantBachelors/Family  -0.01991   0.02167   -0.91854   0.35839
+    ## Pref_TenantFamily            -0.06201   0.03047   -2.03511   0.04190
+    ## Bathroom                      0.14612   0.01904    7.67649   0.00000
+    ## POCContact Owner             -0.33496   0.02711  -12.35420   0.00000
+    ## Floor                         0.00335   0.00210    1.59937   0.10981
+    ## Max_Floor                     0.00492   0.00203    2.42212   0.01547
+    ## Month                         0.00785   0.00818    0.96077   0.33672
 
 <br/> We observe that the standard error estimates are pretty similar.
 As expected, cluster pairs bootstrap provided slightly wider standard
@@ -1885,7 +1918,7 @@ prediction intervals based on 2.5% and 97.5% quantile estimates in 99%
 of cases. Thus, these estimates are a bit more conservative on average.
 The prediction intervals for the log-linear model, based on the
 assumption of normal errors, also have the stated coverage; on average,
-the observations fell within the prediction interval in 97.5% of
+the observations fell within the prediction interval in 97.2% of
 cases.  
 <br/>
 

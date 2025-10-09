@@ -630,7 +630,7 @@ quan_glm
 We observe that the MAE of the Gaussian GLM is quite comparable to that of linear regression, except for the RMSE, which is quite low. However, this value is heavily influenced by the prediction for the few outlying observations.
 <br/>
 
-### Quasi-Poisson GLM
+### Quasi-Poisson model
 
 <br/>
 Since the Gaussian variance function does not correspond to the observed variance in the data, we can consider another model. The quasi-Poisson model is known to us from Circle Four, where we used it to model count data. Its conditional mean is 
@@ -755,10 +755,10 @@ rownames(er_glm3) <- c('linear','linear(red)','log-linear','log-linear (red)','G
 
 
 quan_glm3 <- rbind(quan_glm2,
-                   sqrt(quantile((predict(model_glm_gammaloglink, type = 'response') -
-                                    House_Rent$Rent)^2,c(0.05,0.25,0.5,0.75,0.95))),
-                   sqrt(quantile((predict(model_glm_gammaloglink_red, House_Rent, type = 'response') -
-                                    House_Rent$Rent)^2,c(0.05,0.25,0.5,0.75,0.95)))
+                   quantile(abs(predict(model_glm_gammaloglink, type = 'response') -
+                                    House_Rent$Rent)^2,c(0.05,0.25,0.5,0.75,0.95)),
+                   quantile(abs(predict(model_glm_gammaloglink_red, House_Rent, type = 'response') -
+                                    House_Rent$Rent)^2,c(0.05,0.25,0.5,0.75,0.95))
 )
 
 rownames(quan_glm3) <- c('linear','linear(red)','log-linear','log-linear (red)','GLM (gauss, log-link)','GLM (quasi-Poisson)','GLM (quasi-Poisson, red)','GLM (gamma, log-link)','GLM (gamma, log-link, red)')
@@ -794,7 +794,7 @@ AIC(model_glm_igaussloglink))
 ```
 
 <br/>
-We expect that the variance function will be far too strong. 
+We expect that the variance function will be way too strong. 
 <br/>
 
 ```{r, message=FALSE, warning=FALSE,echo=FALSE}
@@ -824,8 +824,8 @@ er_glm4 <- rbind(er_glm3,
 rownames(er_glm4) <- c('linear','linear(red)','log-linear','log-linear (red)','GLM (gauss, log-link)','GLM (quasi-Poisson)','GLM (quasi-Poisson, red)','GLM (gamma, log-link)','GLM (gamma, log-link, red)','GLM (inv. gaussian, log-link)')
 
 quan_glm4 <- rbind(quan_glm3,
-                   sqrt(quantile((predict(model_glm_igaussloglink, type = 'response') -
-                                    House_Rent$Rent)^2,c(0.05,0.25,0.5,0.75,0.95))))
+                   quantile(abs(predict(model_glm_igaussloglink, type = 'response') -
+                                    House_Rent$Rent),c(0.05,0.25,0.5,0.75,0.95)))
                 
 rownames(quan_glm4) <- c('linear','linear(red)','log-linear','log-linear (red)','GLM (gauss, log-link)','GLM (quasi-Poisson)','GLM (quasi-Poisson, red)','GLM (gamma, log-link)','GLM (gamma, log-link, red)','GLM (inv. gaussian, log-link)')
 
@@ -852,7 +852,7 @@ The last advantage of quantile regression we mention here is that that unlike th
 transformed quantiles of the original $Y$) [6].
 <br/>
 
-### Fit
+### Model fit
 
 <br/>
 In R, quantile regression is performed using the *quantreg*package. Let us start with the model for the median.
@@ -1553,7 +1553,7 @@ apply(accu_lr_log,2,mean)
 ```
 
 <br/>
-We observe that predictions of new observations fell within the prediction intervals based on 2.5% and 97.5% quantile estimates in 99% of cases. Thus, these estimates are a bit more conservative on average. The prediction intervals for the log-linear model, based on the assumption of normal errors, also have the stated coverage; on average, the observations fell within the prediction interval in 97.5% of cases.  
+We observe that predictions of new observations fell within the prediction intervals based on 2.5% and 97.5% quantile estimates in 99% of cases. Thus, these estimates are a bit more conservative on average. The prediction intervals for the log-linear model, based on the assumption of normal errors, also have the stated coverage; on average, the observations fell within the prediction interval in 97.2% of cases.  
 <br/>
 
 ## Conclusion
