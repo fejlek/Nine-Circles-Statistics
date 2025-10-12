@@ -164,7 +164,7 @@ summary(as.factor(months))
     ##  228 1681 1859  978
 
 <br/> All data are from 2022. However, the months vary. Hence, we can
-test the inclusion of a trend in the model.
+test the inclusion of a time trend in the model.
 
 We will add the **Month**, **Floor**, and **Maximum_floor** variables to
 the dataset and remove the original **Floor** variable and the
@@ -199,8 +199,8 @@ plot(House_Rent$Area_Locality,xlab = 'Locations',ylab = 'Count',xaxt = 'n')
 
 <br/> There are many various locations. Since these represent
 neighboring observations, we can consider them as clusters later in our
-analysis to account for the fact that these observations might be
-dependent.
+inference when evaluating statistical significance to account for the
+fact that these observations might be correlated.
 
 Let us check next for missing and duplicated data. <br/>
 
@@ -349,7 +349,7 @@ redun(~.- Rent  - Area_Locality - Month,data = House_Rent,nk = 4, r2 = 0.95)
     ## 
     ## ~BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + 
     ##     POC + Floor + Max_Floor
-    ## <environment: 0x0000013c78c3c4d8>
+    ## <environment: 0x0000016163a0e510>
     ## 
     ## n: 4738  p: 10   nk: 4 
     ## 
@@ -563,9 +563,10 @@ boxcox(model_lr, plotit=T)
 
 ![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-27-1.png)<!-- -->
 
-<br/> The optimal \$ \$ seems to be close to zero. Consequently, we will
-use the log transformation to maintain the clear interpretability of the
-model (instead of considering the non-integer value of $\lambda$). <br/>
+<br/> The optimal $\lambda$ seems to be close to zero. Consequently, we
+will use the log transformation to maintain the clear interpretability
+of the model (instead of considering the non-integer value of
+$\lambda$). <br/>
 
 ``` r
 log_rent <- log(House_Rent$Rent)
@@ -672,10 +673,8 @@ quan_log2
     ## log-linear (Duan)     361.1314 1699.299 3961.497  9066.869 40023.54
 
 <br/> We observe that neither of the corrections improved the overall
-predictions. This hints at the fact that the model is still misspecified
-(the residuals are still heteroskedastic and thus the estimate of
-$\sigma^2$ is off).
-
+predictions. This hints at the fact that the residuals are still
+somewhat heteroskedastic and thus the estimate of $\sigma^2$ is off.
 Next, we can compare the linear and the log-linear models. Naively, we
 would write the following. <br/>
 
@@ -911,33 +910,23 @@ observations deleted. <br/>
     ## GLM (gamma, log-link)         78442.29 13208.78
     ## GLM (gamma, log-link, red)    80696.97 12756.59
 
-    ##                                     5%         25%          50%          75%
-    ## linear                        543.1598    2981.431     6872.966    14170.417
-    ## linear(red)                   457.5159    2260.159     4992.613    10758.330
-    ## log-linear                    293.1116    1501.829     3471.372     8499.362
-    ## log-linear (red)              283.3274    1479.404     3422.906     8448.426
-    ## GLM (gauss, log-link)         564.6077    2832.127     7000.000    15099.103
-    ## GLM (quasi-Poisson)           341.7867    1778.027     4447.695    10465.704
-    ## GLM (quasi-Poisson, red)      330.5470    1654.658     3913.441     9320.795
-    ## GLM (gamma, log-link)      110339.0403 2849481.331 15670272.133 85407609.820
-    ## GLM (gamma, log-link, red) 113691.6297 2560297.660 13634831.029 78686199.462
-    ##                                     95%
-    ## linear                     4.745449e+04
-    ## linear(red)                3.896536e+04
-    ## log-linear                 3.883871e+04
-    ## log-linear (red)           3.847845e+04
-    ## GLM (gauss, log-link)      4.696889e+04
-    ## GLM (quasi-Poisson)        4.335717e+04
-    ## GLM (quasi-Poisson, red)   3.772966e+04
-    ## GLM (gamma, log-link)      1.657296e+09
-    ## GLM (gamma, log-link, red) 1.492837e+09
+    ##                                  5%      25%      50%       75%      95%
+    ## linear                     543.1598 2981.431 6872.966 14170.417 47454.49
+    ## linear(red)                457.5159 2260.159 4992.613 10758.330 38965.36
+    ## log-linear                 293.1116 1501.829 3471.372  8499.362 38838.71
+    ## log-linear (red)           283.3274 1479.404 3422.906  8448.426 38478.45
+    ## GLM (gauss, log-link)      564.6077 2832.127 7000.000 15099.103 46968.89
+    ## GLM (quasi-Poisson)        341.7867 1778.027 4447.695 10465.704 43357.17
+    ## GLM (quasi-Poisson, red)   330.5470 1654.658 3913.441  9320.795 37729.66
+    ## GLM (gamma, log-link)      332.1729 1688.040 3958.569  9241.624 40709.88
+    ## GLM (gamma, log-link, red) 337.1807 1600.092 3692.536  8870.520 38637.24
 
 <br/> The gamma model is even closer to the log-linear model than the
 quasi-Poisson model. <br/>
 
 ### Inverse Gaussian model with log-link
 
-<br/> The last model we will consider here is the inverse Gaussion GLM.
+<br/> The last model we will consider here is the inverse Gaussian GLM.
 The inverse Gaussian is again a full likelihood model for which the
 responses have an inverse Gaussian distribution. The conditional mean is
 the same; $\mu = \mathrm{log} X\beta$. However, the variance function is
@@ -964,34 +953,23 @@ AIC(model_glm_igaussloglink))
 ![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-54-1.png)<!-- -->
 
 <br/> Indeed, it is. The simulated residuals also show that the model is
-misspecified. <br/>
+clearly misspecified. <br/>
 
 ![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-55-1.png)<!-- -->![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-55-2.png)<!-- -->
 
 <br/> Let us evaluate the predictions of the model <br/>
 
-    ##                                        5%         25%          50%          75%
-    ## linear                           543.1598    2981.431     6872.966    14170.417
-    ## linear(red)                      457.5159    2260.159     4992.613    10758.330
-    ## log-linear                       293.1116    1501.829     3471.372     8499.362
-    ## log-linear (red)                 283.3274    1479.404     3422.906     8448.426
-    ## GLM (gauss, log-link)            564.6077    2832.127     7000.000    15099.103
-    ## GLM (quasi-Poisson)              341.7867    1778.027     4447.695    10465.704
-    ## GLM (quasi-Poisson, red)         330.5470    1654.658     3913.441     9320.795
-    ## GLM (gamma, log-link)         110339.0403 2849481.331 15670272.133 85407609.820
-    ## GLM (gamma, log-link, red)    113691.6297 2560297.660 13634831.029 78686199.462
-    ## GLM (inv. gaussian, log-link)    324.4819    1622.435     3884.023     9183.589
-    ##                                        95%
-    ## linear                        4.745449e+04
-    ## linear(red)                   3.896536e+04
-    ## log-linear                    3.883871e+04
-    ## log-linear (red)              3.847845e+04
-    ## GLM (gauss, log-link)         4.696889e+04
-    ## GLM (quasi-Poisson)           4.335717e+04
-    ## GLM (quasi-Poisson, red)      3.772966e+04
-    ## GLM (gamma, log-link)         1.657296e+09
-    ## GLM (gamma, log-link, red)    1.492837e+09
-    ## GLM (inv. gaussian, log-link) 4.902218e+04
+    ##                                     5%      25%      50%       75%      95%
+    ## linear                        543.1598 2981.431 6872.966 14170.417 47454.49
+    ## linear(red)                   457.5159 2260.159 4992.613 10758.330 38965.36
+    ## log-linear                    293.1116 1501.829 3471.372  8499.362 38838.71
+    ## log-linear (red)              283.3274 1479.404 3422.906  8448.426 38478.45
+    ## GLM (gauss, log-link)         564.6077 2832.127 7000.000 15099.103 46968.89
+    ## GLM (quasi-Poisson)           341.7867 1778.027 4447.695 10465.704 43357.17
+    ## GLM (quasi-Poisson, red)      330.5470 1654.658 3913.441  9320.795 37729.66
+    ## GLM (gamma, log-link)         332.1729 1688.040 3958.569  9241.624 40709.88
+    ## GLM (gamma, log-link, red)    337.1807 1600.092 3692.536  8870.520 38637.24
+    ## GLM (inv. gaussian, log-link) 324.4819 1622.435 3884.023  9183.589 49022.18
 
     ##                                    RMSE      MAE
     ## linear                         56427.15 14351.65
@@ -1035,15 +1013,12 @@ expected values. For example, the median regression is given as
 $\mathrm{median} Y = X\beta$. It can be shown, that the estimate
 $\hat{\beta}$ for conditional quantile $\rho$ can be also found as a
 solution of some optimization, namely of a linear program
-$\mathrm{argmin}_\beta\sum_i \rho_\tau (y_i -  x_i^T\beta)$, where
+$\mathrm{argmin}_\beta\sum_i \rho_{\tau} (y_i -  x_i^T\beta)$, where
 $\rho_\tau(u) = u(\tau-I(u <0))$ (piecewise linear function with slopes
 $\tau - 1$ for negative $u$ and $\tau$ for positive $u$). For the
 median, this formula reduces to
 $\mathrm{argmin}_\beta\sum_i |y_i -  x_i^T\beta|$, i.e., median
-regression minimizes the mean absolute error (MAE) \[6\]. This
-optimization examines the computation of quantiles, giving us another
-insight into why quantile regression is more robust (we minimize the
-absolute value of deviations instead of squared deviations).
+regression minimizes the mean absolute error (MAE) \[6\].
 
 Another advantage of quantile regression is that we can model multiple
 quantiles of the distribution of $Y$, providing a more complete picture
@@ -1110,30 +1085,18 @@ mean(abs((predict(model_lr_log)) - House_Rent$Log_Rent))
 
 <br/> The quantiles of absolute deviations are as follows. <br/>
 
-    ##                                        5%         25%          50%          75%
-    ## linear                           543.1598    2981.431     6872.966    14170.417
-    ## linear(red)                      457.5159    2260.159     4992.613    10758.330
-    ## log-linear                       293.1116    1501.829     3471.372     8499.362
-    ## log-linear (red)                 283.3274    1479.404     3422.906     8448.426
-    ## GLM (gauss, log-link)            564.6077    2832.127     7000.000    15099.103
-    ## GLM (quasi-Poisson)              341.7867    1778.027     4447.695    10465.704
-    ## GLM (quasi-Poisson, red)         330.5470    1654.658     3913.441     9320.795
-    ## GLM (gamma, log-link)         110339.0403 2849481.331 15670272.133 85407609.820
-    ## GLM (gamma, log-link, red)    113691.6297 2560297.660 13634831.029 78686199.462
-    ## GLM (inv. gaussian, log-link)    324.4819    1622.435     3884.023     9183.589
-    ## median regression                117.3394    1248.287     3210.823     8326.745
-    ##                                        95%
-    ## linear                        4.745449e+04
-    ## linear(red)                   3.896536e+04
-    ## log-linear                    3.883871e+04
-    ## log-linear (red)              3.847845e+04
-    ## GLM (gauss, log-link)         4.696889e+04
-    ## GLM (quasi-Poisson)           4.335717e+04
-    ## GLM (quasi-Poisson, red)      3.772966e+04
-    ## GLM (gamma, log-link)         1.657296e+09
-    ## GLM (gamma, log-link, red)    1.492837e+09
-    ## GLM (inv. gaussian, log-link) 4.902218e+04
-    ## median regression             3.887808e+04
+    ##                                     5%      25%      50%       75%      95%
+    ## linear                        543.1598 2981.431 6872.966 14170.417 47454.49
+    ## linear(red)                   457.5159 2260.159 4992.613 10758.330 38965.36
+    ## log-linear                    293.1116 1501.829 3471.372  8499.362 38838.71
+    ## log-linear (red)              283.3274 1479.404 3422.906  8448.426 38478.45
+    ## GLM (gauss, log-link)         564.6077 2832.127 7000.000 15099.103 46968.89
+    ## GLM (quasi-Poisson)           341.7867 1778.027 4447.695 10465.704 43357.17
+    ## GLM (quasi-Poisson, red)      330.5470 1654.658 3913.441  9320.795 37729.66
+    ## GLM (gamma, log-link)         332.1729 1688.040 3958.569  9241.624 40709.88
+    ## GLM (gamma, log-link, red)    337.1807 1600.092 3692.536  8870.520 38637.24
+    ## GLM (inv. gaussian, log-link) 324.4819 1622.435 3884.023  9183.589 49022.18
+    ## median regression             117.3394 1248.287 3210.823  8326.745 38878.08
 
 <br/> The predictions based on median response are slightly better.
 <br/>
@@ -1155,13 +1118,14 @@ depend on the reciprocal of a density function of the response evaluated
 at the quantile of interest (so-called sparsity function \[6\]). This
 value must be estimated from the data (e.g., by kernel estimate, see
 <https://www.rdocumentation.org/packages/quantreg/versions/6.1/topics/summary.rq>
-for all options implemented in *quantreg*). Otherwise, the standard
-error must be estimated directly via a bootstrap.
+for all options implemented in *quantreg*). Alternatively, the standard
+errors can be also estimated directly via a bootstrap.
 
 We use two methods mentioned explicitly in \[6\], the Hendricks–Koenker
 sandwich and the Powell sandwich. We also include pairs bootstrap
-estimate of standard errors and pairs cluster bootstrap (clustering by
-**Area_Locality**). <br/>
+estimate of standard errors and pairs cluster bootstrap (to account for
+the fact that observations from the same locality **Area_Locality** may
+be correlated). <br/>
 
 ``` r
 summary(model_med_simple, se = 'nid') # Hendricks and Koenker estimate
@@ -1240,24 +1204,24 @@ summary(model_med_simple, se = 'boot', R = 500, bsmethod = "xy") # pairs bootstr
     ## 
     ## Coefficients:
     ##                             Value     Std. Error t value   Pr(>|t|) 
-    ## (Intercept)                   8.91307   0.06761  131.82877   0.00000
-    ## BHK                           0.21978   0.01807   12.16494   0.00000
-    ## Size                          0.00043   0.00003   16.46378   0.00000
-    ## Area_typeSuper Area          -0.03636   0.01633   -2.22690   0.02600
-    ## CityDelhi                     0.20885   0.03410    6.12420   0.00000
-    ## CityHyderabad                -0.14336   0.01862   -7.69916   0.00000
-    ## CityChennai                  -0.03904   0.02046   -1.90825   0.05642
-    ## CityKolkata                  -0.29332   0.02311  -12.69402   0.00000
-    ## CityMumbai                    0.91184   0.02754   33.11121   0.00000
-    ## FurnishingSemi-Furnished     -0.16895   0.02629   -6.42694   0.00000
-    ## FurnishingUnfurnished        -0.27549   0.02668  -10.32413   0.00000
-    ## Pref_TenantBachelors/Family  -0.01991   0.01874   -1.06246   0.28808
-    ## Pref_TenantFamily            -0.06201   0.02450   -2.53123   0.01140
-    ## Bathroom                      0.14612   0.01952    7.48610   0.00000
-    ## POCContact Owner             -0.33496   0.02116  -15.82871   0.00000
-    ## Floor                         0.00335   0.00201    1.67180   0.09463
-    ## Max_Floor                     0.00492   0.00147    3.34261   0.00084
-    ## Month                         0.00785   0.00781    1.00621   0.31437
+    ## (Intercept)                   8.91307   0.06801  131.06298   0.00000
+    ## BHK                           0.21978   0.01790   12.27846   0.00000
+    ## Size                          0.00043   0.00002   18.03401   0.00000
+    ## Area_typeSuper Area          -0.03636   0.01594   -2.28143   0.02257
+    ## CityDelhi                     0.20885   0.03452    6.05027   0.00000
+    ## CityHyderabad                -0.14336   0.01826   -7.85176   0.00000
+    ## CityChennai                  -0.03904   0.02101   -1.85802   0.06323
+    ## CityKolkata                  -0.29332   0.02456  -11.94359   0.00000
+    ## CityMumbai                    0.91184   0.02825   32.27329   0.00000
+    ## FurnishingSemi-Furnished     -0.16895   0.02666   -6.33694   0.00000
+    ## FurnishingUnfurnished        -0.27549   0.02637  -10.44872   0.00000
+    ## Pref_TenantBachelors/Family  -0.01991   0.01962   -1.01482   0.31025
+    ## Pref_TenantFamily            -0.06201   0.02691   -2.30458   0.02123
+    ## Bathroom                      0.14612   0.02045    7.14540   0.00000
+    ## POCContact Owner             -0.33496   0.02062  -16.24496   0.00000
+    ## Floor                         0.00335   0.00186    1.80634   0.07093
+    ## Max_Floor                     0.00492   0.00138    3.55306   0.00038
+    ## Month                         0.00785   0.00813    0.96574   0.33422
 
 ``` r
 summary(model_med_simple, se = 'boot', R = 500, bsmethod = "cluster",cluster = House_Rent$Area_Locality)  # cluster  bootstrap
@@ -1272,24 +1236,24 @@ summary(model_med_simple, se = 'boot', R = 500, bsmethod = "cluster",cluster = H
     ## 
     ## Coefficients:
     ##                             Value     Std. Error t value   Pr(>|t|) 
-    ## (Intercept)                   8.91307   0.06895  129.25967   0.00000
-    ## BHK                           0.21978   0.01865   11.78329   0.00000
-    ## Size                          0.00043   0.00003   16.59171   0.00000
-    ## Area_typeSuper Area          -0.03636   0.01880   -1.93423   0.05314
-    ## CityDelhi                     0.20885   0.04900    4.26260   0.00002
-    ## CityHyderabad                -0.14336   0.02307   -6.21301   0.00000
-    ## CityChennai                  -0.03904   0.02719   -1.43593   0.15109
-    ## CityKolkata                  -0.29332   0.02981   -9.83848   0.00000
-    ## CityMumbai                    0.91184   0.03672   24.83469   0.00000
-    ## FurnishingSemi-Furnished     -0.16895   0.02513   -6.72245   0.00000
-    ## FurnishingUnfurnished        -0.27549   0.02739  -10.05929   0.00000
-    ## Pref_TenantBachelors/Family  -0.01991   0.02167   -0.91854   0.35839
-    ## Pref_TenantFamily            -0.06201   0.03047   -2.03511   0.04190
-    ## Bathroom                      0.14612   0.01904    7.67649   0.00000
-    ## POCContact Owner             -0.33496   0.02711  -12.35420   0.00000
-    ## Floor                         0.00335   0.00210    1.59937   0.10981
-    ## Max_Floor                     0.00492   0.00203    2.42212   0.01547
-    ## Month                         0.00785   0.00818    0.96077   0.33672
+    ## (Intercept)                   8.91307   0.07405  120.36140   0.00000
+    ## BHK                           0.21978   0.01796   12.23959   0.00000
+    ## Size                          0.00043   0.00003   16.52317   0.00000
+    ## Area_typeSuper Area          -0.03636   0.01810   -2.00821   0.04468
+    ## CityDelhi                     0.20885   0.04987    4.18818   0.00003
+    ## CityHyderabad                -0.14336   0.02295   -6.24746   0.00000
+    ## CityChennai                  -0.03904   0.02718   -1.43643   0.15095
+    ## CityKolkata                  -0.29332   0.03134   -9.35802   0.00000
+    ## CityMumbai                    0.91184   0.03480   26.19862   0.00000
+    ## FurnishingSemi-Furnished     -0.16895   0.02701   -6.25520   0.00000
+    ## FurnishingUnfurnished        -0.27549   0.02939   -9.37389   0.00000
+    ## Pref_TenantBachelors/Family  -0.01991   0.02256   -0.88237   0.37762
+    ## Pref_TenantFamily            -0.06201   0.03174   -1.95348   0.05082
+    ## Bathroom                      0.14612   0.02010    7.26855   0.00000
+    ## POCContact Owner             -0.33496   0.02668  -12.55265   0.00000
+    ## Floor                         0.00335   0.00219    1.52853   0.12645
+    ## Max_Floor                     0.00492   0.00219    2.25018   0.02448
+    ## Month                         0.00785   0.00930    0.84443   0.39847
 
 <br/> We observe that the standard error estimates are pretty similar.
 As expected, cluster pairs bootstrap provided slightly wider standard
@@ -1315,8 +1279,7 @@ coefficients(model_med)[index] %*% solve(V) %*% coefficients(model_med)[index]/s
     ##          [,1]
     ## [1,] 1.362468
 
-<br/> We get the same result using the implemented *anova* function.
-<br/>
+<br/> We get the same result using the *anova* function. <br/>
 
 ``` r
 model_no_Month <- rq(Log_Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor)^2, tau = .5, data = House_Rent)
@@ -1340,9 +1303,8 @@ significant. Let us test all variables. <br/>
     ## 0.000000e+00 0.000000e+00 1.160132e-01 1.471921e-09 1.447016e-01
 
 <br/> **Floor** and **Month** appear non-significant, **Pref_tenant** is
-a bit borderline. We can also perform a paired bootstrap Wald test and a
-cluster paired bootstrap Wald test (to account for the fact that
-observations from the same locality may be correlated). <br/>
+a bit borderline. Alternatively, we can also perform a pairs bootstrap
+Wald test and a cluster pairs bootstrap Wald test <br/>
 
 ``` r
 set.seed(123)
@@ -1850,8 +1812,144 @@ median model and the log-linear model are minor. The other models are
 significantly worse.
 
 The second cross-validation we will consider is the accuracy of the
-prediction intervals. Namely, we will calculate the proportion of
-predictions that fall within the prediction interval. <br/>
+prediction intervals. Naively, we could calculate the proportion of
+predictions that fall within the prediction interval. We will consider
+our log-linear model and the 0.975 and 0.025 quantile models. <br/>
+
+``` r
+pred <- predict(model_lr_log, interval = "prediction",level = .95)
+sum(House_Rent$Log_Rent > pred[,2] &  House_Rent$Log_Rent < pred [,3])/dim(House_Rent)[1]
+```
+
+    ## [1] 0.9563107
+
+``` r
+lb_quan <- predict(model_025,House_Rent)
+ub_quan<- predict(model_975,House_Rent)
+sum(House_Rent$Log_Rent > lb_quan &  House_Rent$Log_Rent < ub_quan)/dim(House_Rent)[1]
+```
+
+    ## [1] 0.9710848
+
+<br/> We observe that predictions of new observations fell within the
+prediction intervals based on 2.5% and 97.5% quantile estimates in 97%
+of cases. Thus, these estimates are a bit more conservative on average.
+The prediction intervals for the log-linear model, based on the
+assumption of normal errors, also have the stated coverage; on average,
+the observations fell within the prediction interval in 96% of cases.
+
+The disadvantage of the accuracy is that it does not penalize the
+prediction for the width of its interval. Hence, we will also consider
+the Winkler score \[7\] defined as $W_\alpha = U - L$ provided that the
+observed value $x$ is in the $100(1-\alpha)\%$ prediction interval
+$[L,U]$ , $W_\alpha = U - L + 2/\alpha(L-x)$ provided that its value is
+lower, and $W_\alpha = U - L + 2/\alpha(x-U)$ provided that its value is
+higher. <br/>
+
+``` r
+Winkler_Score <- function(obs,ub,lb,alpha) {
+  
+  w_score <- 0
+  n <- length(obs)
+  
+  for (i in (1:n)){
+    
+    if (obs[i] > lb[i] & obs[i] < ub[i]){w_score_obs <- ub[i] - lb[i]}
+    else if (obs[i] > ub[i]){w_score_obs <- ub[i] - lb[i] + 2/alpha*(obs[i] - ub[i])}
+    else if (obs[i] < lb[i]){w_score_obs <- ub[i] - lb[i] + 2/alpha*(lb[i] - obs[i])}
+    
+    w_score <- w_score + w_score_obs
+    
+  }
+  return (w_score)
+}
+```
+
+``` r
+# log scale
+Winkler_Score(House_Rent$Log_Rent,pred[,2],pred[,3],0.05)
+```
+
+    ##        1 
+    ## 144995.2
+
+``` r
+Winkler_Score(House_Rent$Log_Rent,lb_quan,ub_quan,0.05)
+```
+
+    ##        1 
+    ## 125001.8
+
+``` r
+Winkler_Score(House_Rent$Log_Rent,pred[,2],pred[,3],0.05)/Winkler_Score(House_Rent$Log_Rent,lb_quan,ub_quan,0.05)
+```
+
+    ##        1 
+    ## 1.159945
+
+``` r
+# original scale
+Winkler_Score(House_Rent$Rent,exp(pred[,2]),exp(pred[,3]),0.05)
+```
+
+    ##          1 
+    ## 3995144419
+
+``` r
+Winkler_Score(House_Rent$Rent,exp(lb_quan),exp(ub_quan),0.05)
+```
+
+    ##          1 
+    ## 3258386437
+
+``` r
+Winkler_Score(House_Rent$Rent,exp(pred[,2]),exp(pred[,3]),0.05)/Winkler_Score(House_Rent$Rent,exp(lb_quan),exp(ub_quan),0.05)
+```
+
+    ##        1 
+    ## 1.226111
+
+<br/> We observe that the Winkler score for the quantile regression is
+about 20% lower indicating that the prediction intervals are tighter.
+<br/>
+
+``` r
+summary(pred[,3]-pred[,2])
+```
+
+    ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+    ##   1.507   1.514   1.520   1.527   1.530   2.071
+
+``` r
+summary(ub_quan-lb_quan)
+```
+
+    ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+    ##   0.000   1.102   1.284   1.387   1.572   4.413
+
+``` r
+par(mfrow = c(1, 2))
+hist(pred[,3]-pred[,2],main = 'Log-linear model', xlab = 'PI witdh (log-scale)')
+hist(ub_quan-lb_quan,main = 'Quantile regression model', xlab = 'PI witdh (log-scale)')
+```
+
+![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-85-1.png)<!-- -->
+
+<br/> We can notice a significant difference in distribution widths of
+predicted intervals. Remember that the confidence intervals for the
+log-linear regression is some multiple of the estimated variance of the
+random errors of the model (the formula for an $100(1-\alpha)\%$
+prediction interval of $y$ corresponding to the value of predictors $x$
+for linear regression is
+$\hat{y} \pm t(1-\alpha,n-k-1)\sqrt{\hat\sigma(1+x(X^TX)^{-1}x}$, where
+$t$ is the correspond quantile of student’s distribution, i.e., the
+prediction interval depends on the estimated variance of the random
+errors and the distance from the center of the data). Quantile
+regression models the required values conditional quantiles directly,
+which is especially important when the variance of the random errors is
+not the same for all observations.
+
+Let us perform the cross-validation. <br/>
 
 ``` r
 set.seed(123)
@@ -1860,8 +1958,13 @@ set.seed(123)
 rep <- 100
 folds <- 10
 
-accu_mde <- matrix(NA,rep*folds,1)
-accu_lr_log <- matrix(NA,rep*folds,1)
+accu_quan <- NA*numeric(rep*folds)
+accu_lr_log <- NA*numeric(rep*folds)
+
+winkler_score_log <- NA*numeric(rep*folds)
+winkler_score_quan <- NA*numeric(rep*folds)
+winkler_score_exp_log <- NA*numeric(rep*folds)
+winkler_score_exp_quan <- NA*numeric(rep*folds)
 
 k <- 1
 
@@ -1874,63 +1977,95 @@ for(j in 1:rep){
     train_set <- House_Rent[-unlist(d[i]),]
     test_set <- House_Rent[unlist(d[i]),]
     
-    
     model_975_cv <- rq(Log_Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month)^2, tau = .975, data = train_set)
     
     model_025_cv <- rq(Log_Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month)^2, tau = .025, data = train_set)
     
     model_lr_log_cv <- lm(Log_Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month)^2, data = train_set)
 
-    lr_log_pred <- predict(model_lr_log_cv,test_set, interval = "confidence",level = .95)
+    # log-lin model
+    lr_log_pred <- predict(model_lr_log_cv,test_set, interval = "prediction",level = .95)
     
-    lb <- lr_log_pred[,2]
-    ub <- lr_log_pred[,3]
-    accu_lr_log[k] <- sum(test_set$Log_Rent > (lb + qnorm(0.025,0,summary(model_lr_log_cv)$sigma)) &  test_set$Log_Rent < (ub - qnorm(0.025,0,summary(model_lr_log_cv)$sigma)))/dim(test_set)[1]
+    accu_lr_log[k] <- sum(test_set$Log_Rent > lr_log_pred[,2] &  test_set$Log_Rent < lr_log_pred[,3])/dim(test_set)[1]
+    winkler_score_log[k] <- Winkler_Score(test_set$Log_Rent,lr_log_pred[,2],lr_log_pred[,3],0.05)
+    winkler_score_exp_log[k] <- Winkler_Score(test_set$Rent,exp(lr_log_pred[,2]),exp(lr_log_pred[,3]),0.05)
     
+    # quantile model
+    lb <- predict(model_025_cv,test_set)
+    ub <- predict(model_975_cv,test_set)
     
-    lb <- predict(model_025,test_set,interval = "confidence",level = .95, se = 'ker')[,2]
-    ub <- predict(model_975,test_set,interval = "confidence",level = .95, se = 'ker')[,3]
-    
-
-    accu_mde[k] <- sum(test_set$Log_Rent > lb &  test_set$Log_Rent < ub)/dim(test_set)[1]
+    accu_quan[k] <- sum(test_set$Log_Rent > lb &  test_set$Log_Rent < ub)/dim(test_set)[1]
+    winkler_score_quan[k] <- Winkler_Score(test_set$Log_Rent,lb,ub,0.05)
+    winkler_score_exp_quan[k] <- Winkler_Score(test_set$Rent,exp(lb),exp(ub),0.05)
     
     k <-  k +1
+    
   }
 }
 ```
 
 ``` r
-# quantile PI
-apply(accu_mde,2,mean)
+# accuracy
+mean(accu_lr_log)
 ```
 
-    ## [1] 0.9915575
+    ## [1] 0.9506141
 
 ``` r
-# log-linear PI
-apply(accu_lr_log,2,mean)
+mean(accu_quan)
 ```
 
-    ## [1] 0.9719964
+    ## [1] 0.9113901
 
-<br/> We observe that predictions of new observations fell within the
-prediction intervals based on 2.5% and 97.5% quantile estimates in 99%
-of cases. Thus, these estimates are a bit more conservative on average.
-The prediction intervals for the log-linear model, based on the
-assumption of normal errors, also have the stated coverage; on average,
-the observations fell within the prediction interval in 97.2% of
-cases.  
-<br/>
+``` r
+summary(winkler_score_quan)
+```
+
+    ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+    ##   12349   13227   13497   13488   13751   14722
+
+``` r
+summary(winkler_score_log)
+```
+
+    ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+    ##   13636   14446   14661   14662   14876   15562
+
+``` r
+summary(winkler_score_exp_quan)
+```
+
+    ##      Min.   1st Qu.    Median      Mean   3rd Qu.      Max. 
+    ## 1.978e+08 3.505e+08 3.891e+08 6.246e+08 5.287e+08 1.104e+10
+
+``` r
+summary(winkler_score_exp_log)
+```
+
+    ##      Min.   1st Qu.    Median      Mean   3rd Qu.      Max. 
+    ## 2.870e+08 3.692e+08 4.060e+08 4.443e+08 4.864e+08 1.565e+09
+
+<br/> We observe that the accuracy of the predictions intervals dropped
+noticeably for the quantile regression model. The Winkler score for the
+predictions in the log scale is still slightly lower for the quantile
+regression. But we notice that in the original scale, the Winkler score
+for the quantile regression have some noticeably large values for some
+cross-validation samples. This fact pushed the overall mean Winkler
+score over the values attained by the log-linear model. Thus, the
+prediction intervals based on the log-linear model seem more a bit more
+robust overall. <br/>
 
 ## Conclusion
 
 In this project, we analyzed the rents of over 4,000 residential
 properties in India during the spring/summer of 2022. Based on the
 cross-validation, the best-performing model in terms of prediction was
-the median regression model for the logarithm of rent. Other models we
-compared included a log-linear regression model and various generalized
-linear models (Gaussian with log link, quasi-Poisson, gamma, inverse
-Gaussian).
+the median regression model for the logarithm of rent and the log-linear
+model. Other models we compared included a standard linear regression
+model and various generalized linear models (Gaussian with log link,
+quasi-Poisson, gamma, inverse Gaussian). We also evaluated the
+prediction intervals, the best model in this regard was the log-linear
+model.
 
 We also performed hypothesis testing for the median model. Namely, we
 observed no significant trend over the four-month period for which we
@@ -1966,3 +2101,7 @@ and
 
 - \[6\] KOENKER, Roger. *Quantile regression.* Cambridge University
   Press, 2005.
+
+- \[7\] WINKLER, Robert L. A decision-theoretic approach to interval
+  estimation. *Journal of the American Statistical Association*, 1972,
+  67.337: 187-191.

@@ -118,7 +118,7 @@ summary(as.factor(months))
 ```
 
 <br/>
-All data are from 2022. However, the months vary. Hence, we can test the inclusion of a trend in the model.
+All data are from 2022. However, the months vary. Hence, we can test the inclusion of a time trend in the model.
 
 We will add the **Month**, **Floor**, and **Maximum_floor** variables to the dataset and remove the original **Floor** variable and the **Posted** variable.
 <br/>
@@ -142,7 +142,7 @@ plot(House_Rent$Area_Locality,xlab = 'Locations',ylab = 'Count',xaxt = 'n')
 ```
 
 <br/>
-There are many various locations. Since these represent neighboring observations, we can consider them as clusters later in our analysis to account for the fact that these observations might be dependent. 
+There are many various locations. Since these represent neighboring observations, we can consider them as clusters later in our inference when evaluating statistical significance to account for the fact that these observations might be correlated. 
 
 Let us check next for missing and duplicated data.
 <br/>
@@ -388,7 +388,7 @@ boxcox(model_lr, plotit=T)
 ```
 
 <br/>
-The optimal $ \lambda $ seems to be close to zero. Consequently, we will use the log transformation to maintain the clear interpretability of the model (instead of considering the non-integer value of $\lambda$).
+The optimal $\lambda$ seems to be close to zero. Consequently, we will use the log transformation to maintain the clear interpretability of the model (instead of considering the non-integer value of $\lambda$).
 <br/>
 
 ```{r, message=FALSE, warning=FALSE}
@@ -480,9 +480,7 @@ quan_log2
 
 
 <br/>
-We observe that neither of the corrections improved the overall predictions. This hints at the fact that the model is still misspecified (the residuals are still heteroskedastic and thus the estimate of $\sigma^2$ is off). 
-
-Next, we can compare the linear and the log-linear models. Naively, we would write the following.
+We observe that neither of the corrections improved the overall predictions. This hints at the fact that the residuals are still somewhat heteroskedastic and thus the estimate of $\sigma^2$ is off. Next, we can compare the linear and the log-linear models. Naively, we would write the following.
 <br/>
 
 ```{r, message=FALSE, warning=FALSE}
@@ -756,9 +754,9 @@ rownames(er_glm3) <- c('linear','linear(red)','log-linear','log-linear (red)','G
 
 quan_glm3 <- rbind(quan_glm2,
                    quantile(abs(predict(model_glm_gammaloglink, type = 'response') -
-                                    House_Rent$Rent)^2,c(0.05,0.25,0.5,0.75,0.95)),
+                                    House_Rent$Rent),c(0.05,0.25,0.5,0.75,0.95)),
                    quantile(abs(predict(model_glm_gammaloglink_red, House_Rent, type = 'response') -
-                                    House_Rent$Rent)^2,c(0.05,0.25,0.5,0.75,0.95))
+                                    House_Rent$Rent),c(0.05,0.25,0.5,0.75,0.95))
 )
 
 rownames(quan_glm3) <- c('linear','linear(red)','log-linear','log-linear (red)','GLM (gauss, log-link)','GLM (quasi-Poisson)','GLM (quasi-Poisson, red)','GLM (gamma, log-link)','GLM (gamma, log-link, red)')
@@ -774,7 +772,7 @@ The gamma model is even closer to the log-linear model than the quasi-Poisson mo
 ### Inverse Gaussian model with log-link
 
 <br/>
-The last model we will consider here is the inverse Gaussion GLM. The inverse Gaussian is again a full likelihood model for which the responses have an inverse Gaussian distribution. The conditional mean is the same; $\mu = \mathrm{log} X\beta$. However, the variance function is even stronger $\mathrm{Var}Y = \phi\mu^3$. 
+The last model we will consider here is the inverse Gaussian GLM. The inverse Gaussian is again a full likelihood model for which the responses have an inverse Gaussian distribution. The conditional mean is the same; $\mu = \mathrm{log} X\beta$. However, the variance function is even stronger $\mathrm{Var}Y = \phi\mu^3$. 
 <br/>
 
 ```{r, message=FALSE, warning=FALSE}
@@ -803,7 +801,7 @@ plot(predict(model_glm_igaussloglink, type = 'response'),residuals(model_glm_iga
 ```
 
 <br/>
-Indeed, it is. The simulated residuals also show that the model is misspecified.
+Indeed, it is. The simulated residuals also show that the model is clearly misspecified.
 <br/>
 
 ```{r, message=FALSE, warning=FALSE,echo=FALSE}
@@ -844,7 +842,7 @@ The last family of models we will consider for modelling our data is quantile re
 
 To illustrate the issue of robustness, let us consider the standard linear regression, which is characterized by the conditional mean $\mathrm{E} Y = X\beta$. The estimates is given as a solution of $\hat{\beta} = \mathrm{argmin}_\beta \sum_i{(y_i - x_i^T\beta)^2}$. This estimate, due to the presence of the quadratic term, is quite sensitive to the presence of outliers. It can be shown that a slight contamination, however small, sufficiently far from the center of the data can significantly alter the estimate, taking it far away from its original value [6].
 
-In quantile regression, we model conditional quantiles of $Y$ instead of expected values. For example, the median regression is given as $\mathrm{median} Y = X\beta$. It can be shown, that the estimate $\hat{\beta}$ for conditional quantile $\rho$ can be also found as a solution of some optimization, namely of a linear program $\mathrm{argmin}_\beta\sum_i \rho_\tau (y_i -  x_i^T\beta)$, where $\rho_\tau(u) = u(\tau-I(u <0))$ (piecewise linear function with slopes $\tau - 1$ for negative $u$ and $\tau$ for positive $u$). For the median, this formula reduces to  $\mathrm{argmin}_\beta\sum_i |y_i -  x_i^T\beta|$, i.e., median regression minimizes the mean absolute error (MAE) [6]. This optimization examines the computation of quantiles, giving us another insight into why quantile regression is more robust (we minimize the absolute value of deviations instead of squared deviations).
+In quantile regression, we model conditional quantiles of $Y$ instead of expected values. For example, the median regression is given as $\mathrm{median} Y = X\beta$. It can be shown, that the estimate $\hat{\beta}$ for conditional quantile $\rho$ can be also found as a solution of some optimization, namely of a linear program $\mathrm{argmin}_\beta\sum_i \rho_{\tau} (y_i -  x_i^T\beta)$, where $\rho_\tau(u) = u(\tau-I(u <0))$ (piecewise linear function with slopes $\tau - 1$ for negative $u$ and $\tau$ for positive $u$). For the median, this formula reduces to  $\mathrm{argmin}_\beta\sum_i |y_i -  x_i^T\beta|$, i.e., median regression minimizes the mean absolute error (MAE) [6].
 
 Another advantage of quantile regression is that we can model multiple quantiles of the distribution of $Y$, providing a more complete picture of the overall distribution than just modeling the mean. This is important, for example, in situations when distributional assumptions are in question (e.g., under heteroskedasticity). Remember from Circle One Part Three that in such a case, we cannot really compute, for example, the prediction intervals for a new observation. Unless the distribution assumptions are met, we merely know the asymptotic distribution of the mean. With quantile regression, we can directly model the prediction interval by considering the corresponding quantiles. 
 
@@ -914,9 +912,9 @@ model_med_simple <- rq(Log_Rent ~ BHK + Size + Area_type + City + Furnishing + P
 ```
 
 <br/>
-There are multiple approaches to computing the covariance matrix (and consequently, the standard errors) of model parameter estimates. This is due to the fact that the asymptotics of quantile estimates depend on the reciprocal of a density function of the response evaluated at the quantile of interest (so-called sparsity function [6]). This value must be estimated from the data  (e.g., by kernel estimate, see https://www.rdocumentation.org/packages/quantreg/versions/6.1/topics/summary.rq for all options implemented in *quantreg*). Otherwise, the standard error must be estimated directly via a bootstrap. 
+There are multiple approaches to computing the covariance matrix (and consequently, the standard errors) of model parameter estimates. This is due to the fact that the asymptotics of quantile estimates depend on the reciprocal of a density function of the response evaluated at the quantile of interest (so-called sparsity function [6]). This value must be estimated from the data  (e.g., by kernel estimate, see https://www.rdocumentation.org/packages/quantreg/versions/6.1/topics/summary.rq for all options implemented in *quantreg*). Alternatively, the standard errors can be also estimated directly via a bootstrap. 
 
-We use two methods mentioned explicitly in [6], the Hendricks–Koenker sandwich and the Powell sandwich. We also include pairs bootstrap estimate of standard errors and pairs cluster bootstrap (clustering by **Area_Locality**).
+We use two methods mentioned explicitly in [6], the Hendricks–Koenker sandwich and the Powell sandwich. We also include pairs bootstrap estimate of standard errors and pairs cluster bootstrap (to account for the fact that observations from the same locality **Area_Locality** may be correlated).
 <br/>
 
 ```{r, message=FALSE, warning=FALSE}
@@ -943,7 +941,7 @@ coefficients(model_med)[index] %*% solve(V) %*% coefficients(model_med)[index]/s
 ```
 
 <br/>
-We get the same result using the implemented *anova* function.
+We get the same result using the *anova* function.
 <br/>
 
 ```{r, message=FALSE, warning=FALSE}
@@ -988,7 +986,7 @@ pvalues
 ```
 
 <br/>
-**Floor** and **Month** appear non-significant, **Pref_tenant** is a bit borderline. We can also perform a paired bootstrap Wald test and a cluster paired bootstrap Wald test (to account for the fact that observations from the same locality may be correlated).
+**Floor** and **Month** appear non-significant, **Pref_tenant** is a bit borderline. Alternatively, we can also perform a pairs bootstrap Wald test and a cluster pairs bootstrap Wald test 
 <br/>
 
 ```{r, message=FALSE, warning=FALSE}
@@ -1496,7 +1494,71 @@ cv_res
 <br/>
 We observe that the median model is best for predictions (in terms of the median absolute error). However, the differences between the median model and the log-linear model are minor. The other models are significantly worse.
 
-The second cross-validation we will consider is the accuracy of the prediction intervals. Namely, we will calculate the proportion of predictions that fall within the prediction interval. 
+The second cross-validation we will consider is the accuracy of the prediction intervals. Naively, we could calculate  the proportion of predictions that fall within the prediction interval. We will consider our log-linear model and the 0.975 and 0.025 quantile models.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+pred <- predict(model_lr_log, interval = "prediction",level = .95)
+sum(House_Rent$Log_Rent > pred[,2] &  House_Rent$Log_Rent < pred [,3])/dim(House_Rent)[1]
+
+lb_quan <- predict(model_025,House_Rent)
+ub_quan<- predict(model_975,House_Rent)
+sum(House_Rent$Log_Rent > lb_quan &  House_Rent$Log_Rent < ub_quan)/dim(House_Rent)[1]
+```
+
+<br/>
+We observe that predictions of new observations fell within the prediction intervals based on 2.5% and 97.5% quantile estimates in 97% of cases. Thus, these estimates are a bit more conservative on average. The prediction intervals for the log-linear model, based on the assumption of normal errors, also have the stated coverage; on average, the observations fell within the prediction interval in 96% of cases.  
+
+The disadvantage of the accuracy is that it does not penalize the prediction for the width of its interval. Hence, we will also consider the Winkler score [7] defined as $W_\alpha = U - L$ provided that the observed value $x$ is in the $100(1-\alpha)\%$ prediction interval $[L,U]$ , $W_\alpha = U - L + 2/\alpha(L-x)$ provided that its value is lower, and $W_\alpha = U - L + 2/\alpha(x-U)$ provided that its value is higher.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+Winkler_Score <- function(obs,ub,lb,alpha) {
+  
+  w_score <- 0
+  n <- length(obs)
+  
+  for (i in (1:n)){
+    
+    if (obs[i] > lb[i] & obs[i] < ub[i]){w_score_obs <- ub[i] - lb[i]}
+    else if (obs[i] > ub[i]){w_score_obs <- ub[i] - lb[i] + 2/alpha*(obs[i] - ub[i])}
+    else if (obs[i] < lb[i]){w_score_obs <- ub[i] - lb[i] + 2/alpha*(lb[i] - obs[i])}
+    
+    w_score <- w_score + w_score_obs
+    
+  }
+  return (w_score)
+}
+```
+
+```{r, message=FALSE, warning=FALSE}
+# log scale
+Winkler_Score(House_Rent$Log_Rent,pred[,2],pred[,3],0.05)
+Winkler_Score(House_Rent$Log_Rent,lb_quan,ub_quan,0.05)
+Winkler_Score(House_Rent$Log_Rent,pred[,2],pred[,3],0.05)/Winkler_Score(House_Rent$Log_Rent,lb_quan,ub_quan,0.05)
+
+# original scale
+Winkler_Score(House_Rent$Rent,exp(pred[,2]),exp(pred[,3]),0.05)
+Winkler_Score(House_Rent$Rent,exp(lb_quan),exp(ub_quan),0.05)
+Winkler_Score(House_Rent$Rent,exp(pred[,2]),exp(pred[,3]),0.05)/Winkler_Score(House_Rent$Rent,exp(lb_quan),exp(ub_quan),0.05)
+```
+
+<br/>
+We observe that the Winkler score for the quantile regression is about 20% lower indicating that the prediction intervals are tighter.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+summary(pred[,3]-pred[,2])
+summary(ub_quan-lb_quan)
+par(mfrow = c(1, 2))
+hist(pred[,3]-pred[,2],main = 'Log-linear model', xlab = 'PI witdh (log-scale)')
+hist(ub_quan-lb_quan,main = 'Quantile regression model', xlab = 'PI witdh (log-scale)')
+```
+
+<br/>
+We can notice a significant difference in distribution widths of predicted intervals. Remember that the confidence intervals for the log-linear regression is some multiple of the estimated variance of the random errors of the model (the formula for an $100(1-\alpha)\%$ prediction interval of $y$ corresponding to the value of predictors $x$ for linear regression is $\hat{y} \pm t(1-\alpha,n-k-1)\sqrt{\hat\sigma(1+x(X^TX)^{-1}x}$, where $t$ is the correspond quantile of student's distribution, i.e., the prediction interval depends on the estimated variance of the random errors and the distance from the center of the data). Quantile regression models the required values conditional quantiles directly, which is especially important when the variance of the random errors is not the same for all observations.
+
+Let us perform the cross-validation. 
 <br/>
 
 ```{r, message=FALSE, warning=FALSE}
@@ -1506,8 +1568,13 @@ set.seed(123)
 rep <- 100
 folds <- 10
 
-accu_mde <- matrix(NA,rep*folds,1)
-accu_lr_log <- matrix(NA,rep*folds,1)
+accu_quan <- NA*numeric(rep*folds)
+accu_lr_log <- NA*numeric(rep*folds)
+
+winkler_score_log <- NA*numeric(rep*folds)
+winkler_score_quan <- NA*numeric(rep*folds)
+winkler_score_exp_log <- NA*numeric(rep*folds)
+winkler_score_exp_quan <- NA*numeric(rep*folds)
 
 k <- 1
 
@@ -1520,45 +1587,53 @@ for(j in 1:rep){
     train_set <- House_Rent[-unlist(d[i]),]
     test_set <- House_Rent[unlist(d[i]),]
     
-    
     model_975_cv <- rq(Log_Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month)^2, tau = .975, data = train_set)
     
     model_025_cv <- rq(Log_Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month)^2, tau = .025, data = train_set)
     
     model_lr_log_cv <- lm(Log_Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month)^2, data = train_set)
 
-    lr_log_pred <- predict(model_lr_log_cv,test_set, interval = "confidence",level = .95)
+    # log-lin model
+    lr_log_pred <- predict(model_lr_log_cv,test_set, interval = "prediction",level = .95)
     
-    lb <- lr_log_pred[,2]
-    ub <- lr_log_pred[,3]
-    accu_lr_log[k] <- sum(test_set$Log_Rent > (lb + qnorm(0.025,0,summary(model_lr_log_cv)$sigma)) &  test_set$Log_Rent < (ub - qnorm(0.025,0,summary(model_lr_log_cv)$sigma)))/dim(test_set)[1]
+    accu_lr_log[k] <- sum(test_set$Log_Rent > lr_log_pred[,2] &  test_set$Log_Rent < lr_log_pred[,3])/dim(test_set)[1]
+    winkler_score_log[k] <- Winkler_Score(test_set$Log_Rent,lr_log_pred[,2],lr_log_pred[,3],0.05)
+    winkler_score_exp_log[k] <- Winkler_Score(test_set$Rent,exp(lr_log_pred[,2]),exp(lr_log_pred[,3]),0.05)
     
+    # quantile model
+    lb <- predict(model_025_cv,test_set)
+    ub <- predict(model_975_cv,test_set)
     
-    lb <- predict(model_025,test_set,interval = "confidence",level = .95, se = 'ker')[,2]
-    ub <- predict(model_975,test_set,interval = "confidence",level = .95, se = 'ker')[,3]
-    
-
-    accu_mde[k] <- sum(test_set$Log_Rent > lb &  test_set$Log_Rent < ub)/dim(test_set)[1]
+    accu_quan[k] <- sum(test_set$Log_Rent > lb &  test_set$Log_Rent < ub)/dim(test_set)[1]
+    winkler_score_quan[k] <- Winkler_Score(test_set$Log_Rent,lb,ub,0.05)
+    winkler_score_exp_quan[k] <- Winkler_Score(test_set$Rent,exp(lb),exp(ub),0.05)
     
     k <-  k +1
+    
   }
 }
 ```
 
 ```{r, message=FALSE, warning=FALSE}
-# quantile PI
-apply(accu_mde,2,mean)
-# log-linear PI
-apply(accu_lr_log,2,mean)
+# accuracy
+mean(accu_lr_log)
+mean(accu_quan)
+
+
+summary(winkler_score_quan)
+summary(winkler_score_log)
+
+summary(winkler_score_exp_quan)
+summary(winkler_score_exp_log)
 ```
 
 <br/>
-We observe that predictions of new observations fell within the prediction intervals based on 2.5% and 97.5% quantile estimates in 99% of cases. Thus, these estimates are a bit more conservative on average. The prediction intervals for the log-linear model, based on the assumption of normal errors, also have the stated coverage; on average, the observations fell within the prediction interval in 97.2% of cases.  
+We observe that the accuracy of the predictions intervals dropped noticeably for the quantile regression model. The Winkler score for the predictions in the log scale is still slightly lower for the quantile regression. But we notice that in the original scale, the Winkler score for the quantile regression have some noticeably large values for some cross-validation samples. This fact pushed the overall mean Winkler score over the values attained by the log-linear model. Thus, the prediction intervals based on the log-linear model seem more a bit more robust overall.
 <br/>
 
 ## Conclusion
 
-In this project, we analyzed the rents of over 4,000 residential properties in India during the spring/summer of 2022. Based on the cross-validation, the best-performing model in terms of prediction was the median regression model for the logarithm of rent. Other models we compared included a log-linear regression model and various generalized linear models (Gaussian with log link, quasi-Poisson, gamma, inverse Gaussian).
+In this project, we analyzed the rents of over 4,000 residential properties in India during the spring/summer of 2022. Based on the cross-validation, the best-performing model in terms of prediction was the median regression model for the logarithm of rent and the log-linear model. Other models we compared included a standard linear regression model and various generalized linear models (Gaussian with log link, quasi-Poisson, gamma, inverse Gaussian). We also evaluated the prediction intervals, the best model in this regard was the log-linear model.
 
 We also performed hypothesis testing for the median model. Namely, we observed no significant trend over the four-month period for which we have available data. We also investigated the marginal effects of the cities. We found that the median rent in Mumbai is significantly higher than in other cities, even after adjusting for other covariates in the model. Indeed, this issue of high rents seems to have noticeable effects on the affordability of housing in Mumbai (see, e.g., https://www.livemint.com/news/india/brain-drain-in-mumbai-due-to-ever-rising-real-estate-prices-people-earn-rs-4-49-lakh-to-pay-rs-5-18-lakh-for-re-11729244633576.html  and https://www.ndtv.com/offbeat/rs-50-70-000-for-1-bhk-lawyers-post-on-high-prices-of-rented-flats-in-mumbai-5856671)  
 
@@ -1576,3 +1651,5 @@ We also performed hypothesis testing for the median model. Namely, we observed n
 * [5] DUAN, Naihua. Smearing estimate: a nonparametric retransformation method. *Journal of the American Statistical Association*, 1983, 78.383: 605-610.
 
 * [6] KOENKER, Roger. *Quantile regression.* Cambridge University Press, 2005.
+
+* [7] WINKLER, Robert L. A decision-theoretic approach to interval estimation. *Journal of the American Statistical Association*, 1972, 67.337: 187-191.
