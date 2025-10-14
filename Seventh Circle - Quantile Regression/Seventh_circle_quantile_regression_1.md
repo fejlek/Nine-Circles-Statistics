@@ -1005,7 +1005,7 @@ model being very similar. <br/>
 
 ### Tweedie model with log-link
 
-<br/> The generalized linear model we considered followed a noticeable
+<br/> The generalized linear models we considered followed a noticeable
 pattern in their variance functions: $\phi\mu^0$, $\phi\mu^1$,
 $\phi\mu^2$, and $\phi\mu^3$. One could naturally ask whether there is
 some general family of distributions with the variance function
@@ -1017,7 +1017,7 @@ $\xi = 0$ and a Poisson distribution for $\xi = 1$ and $\phi = 1$).
 For $\xi < 0$, we obtain distributions with support on the entire real
 line, but they always have a positive mean. They seem to have no
 practical application \[5\]. For $\xi \in (1,2)$, we get interesting
-compound Poisson Gamma distributions. These are mixed distributions;
+compound Poisson gamma distributions. These are mixed distributions;
 continuous distributions combined with a point mass at zero. These
 represent a distribution of sums of gamma-distributed random values, in
 which the number of summands is Poisson-distributed (thus, there is a
@@ -1080,7 +1080,7 @@ AIC_stat
     ##     linear log-linear      gauss      gamma     igauss    Tweedie 
     ##  117405.99   98108.52  110172.24   98976.81   98986.14   98536.08
 
-<br/T> The Tweedie model seems to be a bit better than the gamma model.
+<br/> The Tweedie model seems to be a bit better than the gamma model.
 Let us check the deviance residuals (Tweedie is unfortunately not
 implemented in *DHARMa*). <br/>
 
