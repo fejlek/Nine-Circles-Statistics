@@ -842,9 +842,9 @@ Overall, the log-linear model is the best one, with the gamma model being very s
 ### Tweedie model with log-link
 
 <br/>
-The generalized linear model we considered followed a noticeable pattern in their variance functions: $\phi\mu^0$, $\phi\mu^1$,  $\phi\mu^2$, and $\phi\mu^3$. One could naturally ask whether there is some general family of distributions with the variance function $\phi\mu^\xi$, and indeed, it exists. It is so-called the Tweedie family of distributions [5]. The parameter $\xi$ can have any real value outside of the open interval $(0,1)$ (we get a normal distribution for $\xi = 0$ and a Poisson distribution for $\xi = 1$ and $\phi = 1$). 
+The generalized linear models we considered followed a noticeable pattern in their variance functions: $\phi\mu^0$, $\phi\mu^1$,  $\phi\mu^2$, and $\phi\mu^3$. One could naturally ask whether there is some general family of distributions with the variance function $\phi\mu^\xi$, and indeed, it exists. It is so-called the Tweedie family of distributions [5]. The parameter $\xi$ can have any real value outside of the open interval $(0,1)$ (we get a normal distribution for $\xi = 0$ and a Poisson distribution for $\xi = 1$ and $\phi = 1$). 
 
-For $\xi < 0$, we obtain distributions with support on the entire real line, but they always have a positive mean. They seem to have no practical application [5]. For $\xi \in (1,2)$, we get interesting compound Poisson Gamma distributions. These are mixed distributions; continuous distributions combined with a point mass at zero. These represent a distribution of sums of gamma-distributed random values, in which the number of summands is Poisson-distributed (thus, there is a non-zero probability of exact zero). These distributions are used for the continuous data with exact zeros, such as rainfalls and incomes [5].
+For $\xi < 0$, we obtain distributions with support on the entire real line, but they always have a positive mean. They seem to have no practical application [5]. For $\xi \in (1,2)$, we get interesting compound Poisson gamma distributions. These are mixed distributions; continuous distributions combined with a point mass at zero. These represent a distribution of sums of gamma-distributed random values, in which the number of summands is Poisson-distributed (thus, there is a non-zero probability of exact zero). These distributions are used for the continuous data with exact zeros, such as rainfalls and incomes [5].
 
 Tweedie distributions are implemented in R in the *tweedie* package. We can plot the densities for several combinations of parameter values. Notice that for $\xi$ close to one, the distribution is almost discrete, and for $\xi$ close to 2, the point mass at zero almost disappears. 
 <br/>
@@ -911,7 +911,7 @@ names(AIC_stat) <- c('linear','log-linear','gauss','gamma','igauss','Tweedie')
 AIC_stat
 ```
 
-<br/T>
+<br/>
 The Tweedie model seems to be a bit better than the gamma model. Let us check the deviance residuals (Tweedie is unfortunately not implemented in *DHARMa*).
 <br/>
 
