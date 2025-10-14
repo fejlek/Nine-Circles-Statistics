@@ -1669,7 +1669,7 @@ ae_cv_res
 ```
 
 <br/>
-We observe that the best models in terms of MAE are log-linear, median and linear (with some osbervations removed based on Cook's distance). We can also that inverse Gaussian model is quite unstable. In terms of quntiles of the absolute errors, the median and the log-lienar models are clearly the best ones. The other models are significantly worse.
+We observe that the best models in terms of MAE are log-linear, median and linear (with some observations removed based on Cook's distance). We can also observe that the inverse Gaussian model is quite unstable. In terms of quantiles of the absolute errors, the median and the log-linear models are clearly the best ones. The other models are significantly worse.
 
 The second cross-validation we will consider is the accuracy of the prediction intervals. Naively, we could calculate  the proportion of predictions that fall within the prediction interval. We will consider our log-linear model and the 0.975 and 0.025 quantile models.
 <br/>

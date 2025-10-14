@@ -2035,8 +2035,8 @@ ae_cv_res
 
 <br/> We observe that the best models in terms of MAE are log-linear,
 median and linear (with some osbervations removed based on Cook’s
-distance). We can also that inverse Gaussian model is quite unstable. In
-terms of quntiles of the absolute errors, the median and the log-lienar
+distance). We can also observe that the inverse Gaussian model is quite unstable. In
+terms of quantiles of the absolute errors, the median and the log-linear
 models are clearly the best ones. The other models are significantly
 worse.
 
