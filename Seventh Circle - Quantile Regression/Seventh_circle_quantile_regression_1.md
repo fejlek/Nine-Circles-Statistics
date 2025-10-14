@@ -17,6 +17,7 @@ Jiří Fejlek
   - [Gamma model with log-link](#gamma-model-with-log-link)
   - [Inverse Gaussian model with
     log-link](#inverse-gaussian-model-with-log-link)
+  - [Tweedie model with log-link](#tweedie-model-with-log-link)
 - [Quantile regression](#quantile-regression)
   - [Model fit](#model-fit)
   - [Inference](#inference)
@@ -349,7 +350,7 @@ redun(~.- Rent  - Area_Locality - Month,data = House_Rent,nk = 4, r2 = 0.95)
     ## 
     ## ~BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + 
     ##     POC + Floor + Max_Floor
-    ## <environment: 0x0000016163a0e510>
+    ## <environment: 0x0000022f92d16820>
     ## 
     ## n: 4738  p: 10   nk: 4 
     ## 
@@ -547,7 +548,7 @@ should look for an alternative model. <br/>
 <br/> To obtain a model that better fits the data, we will first
 consider transforming the response to obtain data that will better
 conform to the fit by ordinary least squares. Namely, we will consider
-Box-Cox transformation \[2\]
+Box-Cox transformation \[1\]
 $g_\lambda(y) = \frac{y^\lambda-1}{\lambda}$ for $\lambda \neq 0$ and
 $g_\lambda(y) = \mathrm{log}$ for $\lambda = 0$.
 
@@ -580,8 +581,8 @@ model_lr_log <- lm(Log_Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref
 ![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-29-1.png)<!-- -->![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-29-2.png)<!-- -->
 
 <br/> Heteroskedasticity in log(Rent) appears to be stabilized. The
-residuals still have heavy tails, but to a lesser degree than the model
-with the original response. <br/>
+residuals still have heavier tails than expected, but to a lesser degree
+than the model with the original response. <br/>
 
 ![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-30-1.png)<!-- -->![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-30-2.png)<!-- -->
 
@@ -630,7 +631,7 @@ We can correct the prediction using the *Smearing retransformation*
 (<https://en.wikipedia.org/wiki/Smearing_retransformation>). We will
 also consider Duan’s Smearing retransformation, which attempts to
 accommodate the fact that the distribution of residuals might not be
-normal \[5\]. <br/>
+normal \[2\]. <br/>
 
 ``` r
 corr <- exp(1/2*(summary(model_lr_log)$sigma)^2)
@@ -814,7 +815,8 @@ model_glm_qpoissloglink <- glm(Rent ~ (BHK + Size + Area_type + City + Furnishin
 <br/> Since the quasi-Poisson regression is merely a quasi-likelihood
 approach, we do not have the AIC available nor the simulated residuals.
 However, we can plot the Pearson residuals, which should be
-homoskedastic under the quasi-Poisson model. <br/>
+approximately normal provided that the responses are large enough \[5,
+section 7.5\]. <br/>
 
 ![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-43-1.png)<!-- -->
 
@@ -822,9 +824,12 @@ homoskedastic under the quasi-Poisson model. <br/>
 
 <br/> We observe a slight heteroskedasticity in the Pearson residuals.
 This is not surprising since the linear mean-variance relation
-corresponds to the square-root stabilizing transformation \[1\].
-However, we determined previously that the stabilizing transformation
-for our data is closer to the logarithm transformation.
+corresponds to the square-root stabilizing transformation \[6\]
+(transformation $h(Y)$ is corresponds approximately to the link
+$h(\mu) = X\beta$ and the variance function $V(\mu) = 1/h'(\mu)^2$ , see
+\[5, section 5.8\]). However, we determined previously that the
+stabilizing transformation for our data is closer to the logarithm
+transformation.
 
 Let us evaluate the fit. We will also consider the model in which we
 remove 1% of the most influential observations according to Cook’s
@@ -853,11 +858,11 @@ log-linear model. <br/>
 
 ### Gamma model with log-link
 
-<br/> We consider the gamma model next. The conditional mean is again
-$\mathrm{log} \mu = X\beta$. The variance function is quadratic in the
-mean, i.e., $\mathrm{Var}Y = \phi\mu^2$. The gamma model is a standard
-GLM full likelihood model with the response having a gamma
-distribution.  
+<br/> We consider the gamma model with the log link next. The
+conditional mean is again $\mathrm{log} \mu = X\beta$. The variance
+function is quadratic in the mean, i.e., $\mathrm{Var}Y = \phi\mu^2$.
+The gamma model is a standard GLM full likelihood model with the
+response having a gamma distribution.  
 <br/>
 
 ``` r
@@ -875,17 +880,26 @@ AIC(model_glm_gammaloglink))
 
     ## [1] 117405.99  98108.52 110172.24  98976.81
 
-<br/> The AIC of the gamma model is similar to the log-linear model. We
-plot the deviance residuals next. <br/>
+<br/> The AIC of the gamma model is a bit worse than the log-linear
+model. We plot the deviance residuals next. <br/>
 
 ``` r
 par(mfrow = c(1, 1))
-plot(predict(model_glm_gammaloglink, type = 'response'),residuals(model_glm_gammaloglink,type = 'deviance'), ylab = 'Residuals', xlab = 'Predicted log(Rent)')
+qqnorm(residuals(model_glm_gammaloglink,type = 'deviance'))
+qqline(residuals(model_glm_gammaloglink,type = 'deviance'))
 ```
 
 ![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-48-1.png)<!-- -->
 
-<br/> From the plot, the variance function might be a bit strong. Let us
+``` r
+par(mfrow = c(1, 2))
+plot(predict(model_glm_gammaloglink, type = 'response'),residuals(model_glm_gammaloglink,type = 'deviance'), ylab = 'Residuals', xlab = 'Predicted log(Rent)')
+plot(predict(model_glm_gammaloglink, type = 'response'),residuals(model_glm_gammaloglink,type = 'deviance'), ylab = 'Residuals', xlab = 'Predicted log(Rent)', xlim = c(0,1e+06))
+```
+
+![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-48-2.png)<!-- -->
+
+<br/> From the plot, the variance of residuals seem stabilized. Let us
 check the simulated residuals. <br/>
 
 ![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-49-1.png)<!-- -->![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-49-2.png)<!-- -->
@@ -921,8 +935,10 @@ observations deleted. <br/>
     ## GLM (gamma, log-link)      332.1729 1688.040 3958.569  9241.624 40709.88
     ## GLM (gamma, log-link, red) 337.1807 1600.092 3692.536  8870.520 38637.24
 
-<br/> The gamma model is even closer to the log-linear model than the
-quasi-Poisson model. <br/>
+<br/> Overall, the gamma model is closer to the log-linear model than
+the quasi-Poisson model. This is not surprising since logarithm
+transform is roughly equivalent to the gamma model with the log link
+\[5\]. <br/>
 
 ### Inverse Gaussian model with log-link
 
@@ -930,7 +946,8 @@ quasi-Poisson model. <br/>
 The inverse Gaussian is again a full likelihood model for which the
 responses have an inverse Gaussian distribution. The conditional mean is
 the same; $\mu = \mathrm{log} X\beta$. However, the variance function is
-even stronger $\mathrm{Var}Y = \phi\mu^3$. <br/>
+even stronger $\mathrm{Var}Y = \phi\mu^3$. We will again use the
+log-link. <br/>
 
 ``` r
 model_glm_igaussloglink <- glm(Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month)^2, data = House_Rent, family = inverse.gaussian(link = 'log'), maxit = 50)
@@ -984,19 +1001,143 @@ clearly misspecified. <br/>
     ## GLM (inv. gaussian, log-link) 668592.06 36128.90
 
 <br/> Overall, the log-linear model is the best one, with the gamma
-model being very similar. This is not surprising since both of these
-models are recommended as close alternatives \[1\]. <br/>
+model being very similar. <br/>
+
+### Tweedie model with log-link
+
+<br/> The generalized linear model we considered followed a noticeable
+pattern in their variance functions: $\phi\mu^0$, $\phi\mu^1$,
+$\phi\mu^2$, and $\phi\mu^3$. One could naturally ask whether there is
+some general family of distributions with the variance function
+$\phi\mu^\xi$, and indeed, it exists. It is so-called the Tweedie family
+of distributions \[5\]. The parameter $\xi$ can have any real value
+outside of the open interval $(0,1)$ (we get a normal distribution for
+$\xi = 0$ and a Poisson distribution for $\xi = 1$ and $\phi = 1$).
+
+For $\xi < 0$, we obtain distributions with support on the entire real
+line, but they always have a positive mean. They seem to have no
+practical application \[5\]. For $\xi \in (1,2)$, we get interesting
+compound Poisson Gamma distributions. These are mixed distributions;
+continuous distributions combined with a point mass at zero. These
+represent a distribution of sums of gamma-distributed random values, in
+which the number of summands is Poisson-distributed (thus, there is a
+non-zero probability of exact zero). These distributions are used for
+the continuous data with exact zeros, such as rainfalls and incomes
+\[5\].
+
+Tweedie distributions are implemented in R in the *tweedie* package. We
+can plot the densities for several combinations of parameter values.
+Notice that for $\xi$ close to one, the distribution is almost discrete,
+and for $\xi$ close to 2, the point mass at zero almost disappears.
+<br/>
+
+![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-57-1.png)<!-- -->![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-57-2.png)<!-- -->![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-57-3.png)<!-- -->
+
+<br/> For $\xi \geq 2$, we get distributions that include Gamma and
+inverse Gaussian that are suitable for modeling skewed positive data.
+<br/>
+
+![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-58-1.png)<!-- -->
+
+<br/> These distributions are of particular interest for our data. Let
+us proceed to fit the Tweedie GLM. To fit the model, we need to
+determine the value of $\xi$ first. Function *tweedie.profile* uses the
+profile likelihood method to estimate the value of $\xi$. <br/>
+
+``` r
+par(mfrow = c(1, 1))
+xi_est <- tweedie.profile(Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month)^2, data = House_Rent,do.plot=TRUE,xi.vec=seq(1.8,2.6,0.2),control=list(maxit=50))
+```
+
+    ## 1.8 2 2.2 2.4 2.6 
+    ## .....Done.
+
+![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-59-1.png)<!-- -->
+
+<br/> We observe that the log-likelihood is maximized for $\xi$
+approximately 2.5. Thus, let us fit the corresponding GLM. <br/>
+
+``` r
+library(statmod)
+model_glm_tweedie25loglink <- glm(Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month)^2, data = House_Rent, family=tweedie(var.power=2.5, link.power=0), maxit = 50)
+```
+
+<br/> The AIC can be computed using the function *AICtweedie*. <br/>
+
+``` r
+AIC_stat <- c(AIC(model_lr),
+AIC(model_lr_log) + 2*sum(log(House_Rent$Rent)),
+AIC(model_glm_gaussloglink),
+AIC(model_glm_gammaloglink),
+AIC(model_glm_igaussloglink),
+AICtweedie(model_glm_tweedie25loglink)
+)
+
+names(AIC_stat) <- c('linear','log-linear','gauss','gamma','igauss','Tweedie')
+AIC_stat
+```
+
+    ##     linear log-linear      gauss      gamma     igauss    Tweedie 
+    ##  117405.99   98108.52  110172.24   98976.81   98986.14   98536.08
+
+<br/T> The Tweedie model seems to be a bit better than the gamma model.
+Let us check the deviance residuals (Tweedie is unfortunately not
+implemented in *DHARMa*). <br/>
+
+![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-62-1.png)<!-- -->
+
+<br/> The variance function might be too strong. Let us evaluate the fit
+for $\xi = 2.5$, and additionally $\xi = 1.8$ and $\xi = 2.2$ for
+comparison. <br/>
+
+    ##                                     5%      25%      50%       75%      95%
+    ## linear                        543.1598 2981.431 6872.966 14170.417 47454.49
+    ## linear(red)                   457.5159 2260.159 4992.613 10758.330 38965.36
+    ## log-linear                    293.1116 1501.829 3471.372  8499.362 38838.71
+    ## log-linear (red)              283.3274 1479.404 3422.906  8448.426 38478.45
+    ## GLM (gauss, log-link)         564.6077 2832.127 7000.000 15099.103 46968.89
+    ## GLM (quasi-Poisson)           341.7867 1778.027 4447.695 10465.704 43357.17
+    ## GLM (quasi-Poisson, red)      330.5470 1654.658 3913.441  9320.795 37729.66
+    ## GLM (gamma, log-link)         332.1729 1688.040 3958.569  9241.624 40709.88
+    ## GLM (gamma, log-link, red)    337.1807 1600.092 3692.536  8870.520 38637.24
+    ## GLM (inv. gaussian, log-link) 324.4819 1622.435 3884.023  9183.589 49022.18
+    ## Tweedie (xi = 1.8)            343.2942 1703.089 4026.605  9472.691 40070.41
+    ## Tweedie (xi = 2.2)            337.6212 1708.576 3900.326  9155.733 40528.87
+    ## Tweedie (xi = 2.5)            306.7134 1679.421 3867.987  9141.410 41862.67
+
+    ##                                    RMSE      MAE
+    ## linear                         56427.15 14351.65
+    ## linear(red)                    57395.01 12064.22
+    ## log-linear                     62394.86 11557.54
+    ## log-linear (red)               81211.23 12619.64
+    ## GLM (gauss, log-link)          26300.15 13473.01
+    ## GLM (quasi-Poisson)            53993.07 12080.56
+    ## GLM (quasi-Poisson, red)       65035.97 11768.69
+    ## GLM (gamma, log-link)          78442.29 13208.78
+    ## GLM (gamma, log-link, red)     80696.97 12756.59
+    ## GLM (inv. gaussian, log-link) 668592.06 36128.90
+    ## Tweedie (xi = 1.8)             64390.65 12450.30
+    ## Tweedie (xi = 2.2)            115683.20 14882.27
+    ## Tweedie (xi = 2.5)            249733.32 20012.42
+
+<br/> We observe that the fits are quite similar to the gamma model.
+<br/>
 
 ## Quantile regression
 
 <br/> The last family of models we will consider for modelling our data
 is quantile regression. Quantile regression is a semiparametric method
 that is quite similar to quasi-likelihood methods; it does not assume a
-particular family of distributions, but rather parametrizes some of its
+particular family of ditweedie.plot(seq(0,5,0.01), xi = 1.3, mu = 1, phi
+= 1, type=‘pdf’, xlab = ‘Tweedie, xi = 1.1, mu = 1, phi = 1’)
+tweedie.plot(seq(0,5,0.01), xi = 1.3, mu = 1, phi = 2, type=‘pdf’, xlab
+= ‘Tweedie, xi = 1.1, mu = 1, phi = 2’) tweedie.plot(seq(0,5,0.01), xi =
+1.3, mu = 1, phi = 0.25, type=‘pdf’, xlab = ‘Tweedie, xi = 1.1, mu = 1,
+phi = 0.25’)stributions, but rather parametrizes some of its
 characteristics. However, instead of moments (mean, variance), quantile
 regression models quantiles of the distribution. This makes quantile
 regression inherently more robust than the usual methods that consider
-the conditional mean \[6\].
+the conditional mean \[7\].
 
 To illustrate the issue of robustness, let us consider the standard
 linear regression, which is characterized by the conditional mean
@@ -1006,7 +1147,7 @@ estimate, due to the presence of the quadratic term, is quite sensitive
 to the presence of outliers. It can be shown that a slight
 contamination, however small, sufficiently far from the center of the
 data can significantly alter the estimate, taking it far away from its
-original value \[6\].
+original value \[7\].
 
 In quantile regression, we model conditional quantiles of $Y$ instead of
 expected values. For example, the median regression is given as
@@ -1018,7 +1159,7 @@ $\rho_\tau(u) = u(\tau-I(u <0))$ (piecewise linear function with slopes
 $\tau - 1$ for negative $u$ and $\tau$ for positive $u$). For the
 median, this formula reduces to
 $\mathrm{argmin}_\beta\sum_i |y_i -  x_i^T\beta|$, i.e., median
-regression minimizes the mean absolute error (MAE) \[6\].
+regression minimizes the mean absolute error (MAE) \[7\].
 
 Another advantage of quantile regression is that we can model multiple
 quantiles of the distribution of $Y$, providing a more complete picture
@@ -1037,7 +1178,7 @@ unlike the mean, quantiles are equivariant to monotone transformation,
 i.e., $Q_\tau h(Y) = h(Q_\tau Y)$, where $Q_\tau$ denotes
 $\tau\mathrm{th}$ quantile (the quantiles of the transformed random
 variable $h(Y)$ are the transformed quantiles of the original $Y$)
-\[6\]. <br/>
+\[7\]. <br/>
 
 ### Model fit
 
@@ -1062,6 +1203,7 @@ model_med <- rq(Log_Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref_Te
     ## GLM (gamma, log-link)               78442.29 13208.78
     ## GLM (gamma, log-link, red)          80696.97 12756.59
     ## GLM (inv. gaussian, log-link)      668592.06 36128.90
+    ## Tweedie (xi = 2.5)                  64390.65 12450.30
     ## median regression                   67108.28 11726.51
 
 <br/> We see that the median model is almost identical to the log-linear
@@ -1096,10 +1238,11 @@ mean(abs((predict(model_lr_log)) - House_Rent$Log_Rent))
     ## GLM (gamma, log-link)         332.1729 1688.040 3958.569  9241.624 40709.88
     ## GLM (gamma, log-link, red)    337.1807 1600.092 3692.536  8870.520 38637.24
     ## GLM (inv. gaussian, log-link) 324.4819 1622.435 3884.023  9183.589 49022.18
+    ## Tweedie (xi = 2.5)            306.7134 1679.421 3867.987  9141.410 41862.67
     ## median regression             117.3394 1248.287 3210.823  8326.745 38878.08
 
-<br/> The predictions based on median response are slightly better.
-<br/>
+<br/> The predictions based on median response are slightly better than
+the one provided by the log-linear model. <br/>
 
 ### Inference
 
@@ -1115,13 +1258,13 @@ model_med_simple <- rq(Log_Rent ~ BHK + Size + Area_type + City + Furnishing + P
 (and consequently, the standard errors) of model parameter estimates.
 This is due to the fact that the asymptotics of quantile estimates
 depend on the reciprocal of a density function of the response evaluated
-at the quantile of interest (so-called sparsity function \[6\]). This
+at the quantile of interest (so-called sparsity function \[7\]). This
 value must be estimated from the data (e.g., by kernel estimate, see
 <https://www.rdocumentation.org/packages/quantreg/versions/6.1/topics/summary.rq>
 for all options implemented in *quantreg*). Alternatively, the standard
 errors can be also estimated directly via a bootstrap.
 
-We use two methods mentioned explicitly in \[6\], the Hendricks–Koenker
+We use two methods mentioned explicitly in \[7\], the Hendricks–Koenker
 sandwich and the Powell sandwich. We also include pairs bootstrap
 estimate of standard errors and pairs cluster bootstrap (to account for
 the fact that observations from the same locality **Area_Locality** may
@@ -1204,24 +1347,24 @@ summary(model_med_simple, se = 'boot', R = 500, bsmethod = "xy") # pairs bootstr
     ## 
     ## Coefficients:
     ##                             Value     Std. Error t value   Pr(>|t|) 
-    ## (Intercept)                   8.91307   0.06801  131.06298   0.00000
-    ## BHK                           0.21978   0.01790   12.27846   0.00000
-    ## Size                          0.00043   0.00002   18.03401   0.00000
-    ## Area_typeSuper Area          -0.03636   0.01594   -2.28143   0.02257
-    ## CityDelhi                     0.20885   0.03452    6.05027   0.00000
-    ## CityHyderabad                -0.14336   0.01826   -7.85176   0.00000
-    ## CityChennai                  -0.03904   0.02101   -1.85802   0.06323
-    ## CityKolkata                  -0.29332   0.02456  -11.94359   0.00000
-    ## CityMumbai                    0.91184   0.02825   32.27329   0.00000
-    ## FurnishingSemi-Furnished     -0.16895   0.02666   -6.33694   0.00000
-    ## FurnishingUnfurnished        -0.27549   0.02637  -10.44872   0.00000
-    ## Pref_TenantBachelors/Family  -0.01991   0.01962   -1.01482   0.31025
-    ## Pref_TenantFamily            -0.06201   0.02691   -2.30458   0.02123
-    ## Bathroom                      0.14612   0.02045    7.14540   0.00000
-    ## POCContact Owner             -0.33496   0.02062  -16.24496   0.00000
-    ## Floor                         0.00335   0.00186    1.80634   0.07093
-    ## Max_Floor                     0.00492   0.00138    3.55306   0.00038
-    ## Month                         0.00785   0.00813    0.96574   0.33422
+    ## (Intercept)                   8.91307   0.06738  132.27123   0.00000
+    ## BHK                           0.21978   0.01669   13.16762   0.00000
+    ## Size                          0.00043   0.00002   17.58795   0.00000
+    ## Area_typeSuper Area          -0.03636   0.01607   -2.26283   0.02369
+    ## CityDelhi                     0.20885   0.03330    6.27184   0.00000
+    ## CityHyderabad                -0.14336   0.01878   -7.63220   0.00000
+    ## CityChennai                  -0.03904   0.02081   -1.87626   0.06068
+    ## CityKolkata                  -0.29332   0.02149  -13.64629   0.00000
+    ## CityMumbai                    0.91184   0.02701   33.75790   0.00000
+    ## FurnishingSemi-Furnished     -0.16895   0.02724   -6.20142   0.00000
+    ## FurnishingUnfurnished        -0.27549   0.02793   -9.86462   0.00000
+    ## Pref_TenantBachelors/Family  -0.01991   0.02010   -0.99013   0.32216
+    ## Pref_TenantFamily            -0.06201   0.02756   -2.25024   0.02448
+    ## Bathroom                      0.14612   0.01846    7.91374   0.00000
+    ## POCContact Owner             -0.33496   0.02197  -15.24923   0.00000
+    ## Floor                         0.00335   0.00219    1.53206   0.12558
+    ## Max_Floor                     0.00492   0.00159    3.09293   0.00199
+    ## Month                         0.00785   0.00801    0.98038   0.32695
 
 ``` r
 summary(model_med_simple, se = 'boot', R = 500, bsmethod = "cluster",cluster = House_Rent$Area_Locality)  # cluster  bootstrap
@@ -1236,24 +1379,24 @@ summary(model_med_simple, se = 'boot', R = 500, bsmethod = "cluster",cluster = H
     ## 
     ## Coefficients:
     ##                             Value     Std. Error t value   Pr(>|t|) 
-    ## (Intercept)                   8.91307   0.07405  120.36140   0.00000
-    ## BHK                           0.21978   0.01796   12.23959   0.00000
-    ## Size                          0.00043   0.00003   16.52317   0.00000
-    ## Area_typeSuper Area          -0.03636   0.01810   -2.00821   0.04468
-    ## CityDelhi                     0.20885   0.04987    4.18818   0.00003
-    ## CityHyderabad                -0.14336   0.02295   -6.24746   0.00000
-    ## CityChennai                  -0.03904   0.02718   -1.43643   0.15095
-    ## CityKolkata                  -0.29332   0.03134   -9.35802   0.00000
-    ## CityMumbai                    0.91184   0.03480   26.19862   0.00000
-    ## FurnishingSemi-Furnished     -0.16895   0.02701   -6.25520   0.00000
-    ## FurnishingUnfurnished        -0.27549   0.02939   -9.37389   0.00000
-    ## Pref_TenantBachelors/Family  -0.01991   0.02256   -0.88237   0.37762
-    ## Pref_TenantFamily            -0.06201   0.03174   -1.95348   0.05082
-    ## Bathroom                      0.14612   0.02010    7.26855   0.00000
-    ## POCContact Owner             -0.33496   0.02668  -12.55265   0.00000
-    ## Floor                         0.00335   0.00219    1.52853   0.12645
-    ## Max_Floor                     0.00492   0.00219    2.25018   0.02448
-    ## Month                         0.00785   0.00930    0.84443   0.39847
+    ## (Intercept)                   8.91307   0.07545  118.13026   0.00000
+    ## BHK                           0.21978   0.01814   12.11372   0.00000
+    ## Size                          0.00043   0.00003   17.20807   0.00000
+    ## Area_typeSuper Area          -0.03636   0.01743   -2.08530   0.03710
+    ## CityDelhi                     0.20885   0.05040    4.14387   0.00003
+    ## CityHyderabad                -0.14336   0.02413   -5.94166   0.00000
+    ## CityChennai                  -0.03904   0.02568   -1.52005   0.12857
+    ## CityKolkata                  -0.29332   0.03052   -9.60970   0.00000
+    ## CityMumbai                    0.91184   0.03548   25.70142   0.00000
+    ## FurnishingSemi-Furnished     -0.16895   0.02745   -6.15606   0.00000
+    ## FurnishingUnfurnished        -0.27549   0.02843   -9.68886   0.00000
+    ## Pref_TenantBachelors/Family  -0.01991   0.02288   -0.86996   0.38437
+    ## Pref_TenantFamily            -0.06201   0.02902   -2.13700   0.03265
+    ## Bathroom                      0.14612   0.01923    7.59735   0.00000
+    ## POCContact Owner             -0.33496   0.02707  -12.37418   0.00000
+    ## Floor                         0.00335   0.00210    1.59934   0.10981
+    ## Max_Floor                     0.00492   0.00207    2.37164   0.01775
+    ## Month                         0.00785   0.00888    0.88494   0.37623
 
 <br/> We observe that the standard error estimates are pretty similar.
 As expected, cluster pairs bootstrap provided slightly wider standard
@@ -1261,7 +1404,7 @@ errors than pairs bootstrap. The main takeaway is that the **Month**
 variable is not significant.
 
 To perform inference for multiple parameters simultaneously, we can use
-a standard Wald test \[6\] using the aforementioned estimates of the
+a standard Wald test \[7\] using the aforementioned estimates of the
 covariance matrix. For example, we can compute the Wald statistic to
 test whether the **Month** variable is significant in our full model
 with all interactions. <br/>
@@ -1428,7 +1571,7 @@ library(emmeans)
 plot(lsmeans(model_med, pairwise~ City))
 ```
 
-![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-69-1.png)<!-- -->
+![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-76-1.png)<!-- -->
 
 <br/> It seems that rents in Mumbai are indeed more expensive than in
 other cities. Now, we must be cautious with our conclusions, as
@@ -1443,25 +1586,25 @@ factors. Let us plot the marginal effects at the levels of the factors.
 plot(lsmeans(model_med, pairwise~ City|Area_type))
 ```
 
-![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-70-1.png)<!-- -->
+![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-77-1.png)<!-- -->
 
 ``` r
 plot(lsmeans(model_med, pairwise~ City|Furnishing))
 ```
 
-![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-70-2.png)<!-- -->
+![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-77-2.png)<!-- -->
 
 ``` r
 plot(lsmeans(model_med, pairwise~ City|Pref_Tenant))
 ```
 
-![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-70-3.png)<!-- -->
+![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-77-3.png)<!-- -->
 
 ``` r
 plot(lsmeans(model_med, pairwise~ City|POC))
 ```
 
-![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-70-4.png)<!-- -->
+![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-77-4.png)<!-- -->
 
 <br/> For numerical variables, we can specify the levels manually. <br/>
 
@@ -1469,37 +1612,37 @@ plot(lsmeans(model_med, pairwise~ City|POC))
 plot(lsmeans(model_med, pairwise~ City|Size, at = list(Size = c(500,1000,5000))))
 ```
 
-![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-71-1.png)<!-- -->
+![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-78-1.png)<!-- -->
 
 ``` r
 plot(lsmeans(model_med, pairwise~ City|BHK, at = list(BHK = c(1,2,4))))
 ```
 
-![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-71-2.png)<!-- -->
+![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-78-2.png)<!-- -->
 
 ``` r
 plot(lsmeans(model_med, pairwise~ City|Bathroom, at = list(Bathroom = c(1,2))))
 ```
 
-![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-71-3.png)<!-- -->
+![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-78-3.png)<!-- -->
 
 ``` r
 plot(lsmeans(model_med, pairwise~ City|Floor, at = list(Floor = c(0,5,10,20))))
 ```
 
-![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-71-4.png)<!-- -->
+![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-78-4.png)<!-- -->
 
 ``` r
 plot(lsmeans(model_med, pairwise~ City|Max_Floor, at = list(Max_Floor = c(0,5,10,20))))
 ```
 
-![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-71-5.png)<!-- -->
+![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-78-5.png)<!-- -->
 
 ``` r
 plot(lsmeans(model_med, pairwise~ City|Size + Area_type + POC, at = list(Size = c(500,1000,5000))))
 ```
 
-![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-71-6.png)<!-- -->
+![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-78-6.png)<!-- -->
 
 <br/> We observe that predictions for Mumbai are consistently higher. We
 can also evaluate the slopes for numerical predictors, e.g., **Size**
@@ -1554,7 +1697,7 @@ observation in more detail as we did for comparrison between cities)
 plot(lsmeans(model_med, pairwise~ POC))
 ```
 
-![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-74-1.png)<!-- -->
+![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-81-1.png)<!-- -->
 
 ### Predictions
 
@@ -1623,19 +1766,19 @@ ggplot() +
 geom_ribbon(data = plot5$data,aes(ymin = conf.low, ymax = conf.high, x = x, fill = "0.95 quantile"),alpha = 0.1, linewidth = 0, show.legend = FALSE) + labs(title="Delhi", x="Size", y="Predicted Log Rent")
 ```
 
-![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-78-1.png)<!-- -->
+![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-85-1.png)<!-- -->
 
-![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-79-1.png)<!-- -->![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-79-2.png)<!-- -->![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-79-3.png)<!-- -->![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-79-4.png)<!-- -->![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-79-5.png)<!-- -->![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-79-6.png)<!-- -->![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-79-7.png)<!-- -->![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-79-8.png)<!-- -->![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-79-9.png)<!-- -->
+![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-86-1.png)<!-- -->![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-86-2.png)<!-- -->![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-86-3.png)<!-- -->![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-86-4.png)<!-- -->![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-86-5.png)<!-- -->![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-86-6.png)<!-- -->![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-86-7.png)<!-- -->![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-86-8.png)<!-- -->![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-86-9.png)<!-- -->
 
 <br/> Interestingly, the quantile regression lines actually cross for
 some predictions, which is, of course, impossible for the actual values
 of the quantiles. It can be shown that the quantile estimates are always
 monotonic for the centroid of the data. Thus, such crossings (which are
 a consequence of independent estimation of quantiles) usually happen
-merely in outlying regions of the data \[6\].
+merely in outlying regions of the data \[7\].
 
 Additionally, the regression lines for the quantiles are clearly not
-parallel in some plots. This so-called location shift test \[6\] can be
+parallel in some plots. This so-called location shift test \[7\] can be
 tested more formally via the Wald test. <br/>
 
 ``` r
@@ -1664,7 +1807,7 @@ library(caret)
 set.seed(123)
 
 ## Number of repetitions and folds
-rep <- 100
+rep <- 50
 folds <- 10
 
 ae_mde <- matrix(NA,rep*folds,5)
@@ -1680,7 +1823,13 @@ ae_gammaloglink <- matrix(NA,rep*folds,5)
 ae_gammaloglink_red <- matrix(NA,rep*folds,5) 
 ae_igaussloglink <- matrix(NA,rep*folds,5) 
 ae_igaussloglink_red<- matrix(NA,rep*folds,5)
+ae_tweedieloglink <- matrix(NA,rep*folds,5) 
+ae_tweedieloglink_red<- matrix(NA,rep*folds,5)
+ae_tweedieloglink2 <- matrix(NA,rep*folds,5) 
+ae_tweedieloglink2_red<- matrix(NA,rep*folds,5)
 
+mae_cv <- matrix(NA,rep*folds,17)
+  
 k <- 1
 
 for(j in 1:rep){
@@ -1716,6 +1865,14 @@ for(j in 1:rep){
     model_glm_igaussloglink_cv <- glm(Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month)^2, data = train_set, family = inverse.gaussian(link = 'log'), maxit = 100)
     
     model_glm_igaussloglink_red_cv <- glm(Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month)^2, data = train_set[cooks.distance(model_glm_igaussloglink_cv) < quantile(cooks.distance(model_glm_igaussloglink_cv), 0.99,na.rm = TRUE),], family = inverse.gaussian(link = 'log'), maxit = 100)
+    
+    model_glm_tweedieloglink_cv <- glm(Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month)^2, data = train_set, family=tweedie(var.power=2.5, link.power=0), maxit = 100)
+    
+    model_glm_tweedieloglink_red_cv <- glm(Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month)^2, data = train_set[cooks.distance(model_glm_tweedieloglink_cv) < quantile(cooks.distance(model_glm_tweedieloglink_cv), 0.99,na.rm = TRUE),], family=tweedie(var.power=2.5, link.power=0), maxit = 100)
+    
+    model_glm_tweedieloglink2_cv <- glm(Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month)^2, data = train_set, family=tweedie(var.power=2.2, link.power=0), maxit = 100)
+    
+    model_glm_tweedieloglink2_red_cv <- glm(Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month)^2, data = train_set[cooks.distance(model_glm_tweedieloglink2_cv) < quantile(cooks.distance(model_glm_tweedieloglink2_cv), 0.99,na.rm = TRUE),], family=tweedie(var.power=2.2, link.power=0), maxit = 100)
     
  
     ae_mde[k,] <- quantile(abs(exp(predict(model_med_cv,test_set))- 
@@ -1754,11 +1911,68 @@ for(j in 1:rep){
     ae_igaussloglink_red[k,] <- quantile(abs(exp(predict(model_glm_igaussloglink_red_cv,test_set)) -
                                     test_set$Rent),c(0.05,0.25,0.5,0.75,0.95))
     
+    ae_tweedieloglink[k,] <- quantile(abs(exp(predict(model_glm_tweedieloglink_cv,test_set))- 
+                                     test_set$Rent),c(0.05,0.25,0.5,0.75,0.95))
+    
+    ae_tweedieloglink_red[k,] <- quantile(abs(exp(predict(model_glm_tweedieloglink_red_cv,test_set)) -
+                                    test_set$Rent),c(0.05,0.25,0.5,0.75,0.95))
+    
+    ae_tweedieloglink2[k,] <- quantile(abs(exp(predict(model_glm_tweedieloglink2_cv,test_set))- 
+                                     test_set$Rent),c(0.05,0.25,0.5,0.75,0.95))
+    
+    ae_tweedieloglink2_red[k,] <- quantile(abs(exp(predict(model_glm_tweedieloglink2_red_cv,test_set)) -
+                                    test_set$Rent),c(0.05,0.25,0.5,0.75,0.95))
+    
+    
+    mae_cv[k,] <- c(mean(abs(exp(predict(model_med_cv,test_set)) - test_set$Rent)),
+                    mean(abs((predict(model_lr_cv,test_set)) - test_set$Rent)),
+                    mean(abs((predict(model_lr_red_cv,test_set)) -test_set$Rent)),
+                    mean(abs(exp(predict(model_lr_log_cv,test_set)) - test_set$Rent)),
+                    mean(abs(exp(predict(model_lr_log_red_cv,test_set)) - test_set$Rent)),
+                    mean(abs(exp(predict(model_glm_gaussloglink_cv,test_set)) - test_set$Rent)),
+                    mean(abs(exp(predict(model_glm_gaussloglink_red_cv,test_set)) - test_set$Rent)),
+                    mean(abs(exp(predict(model_glm_qpoissloglink_cv,test_set)) - test_set$Rent)),
+                    mean(abs(exp(predict(model_glm_qpoissloglink_red_cv,test_set)) - test_set$Rent)),
+                    mean(abs(exp(predict(model_glm_gammaloglink_cv,test_set)) - test_set$Rent)),
+                    mean(abs(exp(predict(model_glm_gammaloglink_red_cv,test_set)) - test_set$Rent)),
+                    mean(abs(exp(predict(model_glm_igaussloglink_cv,test_set)) - test_set$Rent)),
+                    mean(abs(exp(predict(model_glm_igaussloglink_red_cv,test_set)) - test_set$Rent)),
+                    mean(abs(exp(predict(model_glm_tweedieloglink_cv,test_set)) - test_set$Rent)),
+                    mean(abs(exp(predict(model_glm_tweedieloglink_red_cv,test_set)) - test_set$Rent)),
+                    mean(abs(exp(predict(model_glm_tweedieloglink2_cv,test_set)) - test_set$Rent)),
+                    mean(abs(exp(predict(model_glm_tweedieloglink2_red_cv,test_set)) - test_set$Rent))
+                    )
+    
     k <-  k +1
   }
 }
 
-cv_res <- (rbind(apply(ae_mde,2,mean),
+mae_cv_res <- round(apply(mae_cv,2,mean),3)
+names(mae_cv_res) <- c('median','linear','linear(red)','log-linear','log-linear (red)','GLM (gauss)','GLM (gauss,red)', 'GLM(quasi-Poisson)','GLM (quasi-Poisson, red)','GLM (gamma)','GLM (gamma, red)','GLM (inv. gaussian)', 'GLM (inv. gaussian, red)','GLM (Tweedie, xi = 2.5)','GLM (Tweedie, xi = 2.5, red)','GLM (Tweedie, xi = 2.2)','GLM (Tweedie, xi = 2.2, red)')
+mae_cv_res
+```
+
+    ##                       median                       linear 
+    ##                 1.290819e+04                 1.534413e+04 
+    ##                  linear(red)                   log-linear 
+    ##                 1.264239e+04                 1.252022e+04 
+    ##             log-linear (red)                  GLM (gauss) 
+    ##                 1.329542e+04                 2.555581e+11 
+    ##              GLM (gauss,red)           GLM(quasi-Poisson) 
+    ##                 1.787444e+04                 1.431553e+04 
+    ##     GLM (quasi-Poisson, red)                  GLM (gamma) 
+    ##                 1.348355e+04                 1.440164e+04 
+    ##             GLM (gamma, red)          GLM (inv. gaussian) 
+    ##                 1.401892e+04                3.315329e+185 
+    ##     GLM (inv. gaussian, red)      GLM (Tweedie, xi = 2.5) 
+    ##                          Inf                 2.111732e+04 
+    ## GLM (Tweedie, xi = 2.5, red)      GLM (Tweedie, xi = 2.2) 
+    ##                 1.756282e+04                 1.614562e+04 
+    ## GLM (Tweedie, xi = 2.2, red) 
+    ##                 1.422866e+04
+
+``` r
+ae_cv_res <- (rbind(apply(ae_mde,2,mean),
 apply(ae_lr,2,mean),
 apply(ae_lr_red,2,mean),
 apply(ae_lr_log,2,mean),
@@ -1770,46 +1984,61 @@ apply(ae_qpoissloglink_red,2,mean),
 apply(ae_gammaloglink,2,mean),
 apply(ae_gammaloglink_red,2,mean),
 apply(ae_igaussloglink,2,mean),
-apply(ae_igaussloglink_red,2,mean)))
+apply(ae_igaussloglink_red,2,mean),
+apply(ae_tweedieloglink,2,mean),
+apply(ae_tweedieloglink_red,2,mean),
+apply(ae_tweedieloglink2,2,mean),
+apply(ae_tweedieloglink2_red,2,mean))
+)
 
-colnames(cv_res) <- c('5%','25%','50%','75%','95%')
-rownames(cv_res) <- c('median','linear','linear(red)','log-linear','log-linear (red)','GLM (gauss)','GLM (gauss,red)', 'GLM(quasi-Poisson)','GLM (quasi-Poisson, red)','GLM (gamma)','GLM (gamma, red)','GLM (inv. gaussian)', 'GLM (inv. gaussian, red)')
-cv_res
+colnames(ae_cv_res) <- c('5%','25%','50%','75%','95%')
+rownames(ae_cv_res) <- c('median','linear','linear(red)','log-linear','log-linear (red)','GLM (gauss)','GLM (gauss,red)', 'GLM(quasi-Poisson)','GLM (quasi-Poisson, red)','GLM (gamma)','GLM (gamma, red)','GLM (inv. gaussian)', 'GLM (inv. gaussian, red)','GLM (Tweedie, xi = 2.5)','GLM (Tweedie, xi = 2.5, red)','GLM (Tweedie, xi = 2.2)','GLM (Tweedie, xi = 2.2, red)')
+ae_cv_res
 ```
 
-    ##                                5%      25%          50%          75%
-    ## median                   287.9638 1456.397 3.483316e+03 8.962253e+03
-    ## linear                   617.0724 3136.930 7.194133e+03 1.504896e+04
-    ## linear(red)              472.8810 2298.307 5.074300e+03 1.112721e+04
-    ## log-linear               311.3545 1547.194 3.582950e+03 8.846755e+03
-    ## log-linear (red)         300.9721 1520.389 3.543039e+03 8.867376e+03
-    ## GLM (gauss)              573.1751 2928.911 7.194695e+03 1.546188e+04
-    ## GLM (gauss,red)          396.6920 1978.806 4.672102e+03 1.086010e+04
-    ## GLM(quasi-Poisson)       364.8897 1857.600 4.556798e+03 1.095006e+04
-    ## GLM (quasi-Poisson, red) 343.7397 1692.762 4.019445e+03 9.669215e+03
-    ## GLM (gamma)              370.1083 1733.445 4.026270e+03 9.668425e+03
-    ## GLM (gamma, red)         343.0732 1636.993 3.778628e+03 9.203344e+03
-    ## GLM (inv. gaussian)      458.6545 1947.052 2.637807e+14 1.013312e+41
-    ## GLM (inv. gaussian, red) 433.6739 1821.876 3.762557e+07 9.135204e+29
-    ##                                   95%
-    ## median                   4.283747e+04
-    ## linear                   5.069895e+04
-    ## linear(red)              4.176100e+04
-    ## log-linear               4.158895e+04
-    ## log-linear (red)         4.126698e+04
-    ## GLM (gauss)              5.555214e+04
-    ## GLM (gauss,red)          4.403197e+04
-    ## GLM(quasi-Poisson)       4.818721e+04
-    ## GLM (quasi-Poisson, red) 4.218132e+04
-    ## GLM (gamma)              4.341822e+04
-    ## GLM (gamma, red)         4.132954e+04
-    ## GLM (inv. gaussian)      4.735348e+68
-    ## GLM (inv. gaussian, red) 5.484853e+62
+    ##                                    5%      25%          50%          75%
+    ## median                       287.7376 1453.096     3475.051 8.950185e+03
+    ## linear                       617.0638 3142.431     7184.689 1.505491e+04
+    ## linear(red)                  473.3142 2301.246     5063.834 1.112115e+04
+    ## log-linear                   310.5566 1546.542     3578.410 8.836452e+03
+    ## log-linear (red)             302.0990 1519.200     3537.175 8.855001e+03
+    ## GLM (gauss)                  569.4862 2929.459     7186.450 1.545566e+04
+    ## GLM (gauss,red)              395.2601 1980.076     4669.503 1.083586e+04
+    ## GLM(quasi-Poisson)           364.4849 1854.660     4560.892 1.094660e+04
+    ## GLM (quasi-Poisson, red)     341.5863 1691.058     4016.145 9.652724e+03
+    ## GLM (gamma)                  372.2519 1736.185     4020.586 9.649553e+03
+    ## GLM (gamma, red)             341.2621 1634.899     3779.988 9.188217e+03
+    ## GLM (inv. gaussian)          500.4852 2044.918 99943534.655 2.171038e+24
+    ## GLM (inv. gaussian, red)     430.1330 1840.322 56529891.632 1.827041e+30
+    ## GLM (Tweedie, xi = 2.5)      340.1288 1705.866     3983.938 9.476936e+03
+    ## GLM (Tweedie, xi = 2.5, red) 327.0510 1586.015     3717.825 9.173089e+03
+    ## GLM (Tweedie, xi = 2.2)      352.1341 1731.404     4018.578 9.559219e+03
+    ## GLM (Tweedie, xi = 2.2, red) 340.0451 1617.092     3761.395 9.222767e+03
+    ##                                       95%
+    ## median                       4.268412e+04
+    ## linear                       5.067821e+04
+    ## linear(red)                  4.174138e+04
+    ## log-linear                   4.148300e+04
+    ## log-linear (red)             4.116891e+04
+    ## GLM (gauss)                  5.561039e+04
+    ## GLM (gauss,red)              4.406782e+04
+    ## GLM(quasi-Poisson)           4.815240e+04
+    ## GLM (quasi-Poisson, red)     4.200351e+04
+    ## GLM (gamma)                  4.321788e+04
+    ## GLM (gamma, red)             4.124355e+04
+    ## GLM (inv. gaussian)          2.307866e+52
+    ## GLM (inv. gaussian, red)     8.365828e+60
+    ## GLM (Tweedie, xi = 2.5)      4.391296e+04
+    ## GLM (Tweedie, xi = 2.5, red) 4.101225e+04
+    ## GLM (Tweedie, xi = 2.2)      4.258032e+04
+    ## GLM (Tweedie, xi = 2.2, red) 4.082040e+04
 
-<br/> We observe that the median model is best for predictions (in terms
-of the median absolute error). However, the differences between the
-median model and the log-linear model are minor. The other models are
-significantly worse.
+<br/> We observe that the best models in terms of MAE are log-linear,
+median and linear (with some osbervations removed based on Cook’s
+distance). We can also that inverse Gaussian model is quite unstable. In
+terms of quntiles of the absolute errors, the median and the log-lienar
+models are clearly the best ones. The other models are significantly
+worse.
 
 The second cross-validation we will consider is the accuracy of the
 prediction intervals. Naively, we could calculate the proportion of
@@ -1840,7 +2069,7 @@ the observations fell within the prediction interval in 96% of cases.
 
 The disadvantage of the accuracy is that it does not penalize the
 prediction for the width of its interval. Hence, we will also consider
-the Winkler score \[7\] defined as $W_\alpha = U - L$ provided that the
+the Winkler score \[8\] defined as $W_\alpha = U - L$ provided that the
 observed value $x$ is in the $100(1-\alpha)\%$ prediction interval
 $[L,U]$ , $W_\alpha = U - L + 2/\alpha(L-x)$ provided that its value is
 lower, and $W_\alpha = U - L + 2/\alpha(x-U)$ provided that its value is
@@ -1933,7 +2162,7 @@ hist(pred[,3]-pred[,2],main = 'Log-linear model', xlab = 'PI witdh (log-scale)')
 hist(ub_quan-lb_quan,main = 'Quantile regression model', xlab = 'PI witdh (log-scale)')
 ```
 
-![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-85-1.png)<!-- -->
+![](Seventh_circle_quantile_regression_1_files/figure-GFM/unnamed-chunk-92-1.png)<!-- -->
 
 <br/> We can notice a significant difference in distribution widths of
 predicted intervals. Remember that the confidence intervals for the
@@ -1955,7 +2184,7 @@ Let us perform the cross-validation. <br/>
 set.seed(123)
 
 ## Number of repetitions and folds
-rep <- 100
+rep <- 50
 folds <- 10
 
 accu_quan <- NA*numeric(rep*folds)
@@ -2009,41 +2238,41 @@ for(j in 1:rep){
 mean(accu_lr_log)
 ```
 
-    ## [1] 0.9506141
+    ## [1] 0.9507501
 
 ``` r
 mean(accu_quan)
 ```
 
-    ## [1] 0.9113901
+    ## [1] 0.9116281
 
 ``` r
 summary(winkler_score_quan)
 ```
 
     ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
-    ##   12349   13227   13497   13488   13751   14722
+    ##   12576   13223   13476   13481   13731   14722
 
 ``` r
 summary(winkler_score_log)
 ```
 
     ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
-    ##   13636   14446   14661   14662   14876   15562
+    ##   13736   14448   14640   14660   14861   15562
 
 ``` r
 summary(winkler_score_exp_quan)
 ```
 
     ##      Min.   1st Qu.    Median      Mean   3rd Qu.      Max. 
-    ## 1.978e+08 3.505e+08 3.891e+08 6.246e+08 5.287e+08 1.104e+10
+    ## 1.978e+08 3.509e+08 3.872e+08 6.257e+08 5.326e+08 1.104e+10
 
 ``` r
 summary(winkler_score_exp_log)
 ```
 
     ##      Min.   1st Qu.    Median      Mean   3rd Qu.      Max. 
-    ## 2.870e+08 3.692e+08 4.060e+08 4.443e+08 4.864e+08 1.565e+09
+    ## 2.962e+08 3.675e+08 4.067e+08 4.446e+08 4.820e+08 1.565e+09
 
 <br/> We observe that the accuracy of the predictions intervals dropped
 noticeably for the quantile regression model. The Winkler score for the
@@ -2080,12 +2309,12 @@ and
 
 ## References
 
-- \[1\] FARAWAY, Julian J. *Extending the linear model with R:
-  generalized linear, mixed effects and nonparametric regression
-  models.* Chapman and Hall/CRC, 2016.
-
-- \[2\] FARAWAY, Julian J. *Linear Models with R (2nd ed.).* Chapman and
+- \[1\] FARAWAY, Julian J. *Linear Models with R (2nd ed.).* Chapman and
   Hall/CRC, 2015.
+
+- \[2\] DUAN, Naihua. Smearing estimate: a nonparametric
+  retransformation method. *Journal of the American Statistical
+  Association*, 1983, 78.383: 605-610.
 
 - \[3\] BURNHAM, Kenneth P.; ANDERSON, David R. (ed.). *Model selection
   and multimodel inference: a practical information-theoretic approach.*
@@ -2095,13 +2324,16 @@ and
   *Journal of the Royal Statistical Society: Series D (The
   Statistician)*, 1978, 27.3-4: 217-235.
 
-- \[5\] DUAN, Naihua. Smearing estimate: a nonparametric
-  retransformation method. *Journal of the American Statistical
-  Association*, 1983, 78.383: 605-610.
+- \[5\] DUNN, Peter K., et al. *Generalized linear models with examples
+  in R*. New York: Springer, 2018.
 
-- \[6\] KOENKER, Roger. *Quantile regression.* Cambridge University
+- \[6\] FARAWAY, Julian J. *Extending the linear model with R:
+  generalized linear, mixed effects and nonparametric regression
+  models.* Chapman and Hall/CRC, 2016.
+
+- \[7\] KOENKER, Roger. *Quantile regression.* Cambridge University
   Press, 2005.
 
-- \[7\] WINKLER, Robert L. A decision-theoretic approach to interval
+- \[8\] WINKLER, Robert L. A decision-theoretic approach to interval
   estimation. *Journal of the American Statistical Association*, 1972,
   67.337: 187-191.

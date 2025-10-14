@@ -376,7 +376,7 @@ Still, we observed that the model is relatively poor, and thus, we should look f
 ### Box-Cox transformation and log-linear model
 
 <br/>
-To obtain a model that better fits the data, we will first consider transforming the response to obtain data that will better conform to the fit by ordinary least squares. Namely, we will consider Box-Cox transformation [2] $g_\lambda(y) = \frac{y^\lambda-1}{\lambda}$ for $\lambda \neq 0$ and $g_\lambda(y) = \mathrm{log}$ for $\lambda = 0$.
+To obtain a model that better fits the data, we will first consider transforming the response to obtain data that will better conform to the fit by ordinary least squares. Namely, we will consider Box-Cox transformation [1] $g_\lambda(y) = \frac{y^\lambda-1}{\lambda}$ for $\lambda \neq 0$ and $g_\lambda(y) = \mathrm{log}$ for $\lambda = 0$.
 
 The Box-Cox transformation is parametrized by $\lambda$, and hence, we can plot the residual sum of squares for various values of $\lambda$ and select the value that best fits the data.
 <br/>
@@ -412,7 +412,7 @@ plot(predict(model_lr_log),residuals(model_lr_log), ylab = 'Residuals', xlab = '
 ```
 
 <br/>
-Heteroskedasticity in log(Rent) appears to be stabilized. The residuals still have heavy tails, but to a lesser degree than the model with the original response. 
+Heteroskedasticity in log(Rent) appears to be stabilized. The residuals still have heavier tails than expected, but to a lesser degree than the model with the original response. 
 <br/>
 
 ```{r, message=FALSE, warning=FALSE,echo=FALSE}
@@ -452,7 +452,7 @@ The expected value of $Y$ meets $\mathrm{E}(Y|X) = \mathrm{exp}(X\beta)\mathrm{E
 
 Let us assume that  $\varepsilon \sim \mathrm{N}(0,\sigma^2)$, i.e., $Y$ has a so-called log-normal distribution with parameters $\mu = X\beta$ and $\sigma^2$. Then, $\mathrm{E}(Y) = \mathrm{exp}(X\beta)\mathrm{exp}(\sigma^2/2)$ (because the expected value of the log-normal distribution is $\mu + \sigma^2/2$; https://en.wikipedia.org/wiki/Log-normal_distribution).
 
-We can correct the prediction using the *Smearing retransformation* (https://en.wikipedia.org/wiki/Smearing_retransformation). We will also consider Duan's Smearing retransformation, which attempts to accommodate the fact that the distribution of residuals might not be normal [5].
+We can correct the prediction using the *Smearing retransformation* (https://en.wikipedia.org/wiki/Smearing_retransformation). We will also consider Duan's Smearing retransformation, which attempts to accommodate the fact that the distribution of residuals might not be normal [2].
 <br/>
 
 ```{r, message=FALSE, warning=FALSE}
@@ -640,7 +640,7 @@ model_glm_qpoissloglink <- glm(Rent ~ (BHK + Size + Area_type + City + Furnishin
 ```
 
 <br/>
-Since the quasi-Poisson regression is merely a quasi-likelihood approach, we do not have the AIC available nor the simulated residuals. However,  we can plot the Pearson residuals, which should be homoskedastic under the quasi-Poisson model. 
+Since the quasi-Poisson regression is merely a quasi-likelihood approach, we do not have the AIC available nor the simulated residuals. However,  we can plot the Pearson residuals, which should be approximately normal provided that the responses are large enough [5, section 7.5]. 
 <br/>
 
 ```{r, message=FALSE, warning=FALSE,echo=FALSE}
@@ -655,7 +655,7 @@ plot(predict(model_lr_log, type = 'response'),residuals(model_glm_qpoissloglink,
 ```
 
 <br/>
-We observe a slight heteroskedasticity in the Pearson residuals. This is not surprising since the linear mean-variance relation corresponds to the square-root stabilizing transformation [1]. However, we determined previously that the stabilizing transformation for our data is closer to the logarithm transformation.
+We observe a slight heteroskedasticity in the Pearson residuals. This is not surprising since the linear mean-variance relation corresponds to the square-root stabilizing transformation [6] (transformation $h(Y)$ is corresponds approximately to the link $h(\mu) = X\beta$ and the variance function $V(\mu) = 1/h'(\mu)^2$ , see [5, section 5.8]). However, we determined previously that the stabilizing transformation for our data is closer to the logarithm transformation.
 
 Let us evaluate the fit. We will also consider the model in which we remove 1% of the most influential observations according to Cook's distance.
 <br/>
@@ -690,7 +690,7 @@ The quasi-Poisson model appears to be slightly inferior to the log-linear model.
 ### Gamma model with log-link
 
 <br/>
-We consider the gamma model next. The conditional mean is again $\mathrm{log} \mu = X\beta$. The variance function is quadratic in the mean, i.e., $\mathrm{Var}Y = \phi\mu^2$. The gamma model is a standard GLM  full likelihood model with the response having a gamma distribution.   
+We consider the gamma model with the log link next. The conditional mean is again $\mathrm{log} \mu = X\beta$. The variance function is quadratic in the mean, i.e., $\mathrm{Var}Y = \phi\mu^2$. The gamma model is a standard GLM  full likelihood model with the response having a gamma distribution.   
 <br/>
 
 ```{r, message=FALSE, warning=FALSE}
@@ -709,16 +709,21 @@ AIC(model_glm_gammaloglink))
 ```
 
 <br/>
-The AIC of the gamma model is similar to the log-linear model. We plot the deviance residuals next.
+The AIC of the gamma model is a bit worse than the log-linear model. We plot the deviance residuals next.
 <br/>
 
 ```{r, message=FALSE, warning=FALSE}
 par(mfrow = c(1, 1))
+qqnorm(residuals(model_glm_gammaloglink,type = 'deviance'))
+qqline(residuals(model_glm_gammaloglink,type = 'deviance'))
+
+par(mfrow = c(1, 2))
 plot(predict(model_glm_gammaloglink, type = 'response'),residuals(model_glm_gammaloglink,type = 'deviance'), ylab = 'Residuals', xlab = 'Predicted log(Rent)')
+plot(predict(model_glm_gammaloglink, type = 'response'),residuals(model_glm_gammaloglink,type = 'deviance'), ylab = 'Residuals', xlab = 'Predicted log(Rent)', xlim = c(0,1e+06))
 ```
 
 <br/>
-From the plot, the variance function might be a bit strong. Let us check the simulated residuals.
+From the plot, the variance of residuals seem stabilized. Let us check the simulated residuals.
 <br/>
 
 ```{r, message=FALSE, warning=FALSE,echo=FALSE}
@@ -743,7 +748,6 @@ model_glm_gammaloglink_red <- glm(Rent ~ (BHK + Size + City + Furnishing + Pref_
 ```
 
 ```{r, message=FALSE, warning=FALSE,echo=FALSE}
-
 er_glm3 <- rbind(er_glm2,
                  c(sqrt(mean((predict(model_glm_gammaloglink, type = 'response') - House_Rent$Rent)^2)),mean(abs(predict(model_glm_gammaloglink, type = 'response') - House_Rent$Rent))),   
                  c(sqrt(mean((predict(model_glm_gammaloglink_red,House_Rent, type = 'response') - House_Rent$Rent)^2)),mean(abs(predict(model_glm_gammaloglink_red,House_Rent, type = 'response') - House_Rent$Rent)))
@@ -766,13 +770,13 @@ quan_glm3
 ```
 
 <br/>
-The gamma model is even closer to the log-linear model than the quasi-Poisson model.
+Overall, the gamma model is closer to the log-linear model than the quasi-Poisson model. This is not surprising since logarithm transform is roughly equivalent to the gamma model with the log link [5].
 <br/>
 
 ### Inverse Gaussian model with log-link
 
 <br/>
-The last model we will consider here is the inverse Gaussian GLM. The inverse Gaussian is again a full likelihood model for which the responses have an inverse Gaussian distribution. The conditional mean is the same; $\mu = \mathrm{log} X\beta$. However, the variance function is even stronger $\mathrm{Var}Y = \phi\mu^3$. 
+The last model we will consider here is the inverse Gaussian GLM. The inverse Gaussian is again a full likelihood model for which the responses have an inverse Gaussian distribution. The conditional mean is the same; $\mu = \mathrm{log} X\beta$. However, the variance function is even stronger $\mathrm{Var}Y = \phi\mu^3$. We will again use the log-link. 
 <br/>
 
 ```{r, message=FALSE, warning=FALSE}
@@ -796,8 +800,9 @@ We expect that the variance function will be way too strong.
 <br/>
 
 ```{r, message=FALSE, warning=FALSE,echo=FALSE}
-par(mfrow = c(1, 1))
+par(mfrow = c(1, 2))
 plot(predict(model_glm_igaussloglink, type = 'response'),residuals(model_glm_igaussloglink,type = 'deviance'), ylab = 'Residuals', xlab = 'Predicted log(Rent)')
+plot(predict(model_glm_igaussloglink, type = 'response'),residuals(model_glm_igaussloglink,type = 'deviance'), ylab = 'Residuals', xlab = 'Predicted log(Rent)', xlim = c(0,1e+06))
 ```
 
 <br/>
@@ -815,7 +820,6 @@ Let us evaluate the predictions of the model
 <br/>
 
 ```{r, message=FALSE, warning=FALSE,echo=FALSE}
-
 er_glm4 <- rbind(er_glm3,
                  c(sqrt(mean((predict(model_glm_igaussloglink, type = 'response') - House_Rent$Rent)^2)),mean(abs(predict(model_glm_igaussloglink, type = 'response') - House_Rent$Rent))))
 
@@ -832,22 +836,139 @@ er_glm4
 ```
 
 <br/>
-Overall, the log-linear model is the best one, with the gamma model being very similar. This is not surprising since both of these models are recommended as close alternatives [1]. 
+Overall, the log-linear model is the best one, with the gamma model being very similar. 
+<br/>
+
+### Tweedie model with log-link
+
+<br/>
+The generalized linear model we considered followed a noticeable pattern in their variance functions: $\phi\mu^0$, $\phi\mu^1$,  $\phi\mu^2$, and $\phi\mu^3$. One could naturally ask whether there is some general family of distributions with the variance function $\phi\mu^\xi$, and indeed, it exists. It is so-called the Tweedie family of distributions [5]. The parameter $\xi$ can have any real value outside of the open interval $(0,1)$ (we get a normal distribution for $\xi = 0$ and a Poisson distribution for $\xi = 1$ and $\phi = 1$). 
+
+For $\xi < 0$, we obtain distributions with support on the entire real line, but they always have a positive mean. They seem to have no practical application [5]. For $\xi \in (1,2)$, we get interesting compound Poisson Gamma distributions. These are mixed distributions; continuous distributions combined with a point mass at zero. These represent a distribution of sums of gamma-distributed random values, in which the number of summands is Poisson-distributed (thus, there is a non-zero probability of exact zero). These distributions are used for the continuous data with exact zeros, such as rainfalls and incomes [5].
+
+Tweedie distributions are implemented in R in the *tweedie* package. We can plot the densities for several combinations of parameter values. Notice that for $\xi$ close to one, the distribution is almost discrete, and for $\xi$ close to 2, the point mass at zero almost disappears. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+library(tweedie)
+par(mfrow = c(1, 3))
+tweedie.plot(seq(0,5,0.01), xi = 1.001, mu = 1, phi = 1, type='pdf', xlab = 'Tweedie, xi = 1.001, mu = 1, phi = 1')
+tweedie.plot(seq(0,5,0.01), xi = 1.001, mu = 1, phi = 2, type='pdf', xlab = 'Tweedie, xi = 1.001, mu = 1, phi = 2')
+tweedie.plot(seq(0,5,0.01), xi = 1.001, mu = 1, phi = 0.25, type='pdf', xlab = 'Tweedie, xi = 1.001, mu = 1, phi = 0.25')
+
+tweedie.plot(seq(0,5,0.01), xi = 1.3, mu = 1, phi = 1, type='pdf', xlab = 'Tweedie, xi = 1.3, mu = 1, phi = 1')
+tweedie.plot(seq(0,5,0.01), xi = 1.3, mu = 1, phi = 2, type='pdf', xlab = 'Tweedie, xi = 1.3, mu = 1, phi = 2')
+tweedie.plot(seq(0,5,0.01), xi = 1.3, mu = 1, phi = 0.25, type='pdf', xlab = 'Tweedie, xi = 1.3, mu = 1, phi = 0.25')
+
+tweedie.plot(seq(0,5,0.01), xi = 1.99, mu = 1, phi = 1, type='pdf', xlab = 'Tweedie, xi = 1.99, mu = 1, phi = 1')
+tweedie.plot(seq(0,5,0.01), xi = 1.99, mu = 1, phi = 2, type='pdf', xlab = 'Tweedie, xi = 1.99, mu = 1, phi = 2')
+tweedie.plot(seq(0,5,0.01), xi = 1.99, mu = 1, phi = 0.25, type='pdf', xlab = 'Tweedie, xi = 1.99, mu = 1, phi = 0.25')
+```
+
+<br/>
+For $\xi \geq 2$, we get distributions that include Gamma and inverse Gaussian that are suitable for modeling skewed positive data. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+par(mfrow = c(1, 3))
+tweedie.plot(seq(0,5,0.01), xi = 2.5, mu = 1, phi = 1, type='pdf', xlab = 'Tweedie, xi = 2.5, mu = 1, phi = 1')
+tweedie.plot(seq(0,5,0.01), xi = 5, mu = 1, phi = 1, type='pdf', xlab = 'Tweedie, xi = 5, mu = 1, phi = 1')
+tweedie.plot(seq(0,5,0.01), xi = 10, mu = 1, phi = 1, type='pdf', xlab = 'Tweedie, xi = 10, mu = 1, phi = 1')
+```
+
+<br/>
+These distributions are of particular interest for our data. Let us proceed to fit the Tweedie GLM. To fit the model, we need to determine the value of $\xi$ first. Function *tweedie.profile* uses the profile likelihood method to estimate the value of $\xi$.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+par(mfrow = c(1, 1))
+xi_est <- tweedie.profile(Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month)^2, data = House_Rent,do.plot=TRUE,xi.vec=seq(1.8,2.6,0.2),control=list(maxit=50))
+```
+
+<br/>
+We observe that the log-likelihood is maximized for $\xi$ approximately 2.5. Thus, let us fit the corresponding GLM.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+library(statmod)
+model_glm_tweedie25loglink <- glm(Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month)^2, data = House_Rent, family=tweedie(var.power=2.5, link.power=0), maxit = 50)
+```
+
+<br/>
+The AIC can be computed using the function *AICtweedie*.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+AIC_stat <- c(AIC(model_lr),
+AIC(model_lr_log) + 2*sum(log(House_Rent$Rent)),
+AIC(model_glm_gaussloglink),
+AIC(model_glm_gammaloglink),
+AIC(model_glm_igaussloglink),
+AICtweedie(model_glm_tweedie25loglink)
+)
+
+names(AIC_stat) <- c('linear','log-linear','gauss','gamma','igauss','Tweedie')
+AIC_stat
+```
+
+<br/T>
+The Tweedie model seems to be a bit better than the gamma model. Let us check the deviance residuals (Tweedie is unfortunately not implemented in *DHARMa*).
+<br/>
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+par(mfrow = c(1, 2))
+plot(predict(model_glm_tweedie25loglink, type = 'response'),residuals(model_glm_tweedie25loglink,type = 'deviance'), ylab = 'Residuals', xlab = 'Predicted log(Rent)')
+plot(predict(model_glm_tweedie25loglink, type = 'response'),residuals(model_glm_tweedie25loglink,type = 'deviance'), ylab = 'Residuals', xlab = 'Predicted log(Rent)', xlim = c(0,1e+06))
+```
+
+<br/>
+The variance function might be too strong. Let us evaluate the fit for $\xi = 2.5$, and additionally $\xi = 1.8$ and $\xi = 2.2$ for comparison.
+<br/>
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+model_glm_tweedie18loglink <- glm(Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month)^2, data = House_Rent, family=tweedie(var.power=1.8, link.power=0), maxit = 50)
+
+model_glm_tweedie22loglink <- glm(Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month)^2, data = House_Rent, family=tweedie(var.power=2.2, link.power=0), maxit = 50)
+
+er_glm5 <- rbind(er_glm4,
+                 c(sqrt(mean((predict(model_glm_tweedie18loglink, type = 'response') - House_Rent$Rent)^2)),mean(abs(predict(model_glm_tweedie18loglink, type = 'response') - House_Rent$Rent))),
+                 c(sqrt(mean((predict(model_glm_tweedie22loglink, type = 'response') - House_Rent$Rent)^2)),mean(abs(predict(model_glm_tweedie22loglink, type = 'response') - House_Rent$Rent))),
+                 c(sqrt(mean((predict(model_glm_tweedie25loglink, type = 'response') - House_Rent$Rent)^2)),mean(abs(predict(model_glm_tweedie25loglink, type = 'response') - House_Rent$Rent))))
+
+rownames(er_glm5) <- c('linear','linear(red)','log-linear','log-linear (red)','GLM (gauss, log-link)','GLM (quasi-Poisson)','GLM (quasi-Poisson, red)','GLM (gamma, log-link)','GLM (gamma, log-link, red)','GLM (inv. gaussian, log-link)', 'Tweedie (xi = 1.8)', 'Tweedie (xi = 2.2)', 'Tweedie (xi = 2.5)')
+
+quan_glm5 <- rbind(quan_glm4,
+                   quantile(abs(predict(model_glm_tweedie18loglink, type = 'response') -
+                                    House_Rent$Rent),c(0.05,0.25,0.5,0.75,0.95)),
+                   quantile(abs(predict(model_glm_tweedie22loglink, type = 'response') -
+                                    House_Rent$Rent),c(0.05,0.25,0.5,0.75,0.95)),
+                   quantile(abs(predict(model_glm_tweedie25loglink, type = 'response') -
+                                    House_Rent$Rent),c(0.05,0.25,0.5,0.75,0.95)))
+rownames(quan_glm5) <- c('linear','linear(red)','log-linear','log-linear (red)','GLM (gauss, log-link)','GLM (quasi-Poisson)','GLM (quasi-Poisson, red)','GLM (gamma, log-link)','GLM (gamma, log-link, red)','GLM (inv. gaussian, log-link)', 'Tweedie (xi = 1.8)', 'Tweedie (xi = 2.2)', 'Tweedie (xi = 2.5)')
+
+quan_glm5
+er_glm5
+```
+
+<br/>
+We observe that the fits are quite similar to the gamma model.
 <br/>
 
 ## Quantile regression
 
 <br/>
-The last family of models we will consider for modelling our data is quantile regression. Quantile regression is a semiparametric method that is quite similar to quasi-likelihood methods; it does not assume a particular family of distributions, but rather parametrizes some of its characteristics. However, instead of moments (mean, variance), quantile regression models quantiles of the distribution. This makes quantile regression inherently more robust than the usual methods that consider the conditional mean [6].
+The last family of models we will consider for modelling our data is quantile regression. Quantile regression is a semiparametric method that is quite similar to quasi-likelihood methods; it does not assume a particular family of ditweedie.plot(seq(0,5,0.01), xi = 1.3, mu = 1, phi = 1, type='pdf', xlab = 'Tweedie, xi = 1.1, mu = 1, phi = 1')
+tweedie.plot(seq(0,5,0.01), xi = 1.3, mu = 1, phi = 2, type='pdf', xlab = 'Tweedie, xi = 1.1, mu = 1, phi = 2')
+tweedie.plot(seq(0,5,0.01), xi = 1.3, mu = 1, phi = 0.25, type='pdf', xlab = 'Tweedie, xi = 1.1, mu = 1, phi = 0.25')stributions, but rather parametrizes some of its characteristics. However, instead of moments (mean, variance), quantile regression models quantiles of the distribution. This makes quantile regression inherently more robust than the usual methods that consider the conditional mean [7].
 
-To illustrate the issue of robustness, let us consider the standard linear regression, which is characterized by the conditional mean $\mathrm{E} Y = X\beta$. The estimates is given as a solution of $\hat{\beta} = \mathrm{argmin}_\beta \sum_i{(y_i - x_i^T\beta)^2}$. This estimate, due to the presence of the quadratic term, is quite sensitive to the presence of outliers. It can be shown that a slight contamination, however small, sufficiently far from the center of the data can significantly alter the estimate, taking it far away from its original value [6].
+To illustrate the issue of robustness, let us consider the standard linear regression, which is characterized by the conditional mean $\mathrm{E} Y = X\beta$. The estimates is given as a solution of $\hat{\beta} = \mathrm{argmin}_\beta \sum_i{(y_i - x_i^T\beta)^2}$. This estimate, due to the presence of the quadratic term, is quite sensitive to the presence of outliers. It can be shown that a slight contamination, however small, sufficiently far from the center of the data can significantly alter the estimate, taking it far away from its original value [7].
 
-In quantile regression, we model conditional quantiles of $Y$ instead of expected values. For example, the median regression is given as $\mathrm{median} Y = X\beta$. It can be shown, that the estimate $\hat{\beta}$ for conditional quantile $\rho$ can be also found as a solution of some optimization, namely of a linear program $\mathrm{argmin}_\beta\sum_i \rho_{\tau} (y_i -  x_i^T\beta)$, where $\rho_\tau(u) = u(\tau-I(u <0))$ (piecewise linear function with slopes $\tau - 1$ for negative $u$ and $\tau$ for positive $u$). For the median, this formula reduces to  $\mathrm{argmin}_\beta\sum_i |y_i -  x_i^T\beta|$, i.e., median regression minimizes the mean absolute error (MAE) [6].
+In quantile regression, we model conditional quantiles of $Y$ instead of expected values. For example, the median regression is given as $\mathrm{median} Y = X\beta$. It can be shown, that the estimate $\hat{\beta}$ for conditional quantile $\rho$ can be also found as a solution of some optimization, namely of a linear program $\mathrm{argmin}_\beta\sum_i \rho_{\tau} (y_i -  x_i^T\beta)$, where $\rho_\tau(u) = u(\tau-I(u <0))$ (piecewise linear function with slopes $\tau - 1$ for negative $u$ and $\tau$ for positive $u$). For the median, this formula reduces to  $\mathrm{argmin}_\beta\sum_i |y_i -  x_i^T\beta|$, i.e., median regression minimizes the mean absolute error (MAE) [7].
 
 Another advantage of quantile regression is that we can model multiple quantiles of the distribution of $Y$, providing a more complete picture of the overall distribution than just modeling the mean. This is important, for example, in situations when distributional assumptions are in question (e.g., under heteroskedasticity). Remember from Circle One Part Three that in such a case, we cannot really compute, for example, the prediction intervals for a new observation. Unless the distribution assumptions are met, we merely know the asymptotic distribution of the mean. With quantile regression, we can directly model the prediction interval by considering the corresponding quantiles. 
 
 The last advantage of quantile regression we mention here is that that unlike the mean, quantiles are equivariant to monotone transformation, i.e., $Q_\tau h(Y) = h(Q_\tau Y)$, where $Q_\tau$ denotes $\tau\mathrm{th}$ quantile (the quantiles of the transformed random variable $h(Y)$ are the
-transformed quantiles of the original $Y$) [6].
+transformed quantiles of the original $Y$) [7].
 <br/>
 
 ### Model fit
@@ -867,9 +988,10 @@ Let us evaluate the RMSE and MAE.
 
 ```{r, message=FALSE, warning=FALSE,echo=FALSE}
 er_qr <- rbind(er_glm4,
+               c(sqrt(mean((predict(model_glm_tweedie18loglink, type = 'response') - House_Rent$Rent)^2)),mean(abs(predict(model_glm_tweedie18loglink, type = 'response') - House_Rent$Rent))),
                  c(sqrt(mean((exp(predict(model_med)) - House_Rent$Rent)^2)),mean(abs(exp(predict(model_med)) - House_Rent$Rent))))
 
-rownames(er_qr) <- c('linear','linear(red)','log-linear','log-linear (red)','GLM (gauss, log-link)','GLM (quasi-Poisson, log-link)','GLM (quasi-Poisson, log-link, red)','GLM (gamma, log-link)','GLM (gamma, log-link, red)','GLM (inv. gaussian, log-link)', 'median regression')
+rownames(er_qr) <- c('linear','linear(red)','log-linear','log-linear (red)','GLM (gauss, log-link)','GLM (quasi-Poisson, log-link)','GLM (quasi-Poisson, log-link, red)','GLM (gamma, log-link)','GLM (gamma, log-link, red)','GLM (inv. gaussian, log-link)', 'Tweedie (xi = 2.5)','median regression')
 
 er_qr
 ```
@@ -889,16 +1011,16 @@ The quantiles of absolute deviations are as follows.
 
 ```{r, message=FALSE, warning=FALSE,echo=FALSE}
 quan_qr <- rbind(quan_glm4,
-                   sqrt(quantile((exp(predict(model_med)) -
-                                    House_Rent$Rent)^2,c(0.05,0.25,0.5,0.75,0.95)))
+                 quantile(abs(predict(model_glm_tweedie25loglink, type = 'response') - House_Rent$Rent),c(0.05,0.25,0.5,0.75,0.95)),
+                 sqrt(quantile((exp(predict(model_med)) - House_Rent$Rent)^2,c(0.05,0.25,0.5,0.75,0.95)))
 )
 
-rownames(quan_qr) <- c('linear','linear(red)','log-linear','log-linear (red)','GLM (gauss, log-link)','GLM (quasi-Poisson)','GLM (quasi-Poisson, red)','GLM (gamma, log-link)','GLM (gamma, log-link, red)','GLM (inv. gaussian, log-link)', 'median regression')
+rownames(quan_qr) <- c('linear','linear(red)','log-linear','log-linear (red)','GLM (gauss, log-link)','GLM (quasi-Poisson)','GLM (quasi-Poisson, red)','GLM (gamma, log-link)','GLM (gamma, log-link, red)','GLM (inv. gaussian, log-link)', 'Tweedie (xi = 2.5)','median regression')
 quan_qr
 ```
 
 <br/>
-The predictions based on median response are slightly better. 
+The predictions based on median response are slightly better than the one provided by the log-linear model. 
 <br/>
 
 ### Inference
@@ -912,9 +1034,9 @@ model_med_simple <- rq(Log_Rent ~ BHK + Size + Area_type + City + Furnishing + P
 ```
 
 <br/>
-There are multiple approaches to computing the covariance matrix (and consequently, the standard errors) of model parameter estimates. This is due to the fact that the asymptotics of quantile estimates depend on the reciprocal of a density function of the response evaluated at the quantile of interest (so-called sparsity function [6]). This value must be estimated from the data  (e.g., by kernel estimate, see https://www.rdocumentation.org/packages/quantreg/versions/6.1/topics/summary.rq for all options implemented in *quantreg*). Alternatively, the standard errors can be also estimated directly via a bootstrap. 
+There are multiple approaches to computing the covariance matrix (and consequently, the standard errors) of model parameter estimates. This is due to the fact that the asymptotics of quantile estimates depend on the reciprocal of a density function of the response evaluated at the quantile of interest (so-called sparsity function [7]). This value must be estimated from the data  (e.g., by kernel estimate, see https://www.rdocumentation.org/packages/quantreg/versions/6.1/topics/summary.rq for all options implemented in *quantreg*). Alternatively, the standard errors can be also estimated directly via a bootstrap. 
 
-We use two methods mentioned explicitly in [6], the Hendricks–Koenker sandwich and the Powell sandwich. We also include pairs bootstrap estimate of standard errors and pairs cluster bootstrap (to account for the fact that observations from the same locality **Area_Locality** may be correlated).
+We use two methods mentioned explicitly in [7], the Hendricks–Koenker sandwich and the Powell sandwich. We also include pairs bootstrap estimate of standard errors and pairs cluster bootstrap (to account for the fact that observations from the same locality **Area_Locality** may be correlated).
 <br/>
 
 ```{r, message=FALSE, warning=FALSE}
@@ -927,7 +1049,7 @@ summary(model_med_simple, se = 'boot', R = 500, bsmethod = "cluster",cluster = H
 <br/>
 We observe that the standard error estimates are pretty similar. As expected, cluster pairs bootstrap provided slightly wider standard errors than pairs bootstrap. The main takeaway is that the **Month** variable is not significant. 
 
-To perform inference for multiple parameters simultaneously, we can use a standard Wald test [6] using the aforementioned estimates of the covariance matrix. For example, we can compute the Wald statistic to test whether the **Month** variable is significant in our full model with all interactions. 
+To perform inference for multiple parameters simultaneously, we can use a standard Wald test [7] using the aforementioned estimates of the covariance matrix. For example, we can compute the Wald statistic to test whether the **Month** variable is significant in our full model with all interactions. 
 <br/>
 
 ```{r, message=FALSE, warning=FALSE}
@@ -1357,9 +1479,9 @@ geom_ribbon(data = plot5$data,aes(ymin = conf.low, ymax = conf.high, x = x, fill
 ```
 
 <br/>
-Interestingly, the quantile regression lines actually cross for some predictions, which is, of course, impossible for the actual values of the quantiles. It can be shown that the quantile estimates are always monotonic for the centroid of the data. Thus, such crossings (which are a consequence of independent estimation of quantiles) usually happen merely in outlying regions of the data [6].
+Interestingly, the quantile regression lines actually cross for some predictions, which is, of course, impossible for the actual values of the quantiles. It can be shown that the quantile estimates are always monotonic for the centroid of the data. Thus, such crossings (which are a consequence of independent estimation of quantiles) usually happen merely in outlying regions of the data [7].
 
-Additionally, the regression lines for the quantiles are clearly not parallel in some plots. This so-called location shift test [6] can be tested more formally via the Wald test.
+Additionally, the regression lines for the quantiles are clearly not parallel in some plots. This so-called location shift test [7] can be tested more formally via the Wald test.
 <br/>
 
 ```{r, message=FALSE, warning=FALSE}
@@ -1378,7 +1500,7 @@ library(caret)
 set.seed(123)
 
 ## Number of repetitions and folds
-rep <- 100
+rep <- 50
 folds <- 10
 
 ae_mde <- matrix(NA,rep*folds,5)
@@ -1394,7 +1516,13 @@ ae_gammaloglink <- matrix(NA,rep*folds,5)
 ae_gammaloglink_red <- matrix(NA,rep*folds,5) 
 ae_igaussloglink <- matrix(NA,rep*folds,5) 
 ae_igaussloglink_red<- matrix(NA,rep*folds,5)
+ae_tweedieloglink <- matrix(NA,rep*folds,5) 
+ae_tweedieloglink_red<- matrix(NA,rep*folds,5)
+ae_tweedieloglink2 <- matrix(NA,rep*folds,5) 
+ae_tweedieloglink2_red<- matrix(NA,rep*folds,5)
 
+mae_cv <- matrix(NA,rep*folds,17)
+  
 k <- 1
 
 for(j in 1:rep){
@@ -1430,6 +1558,14 @@ for(j in 1:rep){
     model_glm_igaussloglink_cv <- glm(Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month)^2, data = train_set, family = inverse.gaussian(link = 'log'), maxit = 100)
     
     model_glm_igaussloglink_red_cv <- glm(Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month)^2, data = train_set[cooks.distance(model_glm_igaussloglink_cv) < quantile(cooks.distance(model_glm_igaussloglink_cv), 0.99,na.rm = TRUE),], family = inverse.gaussian(link = 'log'), maxit = 100)
+    
+    model_glm_tweedieloglink_cv <- glm(Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month)^2, data = train_set, family=tweedie(var.power=2.5, link.power=0), maxit = 100)
+    
+    model_glm_tweedieloglink_red_cv <- glm(Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month)^2, data = train_set[cooks.distance(model_glm_tweedieloglink_cv) < quantile(cooks.distance(model_glm_tweedieloglink_cv), 0.99,na.rm = TRUE),], family=tweedie(var.power=2.5, link.power=0), maxit = 100)
+    
+    model_glm_tweedieloglink2_cv <- glm(Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month)^2, data = train_set, family=tweedie(var.power=2.2, link.power=0), maxit = 100)
+    
+    model_glm_tweedieloglink2_red_cv <- glm(Rent ~ (BHK + Size + Area_type + City + Furnishing + Pref_Tenant + Bathroom + POC + Floor + Max_Floor + Month)^2, data = train_set[cooks.distance(model_glm_tweedieloglink2_cv) < quantile(cooks.distance(model_glm_tweedieloglink2_cv), 0.99,na.rm = TRUE),], family=tweedie(var.power=2.2, link.power=0), maxit = 100)
     
  
     ae_mde[k,] <- quantile(abs(exp(predict(model_med_cv,test_set))- 
@@ -1468,11 +1604,47 @@ for(j in 1:rep){
     ae_igaussloglink_red[k,] <- quantile(abs(exp(predict(model_glm_igaussloglink_red_cv,test_set)) -
                                     test_set$Rent),c(0.05,0.25,0.5,0.75,0.95))
     
+    ae_tweedieloglink[k,] <- quantile(abs(exp(predict(model_glm_tweedieloglink_cv,test_set))- 
+                                     test_set$Rent),c(0.05,0.25,0.5,0.75,0.95))
+    
+    ae_tweedieloglink_red[k,] <- quantile(abs(exp(predict(model_glm_tweedieloglink_red_cv,test_set)) -
+                                    test_set$Rent),c(0.05,0.25,0.5,0.75,0.95))
+    
+    ae_tweedieloglink2[k,] <- quantile(abs(exp(predict(model_glm_tweedieloglink2_cv,test_set))- 
+                                     test_set$Rent),c(0.05,0.25,0.5,0.75,0.95))
+    
+    ae_tweedieloglink2_red[k,] <- quantile(abs(exp(predict(model_glm_tweedieloglink2_red_cv,test_set)) -
+                                    test_set$Rent),c(0.05,0.25,0.5,0.75,0.95))
+    
+    
+    mae_cv[k,] <- c(mean(abs(exp(predict(model_med_cv,test_set)) - test_set$Rent)),
+                    mean(abs((predict(model_lr_cv,test_set)) - test_set$Rent)),
+                    mean(abs((predict(model_lr_red_cv,test_set)) -test_set$Rent)),
+                    mean(abs(exp(predict(model_lr_log_cv,test_set)) - test_set$Rent)),
+                    mean(abs(exp(predict(model_lr_log_red_cv,test_set)) - test_set$Rent)),
+                    mean(abs(exp(predict(model_glm_gaussloglink_cv,test_set)) - test_set$Rent)),
+                    mean(abs(exp(predict(model_glm_gaussloglink_red_cv,test_set)) - test_set$Rent)),
+                    mean(abs(exp(predict(model_glm_qpoissloglink_cv,test_set)) - test_set$Rent)),
+                    mean(abs(exp(predict(model_glm_qpoissloglink_red_cv,test_set)) - test_set$Rent)),
+                    mean(abs(exp(predict(model_glm_gammaloglink_cv,test_set)) - test_set$Rent)),
+                    mean(abs(exp(predict(model_glm_gammaloglink_red_cv,test_set)) - test_set$Rent)),
+                    mean(abs(exp(predict(model_glm_igaussloglink_cv,test_set)) - test_set$Rent)),
+                    mean(abs(exp(predict(model_glm_igaussloglink_red_cv,test_set)) - test_set$Rent)),
+                    mean(abs(exp(predict(model_glm_tweedieloglink_cv,test_set)) - test_set$Rent)),
+                    mean(abs(exp(predict(model_glm_tweedieloglink_red_cv,test_set)) - test_set$Rent)),
+                    mean(abs(exp(predict(model_glm_tweedieloglink2_cv,test_set)) - test_set$Rent)),
+                    mean(abs(exp(predict(model_glm_tweedieloglink2_red_cv,test_set)) - test_set$Rent))
+                    )
+    
     k <-  k +1
   }
 }
 
-cv_res <- (rbind(apply(ae_mde,2,mean),
+mae_cv_res <- round(apply(mae_cv,2,mean),3)
+names(mae_cv_res) <- c('median','linear','linear(red)','log-linear','log-linear (red)','GLM (gauss)','GLM (gauss,red)', 'GLM(quasi-Poisson)','GLM (quasi-Poisson, red)','GLM (gamma)','GLM (gamma, red)','GLM (inv. gaussian)', 'GLM (inv. gaussian, red)','GLM (Tweedie, xi = 2.5)','GLM (Tweedie, xi = 2.5, red)','GLM (Tweedie, xi = 2.2)','GLM (Tweedie, xi = 2.2, red)')
+mae_cv_res
+
+ae_cv_res <- (rbind(apply(ae_mde,2,mean),
 apply(ae_lr,2,mean),
 apply(ae_lr_red,2,mean),
 apply(ae_lr_log,2,mean),
@@ -1484,15 +1656,20 @@ apply(ae_qpoissloglink_red,2,mean),
 apply(ae_gammaloglink,2,mean),
 apply(ae_gammaloglink_red,2,mean),
 apply(ae_igaussloglink,2,mean),
-apply(ae_igaussloglink_red,2,mean)))
+apply(ae_igaussloglink_red,2,mean),
+apply(ae_tweedieloglink,2,mean),
+apply(ae_tweedieloglink_red,2,mean),
+apply(ae_tweedieloglink2,2,mean),
+apply(ae_tweedieloglink2_red,2,mean))
+)
 
-colnames(cv_res) <- c('5%','25%','50%','75%','95%')
-rownames(cv_res) <- c('median','linear','linear(red)','log-linear','log-linear (red)','GLM (gauss)','GLM (gauss,red)', 'GLM(quasi-Poisson)','GLM (quasi-Poisson, red)','GLM (gamma)','GLM (gamma, red)','GLM (inv. gaussian)', 'GLM (inv. gaussian, red)')
-cv_res
+colnames(ae_cv_res) <- c('5%','25%','50%','75%','95%')
+rownames(ae_cv_res) <- c('median','linear','linear(red)','log-linear','log-linear (red)','GLM (gauss)','GLM (gauss,red)', 'GLM(quasi-Poisson)','GLM (quasi-Poisson, red)','GLM (gamma)','GLM (gamma, red)','GLM (inv. gaussian)', 'GLM (inv. gaussian, red)','GLM (Tweedie, xi = 2.5)','GLM (Tweedie, xi = 2.5, red)','GLM (Tweedie, xi = 2.2)','GLM (Tweedie, xi = 2.2, red)')
+ae_cv_res
 ```
 
 <br/>
-We observe that the median model is best for predictions (in terms of the median absolute error). However, the differences between the median model and the log-linear model are minor. The other models are significantly worse.
+We observe that the best models in terms of MAE are log-linear, median and linear (with some osbervations removed based on Cook's distance). We can also that inverse Gaussian model is quite unstable. In terms of quntiles of the absolute errors, the median and the log-lienar models are clearly the best ones. The other models are significantly worse.
 
 The second cross-validation we will consider is the accuracy of the prediction intervals. Naively, we could calculate  the proportion of predictions that fall within the prediction interval. We will consider our log-linear model and the 0.975 and 0.025 quantile models.
 <br/>
@@ -1509,7 +1686,7 @@ sum(House_Rent$Log_Rent > lb_quan &  House_Rent$Log_Rent < ub_quan)/dim(House_Re
 <br/>
 We observe that predictions of new observations fell within the prediction intervals based on 2.5% and 97.5% quantile estimates in 97% of cases. Thus, these estimates are a bit more conservative on average. The prediction intervals for the log-linear model, based on the assumption of normal errors, also have the stated coverage; on average, the observations fell within the prediction interval in 96% of cases.  
 
-The disadvantage of the accuracy is that it does not penalize the prediction for the width of its interval. Hence, we will also consider the Winkler score [7] defined as $W_\alpha = U - L$ provided that the observed value $x$ is in the $100(1-\alpha)\%$ prediction interval $[L,U]$ , $W_\alpha = U - L + 2/\alpha(L-x)$ provided that its value is lower, and $W_\alpha = U - L + 2/\alpha(x-U)$ provided that its value is higher.
+The disadvantage of the accuracy is that it does not penalize the prediction for the width of its interval. Hence, we will also consider the Winkler score [8] defined as $W_\alpha = U - L$ provided that the observed value $x$ is in the $100(1-\alpha)\%$ prediction interval $[L,U]$ , $W_\alpha = U - L + 2/\alpha(L-x)$ provided that its value is lower, and $W_\alpha = U - L + 2/\alpha(x-U)$ provided that its value is higher.
 <br/>
 
 ```{r, message=FALSE, warning=FALSE}
@@ -1565,7 +1742,7 @@ Let us perform the cross-validation.
 set.seed(123)
 
 ## Number of repetitions and folds
-rep <- 100
+rep <- 50
 folds <- 10
 
 accu_quan <- NA*numeric(rep*folds)
@@ -1640,16 +1817,19 @@ We also performed hypothesis testing for the median model. Namely, we observed n
 
 ## References
 
-* [1] FARAWAY, Julian J. *Extending the linear model with R: generalized linear, mixed effects and nonparametric regression models.* Chapman and Hall/CRC, 2016.
+* [1] FARAWAY, Julian J. *Linear Models with R (2nd ed.).* Chapman and Hall/CRC, 2015.
 
-* [2] FARAWAY, Julian J. *Linear Models with R (2nd ed.).* Chapman and Hall/CRC, 2015.
+* [2] DUAN, Naihua. Smearing estimate: a nonparametric retransformation method. *Journal of the American Statistical Association*, 1983, 78.383: 605-610.
 
 * [3] BURNHAM, Kenneth P.; ANDERSON, David R. (ed.). *Model selection and multimodel inference: a practical information-theoretic approach.* New York, NY: Springer New York, 2002.
 
 * [4] AKAIKE, Hirotugu. On the likelihood of a time series model. *Journal of the Royal Statistical Society: Series D (The Statistician)*, 1978, 27.3-4: 217-235.
 
-* [5] DUAN, Naihua. Smearing estimate: a nonparametric retransformation method. *Journal of the American Statistical Association*, 1983, 78.383: 605-610.
+* [5] DUNN, Peter K., et al. *Generalized linear models with examples in R*. New York: Springer, 2018.
 
-* [6] KOENKER, Roger. *Quantile regression.* Cambridge University Press, 2005.
+* [6] FARAWAY, Julian J. *Extending the linear model with R: generalized linear, mixed effects and nonparametric regression models.* Chapman and Hall/CRC, 2016.
 
-* [7] WINKLER, Robert L. A decision-theoretic approach to interval estimation. *Journal of the American Statistical Association*, 1972, 67.337: 187-191.
+* [7] KOENKER, Roger. *Quantile regression.* Cambridge University Press, 2005.
+
+* [8] WINKLER, Robert L. A decision-theoretic approach to interval estimation. *Journal of the American Statistical Association*, 1972, 67.337: 187-191.
+
