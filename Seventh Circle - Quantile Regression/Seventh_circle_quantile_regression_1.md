@@ -1152,8 +1152,8 @@ solution of some optimization, namely of a linear program
 $\mathrm{min}\sum_i\rho_\tau(y_i -  x_i^T\beta)$, where
 $\rho_\tau(u) = u(\tau-I(u <0))$ (piecewise linear function with slopes
 $\tau - 1$ for negative $u$ and $\tau$ for positive $u$). For the
-median, this formula reduces to
-$\mathrm{argmin}_\beta\sum_i |y_i -  x_i^T\beta|$, i.e., median
+median, this program reduces to
+$\mathrm{min}_\beta\sum_i |y_i -  x_i^T\beta|$, i.e., median
 regression minimizes the mean absolute error (MAE) \[7\].
 
 Another advantage of quantile regression is that we can model multiple
