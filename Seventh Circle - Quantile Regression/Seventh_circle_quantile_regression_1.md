@@ -1137,7 +1137,7 @@ the conditional mean \[7\].
 To illustrate the issue of robustness, let us consider the standard
 linear regression, which is characterized by the conditional mean
 $\mathrm{E} Y = X\beta$. The estimates is given as a solution of
-$\hat{\beta} = \sum_i{(y_i - x_i^T\beta)^2}$. This
+$\hat{\beta} = \mathrm{argmin}_\beta \sum_i{(y_i - x_i^T\beta)^2}$. This
 estimate, due to the presence of the quadratic term, is quite sensitive
 to the presence of outliers. It can be shown that a slight
 contamination, however small, sufficiently far from the center of the
@@ -1149,7 +1149,7 @@ expected values. For example, the median regression is given as
 $\mathrm{median} Y = X\beta$. It can be shown, that the estimate
 $\hat{\beta}$ for conditional quantile $\rho$ can be also found as a
 solution of some optimization, namely of a linear program
-$\mathrm{argmin}_\beta\sum_i \rho_{\tau} (y_i -  x_i^T\beta)$, where
+$\mathrm{argmin}_\beta \sum_i{\rho_\tau (y_i -  x_i^T\beta)}$, where
 $\rho_\tau(u) = u(\tau-I(u <0))$ (piecewise linear function with slopes
 $\tau - 1$ for negative $u$ and $\tau$ for positive $u$). For the
 median, this formula reduces to
