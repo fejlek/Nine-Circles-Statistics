@@ -1137,7 +1137,7 @@ the conditional mean \[7\].
 To illustrate the issue of robustness, let us consider the standard
 linear regression, which is characterized by the conditional mean
 $\mathrm{E} Y = X\beta$. The estimates is given as a solution of
-$\hat{\beta} = \mathrm{argmin}_\beta \sum_i{(y_i - x_i^T\beta)^2}$. This
+$\hat{\beta} = \sum_i{(y_i - x_i^T\beta)^2}$. This
 estimate, due to the presence of the quadratic term, is quite sensitive
 to the presence of outliers. It can be shown that a slight
 contamination, however small, sufficiently far from the center of the
