@@ -28,8 +28,8 @@ Jiří Fejlek
 
 <br/> This project focuses on quantile regression. In addition, we will
 also demonstrate the use of several generalized linear models: the
-log-linear, gamma, and inverse Gaussian models. The uniting theme of
-these models is dealing with data that is skewed towards more extreme
+log-linear, gamma, inverse Gaussian nad Tweedie models. The uniting theme of
+all these models is dealing with data that is skewed towards more extreme
 values of the response, which often makes the plain linear regression
 model inappropriate.
 
@@ -825,7 +825,7 @@ section 7.5\]. <br/>
 <br/> We observe a slight heteroskedasticity in the Pearson residuals.
 This is not surprising since the linear mean-variance relation
 corresponds to the square-root stabilizing transformation \[6\]
-(transformation $h(Y)$ is corresponds approximately to the link
+(transformation $h(Y)$ corresponds approximately to the link
 $h(\mu) = X\beta$ and the variance function $V(\mu) = 1/h'(\mu)^2$ , see
 \[5, section 5.8\]). However, we determined previously that the
 stabilizing transformation for our data is closer to the logarithm
@@ -942,7 +942,7 @@ transform is roughly equivalent to the gamma model with the log link
 
 ### Inverse Gaussian model with log-link
 
-<br/> The last model we will consider here is the inverse Gaussian GLM.
+<br/> The next model we will consider here is the inverse Gaussian GLM.
 The inverse Gaussian is again a full likelihood model for which the
 responses have an inverse Gaussian distribution. The conditional mean is
 the same; $\mu = \mathrm{log} X\beta$. However, the variance function is
@@ -1128,12 +1128,7 @@ comparison. <br/>
 <br/> The last family of models we will consider for modelling our data
 is quantile regression. Quantile regression is a semiparametric method
 that is quite similar to quasi-likelihood methods; it does not assume a
-particular family of ditweedie.plot(seq(0,5,0.01), xi = 1.3, mu = 1, phi
-= 1, type=‘pdf’, xlab = ‘Tweedie, xi = 1.1, mu = 1, phi = 1’)
-tweedie.plot(seq(0,5,0.01), xi = 1.3, mu = 1, phi = 2, type=‘pdf’, xlab
-= ‘Tweedie, xi = 1.1, mu = 1, phi = 2’) tweedie.plot(seq(0,5,0.01), xi =
-1.3, mu = 1, phi = 0.25, type=‘pdf’, xlab = ‘Tweedie, xi = 1.1, mu = 1,
-phi = 0.25’)stributions, but rather parametrizes some of its
+particular family of distributions, but rather parametrizes some of its
 characteristics. However, instead of moments (mean, variance), quantile
 regression models quantiles of the distribution. This makes quantile
 regression inherently more robust than the usual methods that consider
@@ -1154,7 +1149,7 @@ expected values. For example, the median regression is given as
 $\mathrm{median} Y = X\beta$. It can be shown, that the estimate
 $\hat{\beta}$ for conditional quantile $\rho$ can be also found as a
 solution of some optimization, namely of a linear program
-$\mathrm{argmin}_\beta\sum_i \rho_{\tau} (y_i -  x_i^T\beta)$, where
+$\mathrm{argmin}_\beta\sum_i \rho_\tau (y_i -  x_i^T\beta)$, where
 $\rho_\tau(u) = u(\tau-I(u <0))$ (piecewise linear function with slopes
 $\tau - 1$ for negative $u$ and $\tau$ for positive $u$). For the
 median, this formula reduces to
