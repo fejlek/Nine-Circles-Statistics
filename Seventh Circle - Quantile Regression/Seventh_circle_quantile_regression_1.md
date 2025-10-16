@@ -1149,7 +1149,7 @@ expected values. For example, the median regression is given as
 $\mathrm{median} Y = X\beta$. It can be shown, that the estimate
 $\hat{\beta}$ for conditional quantile $\rho$ can be also found as a
 solution of some optimization, namely of a linear program
-$\sum_i\rho_\tau(y_i -  x_i^T\beta)$, where
+$\mathrm{argmin}_\beta\sum_i\rho_\tau(y_i -  x_i^T\beta)$, where
 $\rho_\tau(u) = u(\tau-I(u <0))$ (piecewise linear function with slopes
 $\tau - 1$ for negative $u$ and $\tau$ for positive $u$). For the
 median, this formula reduces to
