@@ -14,7 +14,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 <br/>
-This project focuses on quantile regression. In addition, we will also demonstrate the use of several generalized linear models: the log-linear, gamma, and inverse Gaussian models. The uniting theme of these models is dealing with data that is skewed towards more extreme values of the response, which often makes the plain linear regression model inappropriate.
+This project focuses on quantile regression. In addition, we will also demonstrate the use of several generalized linear models: the log-linear, gamma, inverse Gaussian and Tweedie models. The uniting theme of all these models is dealing with data that is skewed towards more extreme values of the response, which often makes the plain linear regression model inappropriate.
 
 The dataset we will use for the demonstration consists of rental rates for over 4,000 residential properties in India during the spring/summer of 2022.
 <br/>
@@ -655,7 +655,7 @@ plot(predict(model_lr_log, type = 'response'),residuals(model_glm_qpoissloglink,
 ```
 
 <br/>
-We observe a slight heteroskedasticity in the Pearson residuals. This is not surprising since the linear mean-variance relation corresponds to the square-root stabilizing transformation [6] (transformation $h(Y)$ is corresponds approximately to the link $h(\mu) = X\beta$ and the variance function $V(\mu) = 1/h'(\mu)^2$ , see [5, section 5.8]). However, we determined previously that the stabilizing transformation for our data is closer to the logarithm transformation.
+We observe a slight heteroskedasticity in the Pearson residuals. This is not surprising since the linear mean-variance relation corresponds to the square-root stabilizing transformation [6] (transformation $h(Y)$ corresponds approximately to the link $h(\mu) = X\beta$ and the variance function $V(\mu) = 1/h'(\mu)^2$ , see [5, section 5.8]). However, we determined previously that the stabilizing transformation for our data is closer to the logarithm transformation.
 
 Let us evaluate the fit. We will also consider the model in which we remove 1% of the most influential observations according to Cook's distance.
 <br/>
@@ -776,7 +776,7 @@ Overall, the gamma model is closer to the log-linear model than the quasi-Poisso
 ### Inverse Gaussian model with log-link
 
 <br/>
-The last model we will consider here is the inverse Gaussian GLM. The inverse Gaussian is again a full likelihood model for which the responses have an inverse Gaussian distribution. The conditional mean is the same; $\mu = \mathrm{log} X\beta$. However, the variance function is even stronger $\mathrm{Var}Y = \phi\mu^3$. We will again use the log-link. 
+A next model we will consider here is the inverse Gaussian GLM. The inverse Gaussian is again a full likelihood model for which the responses have an inverse Gaussian distribution. The conditional mean is the same; $\mu = \mathrm{log} X\beta$. However, the variance function is even stronger $\mathrm{Var}Y = \phi\mu^3$. We will again use the log-link. 
 <br/>
 
 ```{r, message=FALSE, warning=FALSE}
@@ -957,13 +957,11 @@ We observe that the fits are quite similar to the gamma model.
 ## Quantile regression
 
 <br/>
-The last family of models we will consider for modelling our data is quantile regression. Quantile regression is a semiparametric method that is quite similar to quasi-likelihood methods; it does not assume a particular family of ditweedie.plot(seq(0,5,0.01), xi = 1.3, mu = 1, phi = 1, type='pdf', xlab = 'Tweedie, xi = 1.1, mu = 1, phi = 1')
-tweedie.plot(seq(0,5,0.01), xi = 1.3, mu = 1, phi = 2, type='pdf', xlab = 'Tweedie, xi = 1.1, mu = 1, phi = 2')
-tweedie.plot(seq(0,5,0.01), xi = 1.3, mu = 1, phi = 0.25, type='pdf', xlab = 'Tweedie, xi = 1.1, mu = 1, phi = 0.25')stributions, but rather parametrizes some of its characteristics. However, instead of moments (mean, variance), quantile regression models quantiles of the distribution. This makes quantile regression inherently more robust than the usual methods that consider the conditional mean [7].
+The last family of models we will consider for modelling our data is quantile regression. Quantile regression is a semiparametric method that is quite similar to quasi-likelihood methods; it does not assume a particular family of distributions, but rather parametrizes some of its characteristics. However, instead of moments (mean, variance), quantile regression models quantiles of the distribution. This makes quantile regression inherently more robust than the usual methods that consider the conditional mean [7].
 
 To illustrate the issue of robustness, let us consider the standard linear regression, which is characterized by the conditional mean $\mathrm{E} Y = X\beta$. The estimates is given as a solution of $\hat{\beta} = \mathrm{argmin}_\beta \sum_i{(y_i - x_i^T\beta)^2}$. This estimate, due to the presence of the quadratic term, is quite sensitive to the presence of outliers. It can be shown that a slight contamination, however small, sufficiently far from the center of the data can significantly alter the estimate, taking it far away from its original value [7].
 
-In quantile regression, we model conditional quantiles of $Y$ instead of expected values. For example, the median regression is given as $\mathrm{median} Y = X\beta$. It can be shown, that the estimate $\hat{\beta}$ for conditional quantile $\rho$ can be also found as a solution of some optimization, namely of a linear program $\mathrm{argmin}_\beta\sum_i \rho_{\tau} (y_i -  x_i^T\beta)$, where $\rho_\tau(u) = u(\tau-I(u <0))$ (piecewise linear function with slopes $\tau - 1$ for negative $u$ and $\tau$ for positive $u$). For the median, this formula reduces to  $\mathrm{argmin}_\beta\sum_i |y_i -  x_i^T\beta|$, i.e., median regression minimizes the mean absolute error (MAE) [7].
+In quantile regression, we model conditional quantiles of $Y$ instead of expected values. For example, the median regression is given as $\mathrm{median} Y = X\beta$. It can be shown, that the estimate $\hat{\beta}$ for conditional quantile $\rho$ can be also found as a solution of some optimization, namely of a linear program $\mathrm{min}\sum_i \rho_\tau (y_i -  x_i^T\beta)$, where $\rho_\tau(u) = u(\tau-I(u <0))$ (piecewise linear function with slopes $\tau - 1$ for negative $u$ and $\tau$ for positive $u$). For the median, this linear program reduces to  $\mathrm{argmin}_\beta\sum_i |y_i -  x_i^T\beta|$, i.e., median regression minimizes the mean absolute error (MAE) [7].
 
 Another advantage of quantile regression is that we can model multiple quantiles of the distribution of $Y$, providing a more complete picture of the overall distribution than just modeling the mean. This is important, for example, in situations when distributional assumptions are in question (e.g., under heteroskedasticity). Remember from Circle One Part Three that in such a case, we cannot really compute, for example, the prediction intervals for a new observation. Unless the distribution assumptions are met, we merely know the asymptotic distribution of the mean. With quantile regression, we can directly model the prediction interval by considering the corresponding quantiles. 
 
@@ -1810,7 +1808,7 @@ We observe that the accuracy of the predictions intervals dropped noticeably for
 
 ## Conclusion
 
-In this project, we analyzed the rents of over 4,000 residential properties in India during the spring/summer of 2022. Based on the cross-validation, the best-performing model in terms of prediction was the median regression model for the logarithm of rent and the log-linear model. Other models we compared included a standard linear regression model and various generalized linear models (Gaussian with log link, quasi-Poisson, gamma, inverse Gaussian). We also evaluated the prediction intervals, the best model in this regard was the log-linear model.
+In this project, we analyzed the rents of over 4,000 residential properties in India during the spring/summer of 2022. Based on the cross-validation, the best-performing model in terms of prediction was the median regression model for the logarithm of rent and the log-linear model. Other models we compared included a standard linear regression model and various generalized linear models (Gaussian with log link, quasi-Poisson, gamma, inverse Gaussian, and Tweedie). We also evaluated the prediction intervals, the best model in this regard was the log-linear model.
 
 We also performed hypothesis testing for the median model. Namely, we observed no significant trend over the four-month period for which we have available data. We also investigated the marginal effects of the cities. We found that the median rent in Mumbai is significantly higher than in other cities, even after adjusting for other covariates in the model. Indeed, this issue of high rents seems to have noticeable effects on the affordability of housing in Mumbai (see, e.g., https://www.livemint.com/news/india/brain-drain-in-mumbai-due-to-ever-rising-real-estate-prices-people-earn-rs-4-49-lakh-to-pay-rs-5-18-lakh-for-re-11729244633576.html  and https://www.ndtv.com/offbeat/rs-50-70-000-for-1-bhk-lawyers-post-on-high-prices-of-rented-flats-in-mumbai-5856671)  
 

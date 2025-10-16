@@ -2287,7 +2287,7 @@ cross-validation, the best-performing model in terms of prediction was
 the median regression model for the logarithm of rent and the log-linear
 model. Other models we compared included a standard linear regression
 model and various generalized linear models (Gaussian with log link,
-quasi-Poisson, gamma, inverse Gaussian). We also evaluated the
+quasi-Poisson, gamma, inverse Gaussian, and Tweedie). We also evaluated the
 prediction intervals, the best model in this regard was the log-linear
 model.
 
