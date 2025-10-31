@@ -1,0 +1,1826 @@
+---
+title: "The Eighth Circle: Generalized Additive Models"
+author: "Jiří Fejlek"
+date: "2025-10-30"
+output:
+  md_document:
+    toc: true
+    variant: GFM
+code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+<br/>
+In the penultimate part of our series on statistical modeling, we will have a look at generalized additive models (GAMs). Unlike the previous project, there will be no central dataset. Instead, we will look at several smaller projects that will hopefully demonstrate the broad applicability of GAMs.
+<br/>
+
+## Introduction to GAM
+
+<br/>
+Generalized additive model (GAM) is a generalization of generalized linear model (GLM) in which effects of covariates on the conditional mean of the response variable are modeled as $g(\mu) = f_{x_1}(x_1) + f_{x_2}(x_2) + \ldots + f_{x_1,x_2}(x_1,x_2) + f_{x_1,x_3}(x_1,x_3) + \ldots + f_{x_1,x_2,x_3}(x_1, x_2, x_3) + \ldots$, where functions $f$ are so-called *smooth* functions. GAMs represent a family of very flexible models which, however, still keep *additive* structure; effects of covariates are still interpretable in the sense of their split into 'main effects' and effects of interactions. Thus, GAMs lie on the boundary between traditional regression models and general nonlinear models (represented by neural networks and random forests) [1].
+
+Before we proceed to use GAMs, let us first review the theory a bit.
+<br/>
+
+### Univariate smooths
+
+<br/>
+Let us first describe what the smooth functions actually are. For simplicity's sake, we start with univariate smooths which are given as $f(x) = \sum_{j = 1}^k \beta_jb_j(x)$, where $b_j$ are some appropriate prespecified basis functions [1]. Examples of smooth functions that can be represented this way include cubic regression splines, B-splines, P-splines, thin plate regression splines, and Duchon splines [1]. One important thing to notice is that this specification is still linear in parameters $\beta$. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+# B-spline basis
+library(fda)
+rangeval <- c(0, 1) # range of values
+nbasis <- 10 # number of basis functions
+bspline_basis <- create.bspline.basis(rangeval, nbasis)
+plot(bspline_basis, xlab = 'B-splines basis functions')
+```
+
+<br/>
+Consequently, using smooths can still lead to the usual GLM models. We essentially employed this strategy in some previous circles, using restricted cubic splines to model more complex nonlinear effects of continuous variables. However, a major disadvantage of using these smooths in this straightforward way is the substantial risk of overfitting, provided the number of basis functions $k$ is sufficiently large. Remember that we always used restricted cubic splines with a very limited number of knots. To control the overfitting for large $k$, GAMs introduce *penalization* into the fitting procedure.
+<br/>
+
+### Penalized likelihood
+
+<br/>
+The penalization term used in GAMs is the so-called *wigglines*. The term *wigglines* is literal; the penalization term penalizes the regression curve for being too wiggly, i.e., for fitting the data too closely.
+
+Let us assume GAM model $g(\mu) = X_1\beta_1 + X_2\beta_2 + X_3\beta_3 + \cdots X_p\beta_p$, where terms $X_i\beta_i$ correspond to univariate smooths $f(x_i) = \sum_{j = 1}^k \beta_{ij}b_j(x_{i})$ for the values of the ith predictor. The wiggliness penalty for the aforementioned univariate smooths of the ith predictor is defined as $\beta^T_iS_i\beta_i$ for some smoothing penalty matrix $S_i$. Hence, the total wiggliness penalty for all smooths is  $\sum_{i = p}^k \beta_i^T S_i \beta_i$. A typical example of the wiggliness penalty is $\int f''(x)^2 \mathrm{d}x$. However, some splines use different penalization, e.g., squared difference of coefficients $\sum (\beta_{i+1} - \beta_{i})^2$ for P-splines [1]. 
+
+Let $Y_i \sim \mathrm{EF}(\mu_i,\sigma)$ (EF denotes exponential family of distributions with mean $\mu$ and the scale parameter $\sigma$) and  $g(\mu_i) = X\beta$ , and let the wiggliness penalty term be $\sum_{i = 1}^p \beta^T S_i \beta$. To estimate $\beta$ and $\phi$ in a way that fits the data well, we need to consider a compromise between maximizing a likelihood $L(\beta,\phi)$ and minimizing the wiggliness penalty; we consider a *penalized likelihood function* $L(\beta,\phi) -\frac{1}{2\phi}\sum_i \lambda_i\beta^TS_i\beta$, where $\lambda_i$ are some weights that balances the precision of the fit and the wiggliness. We should note that for values $\lambda_i \rightarrow \infty$ for all $i$, we obtain ordinary linear regression, since linear functions have zero wiggliness; i.e., a high wiggliness penalty will not force the estimated effects to be zero, dropping some covariate from the model in the process.
+<br/>
+
+### Estimation of $\lambda$
+
+<br/>
+To estimate model parameters $\beta$ and $\phi$ from the penalized likelihood $L(\beta,\phi) -\frac{1}{2\phi}\sum_i \lambda_i\beta^TS_i\beta$, we also need to determine an appropriate value of smoothing parameters $\lambda$. The first standard method of estimating appropriate $\lambda$ for the data is based on minimization of the prediction error, namely, via leave-one-out cross-validation (LOOC) $\nu_0 =\frac{1}{n} \sum_i (\hat f^{[-i]}_i - y_i)^2$, where $f^{[-i]}_i$ is the predicted value of the ith observation for a model in which the ith observation is omitted. It can be shown that for linear regression $\nu_0 = \frac{1}{n} \sum_i\frac{(y_i -\hat\mu_i)^2}{(1-H_{ii})^2}$, where $H$ is the hat matrix of the model with all observations, i.e., we do need to repeatedly refit the model [1, Section 6.2.1]. We should note that $H_{ii}$ is usually replaced by $\mathrm{trace } H/n$ leading to so-called *generalized cross-validation* (GCV) [1].
+
+The LOOC/GCV formulas can be used even for a GLM, since the MLE estimator $\hat\beta$ meets $\hat\beta \approx X(X^T WX)^{-1}X^TW z$, where $W$ is diagonal matrix of 'working' weights and $z$ are 'working' (also called adjusted) responses [1,2] of the iteratively re-weighted least squares algorithm that is used to numerically maximize the likelihood, i.e., $\hat\beta$ approximately solves weighted least squares problem $\sum_i w_i (z_i - X_i\beta)^2$.
+
+A notable issue with LOOCV/GCV for estimating smoothing parameters is that it tends to overfit (i.e., under-smooth) in practice [1]. Hence, an alternative approach based on REML (restricted maximum likelihood) was proposed that often performs better than LOOCV/GCV [1]. This approach uses the fact that by taking a Bayesian approach to estimate the smooth model by assigning improper normal priors on $\beta$ (namely $\beta \sim N(0, S^-_\lambda \phi)$, where $S^-_\lambda \phi$ is a pseudo-inverse of $S_\lambda = \sum_j\lambda_jS_j$), the Bayesian log marginal likelihood $\nu(\lambda) = \mathrm{log} \int f(y\mid\beta)f(\beta)\mathrm{d}\beta$ has the same form as the REML for generalized mixed effects models [1]. Thus, algorithms for estimating variance components in mixed effects models can be used to obtain an *empirical Bayes* estimate of the smooth parameters $\lambda$ [1].
+<br/>
+
+### Multivariate smooths
+
+<br/>
+We introduced GAM models for univariate smooth. An extension to multivariate smooths $f_{x_1,x_2, \ldots}(x_1,x_2, \ldots)$ is quite straightforward. We can use smooths such as thin plate regression splines, which are naturally defined for any number of covariates. Alternatively, we can use tensor product smooths to combine multiple univariate smooths. Let $X_1, X_2, \ldots X_p$ be model  matrices of univariate smooths $f_{x_1},\ldots, f_{x_p}$. Then the model matrix of the corresponding tensor product smooth is $X = X_1 \odot X_2 \odot \cdots \odot X_p$, where $\odot$ denotes row-wise Kronecker product [1]. The penalty for the tensor product smooth is chosen as $\sum_i \beta^T \tilde S_{x_i} \beta$ where $\tilde{S}_{x_i} = I_{x_1} \odot I_{x_2}  \odot \cdots  \odot S_{x_i}  \odot I_{x_{i+1}}  \odot \cdots  \odot I_{x_p}$, where $I_{x_{i}}$ is an identity matrix of rank that equals the number of basis vectors for smooth $f_{x_i}$. We should note that marginal smooths $f_{x_i}$ are often reparametrized such that the overall penalty has the interpretation in terms of (averaged) wiglinnes; see [1, Section 5.6.2].
+
+The last thing we add is an useful observation that the tensor product smooth can be split into the smooth 'main effects' and smooth 'interaction' components, e.g., $f_{x_1} + f_{x_2} + f_{x_1x_2}$, since the tensor product basis constructions is precisely the same as the construction of interaction terms in a linear model. Provided that the marginal smooths are first subjected to sum-to-zero identifiability constraint $1^TX_i = 0$ (i.e., the unit function is removed from the span of all bases or in other words, the intercept is extracted from the smooths), then the tensor product smooth will not include the products of basis with a unit functions, i.e., the tensor product smooth will not include the main effects [1]. 
+
+We should note here that the sum-to-zero identifiability constraint must be employed in any model with smooths anyway, since all the smooths are estimable only up to an additive constant. To enforce the sum-to-zero identifiability constraint $1^TX = 0$, one can just subtract the column mean from each column $\tilde X = 11^TX/n$ and delete a single column from $\tilde{X}$.
+<br/>
+
+
+## Solutions to excersises from *Generalized Additive Models: An Introduction with R*
+
+<br/>
+In this project, we will not have a look at a single dataset to demonstrate the application of GAMs. Instead, we provide multiple smaller demonstrations to have a look at different types of problems that GAM can solve. We start with datasets presented as modeling exercises in [1, Chapter 7]. 
+<br/>
+
+### Hubble dataset
+
+<br/>
+Exercise 1 considers the data about the distance (in megaparsecs) and relative velocity (in kilometers per second) of 24 galaxies. The distance of a galaxy is estimated from observations (by the Hubble Space Telescope) of Cepheids, variable stars with a known relationship between brightness and period. The galaxy's velocity is estimated from its mean redshift. The resulting estimates of galaxy distances and velocities were taken from [3].
+
+The goal is to estimate the so-called Hubble constant $\beta$ in the Hubble's law $y = \beta x$, which expresses the relative velocity of any two galaxies $y$ separated by distance $x$ under the standard Big Bang model. 
+
+Let us load the dataset and fit a simple linear regression model.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+library(gamair) # gamair package includes all datasets from Generalized Additive Models: An Introduction with R
+data(hubble)
+hubble_lm <- lm(y~x,data = hubble)
+summary(hubble_lm)
+```
+
+```{r, message=FALSE, warning=FALSE}
+library(sjPlot)
+library(ggplot2)
+plot_model(hubble_lm, type = "pred", terms = c('x')) + geom_point(data = hubble, aes(x = x, y =y)) + labs(x = 'Distance', y = 'Velocity', title = 'Predicted Values of Velocity')
+```
+
+<br/>
+The linear model appears to fit the dataset well. We can also see that the intercept is largely insignificant, as Hubble's law would suggest. Still, it would be interesting to estimate whether the data indicate any nonlinear relation between galaxies' distance and their relative velocity. Thanks to GAM, we can fit a flexible nonlinear model. We will use the *mgcv* package to fit the GAM model. The function *s* denotes the smooth; we need to specify a number of basis vectors and the type of the smooth ('ts' denotes thin-plate regression splines); see https://stat.ethz.ch/R-manual/R-devel/library/mgcv/html/smooth.terms.html for all possible options.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+library(mgcv)
+hubble_gam <- gam(y~s(x, k = 10,bs = 'tp'), data = hubble, method = 'REML') # REML estimation of smoothing parameter
+summary(hubble_gam)
+```
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+plot_model(hubble_gam, type = "pred", terms = c('x')) + geom_point(data = hubble, aes(x = x, y =y)) + labs(x = 'Distance', y = 'Velocity', title = 'Predicted Values of Velocity')
+```
+
+<br/>
+We observe that the smooth fit remains fairly linear, with a bit of curvature at the end. There are a few points we should clarify about the inference. 
+
+Firstly, we should comment on the computation of the confidence intervals for parameters/predictions. The confidence intervals are computed using Bayesian credible intervals based on posterior Bayes covariance matrix for $\hat\beta$ (remember that the estimation of GAMs via REML is based on empirical Bayes) that equals $V_\beta= (X^TWX+S_\lambda)^{-1}\phi$, where $S_\lambda = \sum_j\lambda_jS_j$ and $W$ is a matrix of 'working' weights. Now, these are credible intervals, not confidence intervals. However, it was shown (see Nychka’s coverage probability argument [1]) that these intervals have close to nominal coverage. The Bayes covariance matrix is also used to evaluate the significance of smooth terms (and unpenalized terms); see [1, Section 6.12.1] for more details.
+
+Secondly, the *edf* stands for estimated degrees of freedom (edf), and it is an estimate of how many degrees of freedom were actually used in the fit. If the fit was not penalized, we would use 10 degrees of freedom in our case (nine predictors correspond to basis vectors + intercept). However, thanks to the wiggliness penalization, some predictors are not 'fully' utilized and are *shrinked*. Namely, $\mathrm{E}\hat\beta = F\beta$, where $F = (X^TX + S_\lambda)^{-1}X^TX$ and $S_\lambda = \sum_j \lambda_jS_j$ ($F$ is quite similar to the hat matrix of GAM $H = X(X^TX + S_\lambda)^{-1}X^T$). The trace of $F$ represents the effective degrees of freedom [1]. We should note that this relation clearly implies that the penalized-likelihood estimates are biased. However, for finite samples, biased estimates can perform better than the unpenalized estimate due to overfitting.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+library(Matrix)
+
+# edf using the formula
+mm <- model.matrix(hubble_gam)
+S <- bdiag(list(0,hubble_gam$sp[1]*hubble_gam$smooth[[1]]$S[[1]])) # block diagonal matrix
+
+diag(solve(t(mm) %*% mm + S)%*%t(mm)%*%mm ) # trace of F
+sum(diag(solve(t(mm) %*% mm + S)%*%t(mm)%*%mm )) # total edf
+sum(diag(solve(t(mm) %*% mm + S)%*%t(mm)%*%mm )[2:10]) # x edf
+
+# or simply
+hubble_gam$edf
+```
+
+<br/>
+We observe that merely two coefficients are not significantly shrinked (apart from the intercept, which is not penalized). For comparison, let us repeat the fit with $\lambda$ fixed at zero.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+hubble_gam_nopen <- gam(y~s(x, k = 10, bs = 'tp'), data = hubble, sp = 0) # sp allows us to set the value of the smoothing par
+summary(hubble_gam_nopen)
+```
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+plot_model(hubble_gam_nopen, type = "pred", terms = c('x')) + geom_point(data = hubble, aes(x = x, y =y)) + labs(x = 'Distance', y = 'Velocity', title = 'Predicted Values of Velocity')
+```
+
+<br/>
+We observe that the fit is extremely wiggly due to the zero penalty term. Analogously, if we increase the penalty enough, the regression reduces smooths to ordinary linear terms. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+hubble_gam_bigpen <- gam(y~s(x, k = 10,bs = 'tp'), data = hubble, sp = 10000) 
+summary(hubble_gam_bigpen)
+```
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+plot_model(hubble_gam_bigpen, type = "pred", terms = c('x')) + geom_point(data = hubble, aes(x = x, y =y)) + labs(x = 'Distance', y = 'Velocity', title = 'Predicted Values of Velocity')
+```
+
+<br/>
+We fitted the GAM to test for significant nonlinear trends. Let us compare the AIC for both models.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+AIC(hubble_gam)
+AIC(hubble_lm )
+```
+
+<br/>
+We observe that the AIC is almost identical, indicating that the linear model is sufficient. We should note that the AIC for the GAM is based on the penalized log-likelihood (the so-called *conditional AIC*). However, if we evaluate the log-likelihood of the GAM model, we notice that edf differs from the one estimated by the fit (we expect 2.765627 + 1 for the scale parameter).
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+logLik.gam(hubble_gam) #logLik
+165.7355*2 + 2*4.187244 # AIC as provided by the function AIC.
+
+165.7355*2 + 2*(sum(hubble_gam$edf)+1) # AIC that we would expect
+hubble_gam$aic # we can actually get the AIC with the original estimate of edf from the GAM model
+```
+
+<br/>
+Here, the EDF is corrected to compute AIC. The problem is that the original AIC computation ignores the fact that the smoothing parameter must be estimated. Without this correction, AIC would tend to prefer more complex models than necessary [4]. We see this effect a bit in our case too; the uncorrected AIC for the GAM model is slightly lower than that of the linear model. The corrected value, however, is higher than the AIC of the linear model.
+
+An alternative way to decide whether the smooth is needed is to fit the model with the linear term and the smooth with a second-order penalty, with no null space (i.e., the penalty's null space does not contain the linear trend).
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+hubble_gam2 <- gam(y~ x + s(x, k = 10,bs = 'tp', m=c(2, 0)),data = hubble, method = 'REML')
+summary(hubble_gam2)
+```
+
+<br/>
+We observe that the remaining smooth term is not significant, suggesting again that the linear model should be sufficient. Let us diagnose our linear and GAM models. We use the *gratia* package to obtain the main diagnostic plots for GAMs. We should remember that the distributional assumptions for GAMs correspond to those of the GLM, in this case, linear regression. 
+<br/>
+
+
+```{r, message=FALSE, warning=FALSE}
+library(gratia)
+appraise(hubble_lm)
+appraise(hubble_gam)
+```
+
+<br/>
+We observe noticeable heteroskedasticity in residuals. In the previous circle, we discussed several GLMs for fitting data with increasing-variance functions. Let us consider the usual quasi-Poisson, gamma, and inverse-Gaussian models. We will use the identity link to maintain the model's interpretability with respect to Hubble's law.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+hubble_gam_quasipoisson <- gam(y ~ s(x, k = 10,bs = 'tp'),method = 'REML',data = hubble, family = quasipoisson(link = 'identity')) 
+hubble_gam_Gamma <- gam(y ~ s(x, k = 10,bs = 'tp'),method = 'REML',data = hubble, family = Gamma(link = 'identity')) 
+hubble_gam_inverse.gaussian <- gam(y ~ s(x, k = 10,bs = 'tp'),method = 'REML',data = hubble, family = inverse.gaussian(link = 'identity')) 
+```
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+plot_model(hubble_gam_quasipoisson, type = "pred", terms = c('x')) + geom_point(data = hubble, aes(x = x, y =y)) + labs(x = 'Distance', y = 'Velocity', title = 'Predicted Values of Velocity (quasi-Poisson)')
+plot_model(hubble_gam_Gamma, type = "pred", terms = c('x')) + geom_point(data = hubble, aes(x = x, y =y)) + labs(x = 'Distance', y = 'Velocity', title = 'Predicted Values of Velocity (Gamma)')
+plot_model(hubble_gam_inverse.gaussian, type = "pred", terms = c('x')) + geom_point(data = hubble, aes(x = x, y =y)) + labs(x = 'Distance', y = 'Velocity', title = 'Predicted Values of Velocity (inverse-Gaussian)')
+```
+
+```{r, message=FALSE, warning=FALSE}
+appraise(hubble_gam_quasipoisson)
+appraise(hubble_gam_Gamma)
+appraise(hubble_gam_inverse.gaussian)
+```
+
+<br/>
+It is hard to estimate the correct variance function with so few observations. However, the linear relationship between **Velocity** and **Distance**becomes clearer. We observe that the EDF of the smooth function is one across all models. Hence, to wrap up this exercise, let us fit the GLM models that respect Hubble's law (linear trend with no intercept) and obtain estimates of the Hubble constant. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+glm_qp <- glm(y ~ x-1,data = hubble, family = quasipoisson(link = 'identity'))
+glm_gamma <- glm(y ~ x-1,data = hubble, family = Gamma(link = 'identity'))
+glm_ig <- glm(y ~ x-1,data = hubble, family = inverse.gaussian(link = 'identity')) 
+
+appraise(glm_qp)
+appraise(glm_gamma)
+appraise(glm_ig)
+
+sum((predict(glm_qp) - hubble$y)^2)/length(hubble$y)
+sum((predict(glm_gamma) - hubble$y)^2)/length(hubble$y)
+sum((predict(glm_ig) - hubble$y)^2)/length(hubble$y)
+```
+
+<br/>
+The inverse-Gaussian model is clearly off (although the fit is probably heavily influenced by one outlier). We will choose the quasi-Poisson model, as all residuals appear consistent with it. In addition, this model achieves the lowest value of MSE. Hence, our estimate of the Hubble constant is as follows.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+confint(glm_qp)
+```
+
+<br/>
+Various estimates of the Hubble constant can be found at https://en.wikipedia.org/wiki/Hubble%27s_law. Our estimate mostly aligns with the other confidence intervals (though the most recent ones are much narrower).
+<br/>
+
+### Simulated Motorcycle Accident Dataset
+
+<br/>
+The following dataset for Exercises 2 and 3 contains 133 observations from a simulated motorcycle accident used to test helmets. Two variables in the dataset are **times** in milliseconds from the time of impact and **accel** acceleration of the head in g [5]. This dataset is widely used to demonstrate univariate smooths. Let us plot the data.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+library(MASS)
+data(mcycle)
+plot(mcycle)
+```
+
+<br/>
+We will fit the data using a GAM with thin-plate regression splines ($k = 40$).
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+mcycle_gam <- gam(accel ~ s(times, k = 40,bs = 'tp'),method = 'REML',data = mcycle)
+summary(mcycle_gam)
+```
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+plot_model(mcycle_gam, type = "pred", terms = c('times')) + geom_point(data = mcycle, aes(x = times, y = accel)) + labs(x = 'Time', y = 'Acceleration', title = 'Predicted Values of Acceleration')
+```
+
+<br/>
+We can check that the size of our basis was adequate. The test is based on estimating the residual variance from neighboring residuals (see [1, Section 5.9]). Provided that there is a pattern with respect to some covariate, that covariate might be undersmoothed (or there could be other misspecification in the conditional mean or correlation structure that causes the residual pattern).
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+k.check(mcycle_gam)
+```
+
+<br/>
+The test detected no problems. Let us assess the model. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE,echo = FALSE}
+appraise(mcycle_gam)
+```
+
+<br/>
+These plots do not include a residual plot against the **Times** variable.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+plot(mcycle$times ,residuals(mcycle_gam), xlab = 'Time',ylab = 'Residuals')
+acf(residuals(mcycle_gam))
+```
+
+<br/>
+The autocorrelation function seems adequate. However, there is a clear heteroskedasticity early on. The assignment in [1] suggests penalizing (using weights) the first 20 observations and refitting the model. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+mcycle_gam_weighted10 <- gam(accel ~ s(times, k = 40,bs = 'tp'),method = 'REML',data = mcycle, weights = c(rep(10,20),rep(1,113)))
+mcycle_gam_weighted20 <- gam(accel ~ s(times, k = 40,bs = 'tp'),method = 'REML',data = mcycle, weights = c(rep(20,20),rep(1,113)))
+mcycle_gam_weighted50 <- gam(accel ~ s(times, k = 40,bs = 'tp'),method = 'REML',data = mcycle, weights = c(rep(50,20),rep(1,113)))
+mcycle_gam_weighted100 <- gam(accel ~ s(times, k = 40,bs = 'tp'),method = 'REML',data = mcycle, weights = c(rep(100,20),rep(1,113)))
+mcycle_gam_weighted200 <- gam(accel ~ s(times, k = 40,bs = 'tp'),method = 'REML',data = mcycle, weights = c(rep(200,20),rep(1,113)))
+mcycle_gam_weighted500 <- gam(accel ~ s(times, k = 40,bs = 'tp'),method = 'REML',data = mcycle, weights = c(rep(500,20),rep(1,113)))
+mcycle_gam_weighted1000 <- gam(accel ~ s(times, k = 40,bs = 'tp'),method = 'REML',data = mcycle, weights = c(rep(1000,20),rep(1,113)))
+mcycle_gam_weighted2000 <- gam(accel ~ s(times, k = 40,bs = 'tp'),method = 'REML',data = mcycle, weights = c(rep(2000,20),rep(1,113)))
+```
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+par(mfrow = c(1, 2))
+plot(mcycle$times ,residuals(mcycle_gam_weighted10), xlab = 'Time',ylab = 'Residuals (W = 10)')
+plot(mcycle$times ,residuals(mcycle_gam_weighted20), xlab = 'Time',ylab = 'Residuals (W = 20)')
+plot(mcycle$times ,residuals(mcycle_gam_weighted50), xlab = 'Time',ylab = 'Residuals (W = 50)')
+plot(mcycle$times ,residuals(mcycle_gam_weighted100), xlab = 'Time',ylab = 'Residuals (W = 100)')
+plot(mcycle$times ,residuals(mcycle_gam_weighted200), xlab = 'Time',ylab = 'Residuals (W = 200)')
+plot(mcycle$times ,residuals(mcycle_gam_weighted500), xlab = 'Time',ylab = 'Residuals (W = 500)')
+plot(mcycle$times ,residuals(mcycle_gam_weighted1000), xlab = 'Time',ylab = 'Residuals (W = 1000)')
+plot(mcycle$times ,residuals(mcycle_gam_weighted2000), xlab = 'Time',ylab = 'Residuals (W = 2000)')
+```
+
+<br/>
+With weights 500, the residuals appear adequate. The fit is also better. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+plot_model(mcycle_gam_weighted500, type = "pred", terms = c('times')) + geom_point(data = mcycle, aes(x = times, y = accel)) + labs(x = 'Time', y = 'Acceleration', title = 'Predicted Values of Acceleration')
+```
+
+<br/>
+This approach is, of course, somewhat ad hoc (the observed heteroskedasticity does not really fit any typical variance structure). However, it is better than doing nothing, as mentioned in the exercise solutions in [1].
+<br/>
+
+### CO2 Dataset
+
+<br/>
+The next dataset (Exercise 5) considers CO2 measurements (concentration in parts per million ) at the South Pole from January 1957 onwards.
+<br/>
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+data(co2s)
+par(mfrow = c(1, 1))
+plot(co2s$c.month,co2s$co2,xlab = 'Cummulative Month', ylab = 'CO2 concentration')
+```
+
+<br/>
+The data show an increasing trend and noticeable seasonality. With GAM, we can model this seasonality using cyclic cubic regression splines, with the same value and the first few derivatives at the boundaries. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+co2s_gam <- gam(co2 ~ s(c.month, k = 200,bs = 'tp') + s(month, k = 10,bs = 'cc'), knots=list(month=seq(1,13,length=10)),method = 'REML',data = co2s) # knots assures that first month equals thirteenth month 
+summary(co2s_gam)
+```
+
+<br/>
+We can easily plot the trend and the seasonal component using the package *gratia*.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+draw(co2s_gam, residuals = TRUE)
+```
+
+<br/>
+We should note that the trend is still quite wiggly (the edf for **c.month** is over 90!). The package *gratia* allows us to evaluate the derivatives of smooth terms.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+deriv <- derivatives(co2s_gam, data = co2s,type = 'central', select = 'c.month',partial_match = TRUE)
+
+ggplot(data = deriv) +
+  geom_line(data = deriv, aes(x = c.month, y = .derivative),col = 'red', lwd = 0.75) +
+  geom_ribbon(data = deriv, aes(x = c.month,ymin=.lower_ci ,ymax=.upper_ci),alpha=0.3) + 
+  labs(x = 'Cummulative Month', y = 'Derivative of s(c.month,bs = "tp")', title = 'Derivative of trend c.month smooth')
+
+
+deriv <- derivatives(co2s_gam, data = co2s[1:12,],type = 'central', select = 's(month)',partial_match = TRUE)
+ggplot(data = deriv) +
+  geom_line(data = deriv, aes(x = month, y = .derivative),col = 'red', lwd = 0.75) +
+  geom_ribbon(data = deriv, aes(x = month,ymin=.lower_ci ,ymax=.upper_ci),alpha=0.3) + 
+  labs(x = 'Month', y = 'Derivative of s(month, bs = "cc")', title = 'Derivative of sesonal effect')
+```
+
+<br/>
+The overall model predictions are as follows.
+<br/>
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+predict_y  <- predict(co2s_gam,se=TRUE)
+predict_co2s_data <- co2s[!is.na(co2s$co2),]
+
+ggplot(data = predict_co2s_data) +
+  geom_point(data = predict_co2s_data, aes(x = c.month, y = co2)) + 
+  geom_line(data = predict_co2s_data, aes(x = c.month, y = predict_y$fit),col = 'red', lwd = 0.75) +
+  geom_ribbon(data=predict_co2s_data,aes(x = c.month,ymin=predict_y$fit-1.96*predict_y$se ,ymax=predict_y$fit+1.96*predict_y$se),alpha=0.3) + 
+  labs(x = 'Cummulative Month', y = 'CO2 concentration', title = 'GAM with seasonal component')
+```
+
+<br/>
+We could fit the model without a seasonal component and get a very similar fit. Notice, however, that this model uses many more EDFs than the model with a seasonal component. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+co2s_gam_noseas <- gam(co2 ~ s(c.month, k = 200,bs = 'tp'),data = co2s) 
+summary(co2s_gam_noseas)
+```
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+predict_y  <- predict(co2s_gam_noseas,se=TRUE)
+
+ggplot(data = predict_co2s_data) +
+  geom_point(data = predict_co2s_data, aes(x = c.month, y = co2)) + 
+  geom_line(data = predict_co2s_data, aes(x = c.month, y = predict_y$fit),col = 'red', lwd = 0.75) +
+  geom_ribbon(data=predict_co2s_data,aes(x = c.month,ymin=predict_y$fit-1.96*predict_y$se ,ymax=predict_y$fit+1.96*predict_y$se),alpha=0.3) + 
+  labs(x = 'Cummulative Month', y = 'CO2 concentration', title = 'GAM without seasonal component')
+```
+
+<br/>
+It also cannot really extrapolate the future trend (the trend is a linear extrapolation of the last trend provided by the thin-plate regression splines model; this is due to the penalty on second derivatives, see https://fromthebottomoftheheap.net/2020/06/03/extrapolating-with-gams).
+<br/>
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+predict_co2s_data_new <- data.frame(c.month=seq(500,559,1),month = rep(seq(1,12,1),each = 5))
+predict_y  <- predict(co2s_gam_noseas,newdata = predict_co2s_data_new,se=TRUE)
+
+ggplot(data = predict_co2s_data_new) +
+  geom_line(data = predict_co2s_data_new, aes(x = c.month, y = predict_y$fit),col = 'red', lwd = 0.75) +
+  geom_ribbon(data=predict_co2s_data_new,aes(x = c.month,ymin=predict_y$fit-1.96*predict_y$se ,ymax=predict_y$fit+1.96*predict_y$se),alpha=0.3) + 
+  labs(x = 'Cummulative Month', y = 'CO2 concentration', title = 'GAM without seasonal component')                             
+```
+    
+<br/>
+The model with a seasonal component provides much more reasonable extrapolation (essentially linear extrapolation of the trend plus some seasonal wiggliness).
+<br/>       
+                                    
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+predict_y  <- predict(co2s_gam,newdata = predict_co2s_data_new,se=TRUE)
+
+ggplot(data = predict_co2s_data_new) +
+  geom_line(data = predict_co2s_data_new, aes(x = c.month, y = predict_y$fit),col = 'red', lwd = 0.75) +
+  geom_ribbon(data=predict_co2s_data_new,aes(x = c.month,ymin=predict_y$fit-1.96*predict_y$se ,ymax=predict_y$fit+1.96*predict_y$se),alpha=0.3) + 
+  labs(x = 'Cummulative Month', y = 'CO2 concentration', title = 'GAM with seasonal component')                             
+```                                    
+                                    
+<br/>
+Let us diagnose the model.
+<br/>
+
+```{r, message=FALSE, warning=FALSE,echo = FALSE}
+appraise(co2s_gam)
+``` 
+
+```{r, message=FALSE, warning=FALSE,echo = FALSE}
+plot(co2s$c.month[!is.na(co2s$co2)],residuals(co2s_gam))
+acf(residuals(co2s_gam))
+pacf(residuals(co2s_gam))
+``` 
+
+<br/>
+We observe some autocorrelation in the residuals, suggesting that the smooth terms did not fully account for all trends in the data. Hence, we will consider models with AR correlation structures (in **c.months**). To fit these models, we need to use the *gamm* function, which translates the GAM into a mixed-effects model fitted by *lme* (remember that smooths can be treated as random effects for estimation).
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+co2s_gamm <- gamm(co2 ~ s(c.month, k = 200,bs = 'tp') + s(month,bs = 'cc'), knots=list(month=seq(1,13,length = 10)),data = co2s)
+co2s_gamm_AR1 <- gamm(co2 ~ s(c.month, k = 200,bs = 'tp') + s(month,bs = 'cc'), knots=list(month=seq(1,13,length =10)),data = co2s, correlation = corARMA(form = ~ c.month, p = 1))
+co2s_gamm_AR2 <- gamm(co2 ~ s(c.month, k = 200,bs = 'tp') + s(month,bs = 'cc'), knots=list(month=seq(1,13,length =10)),data = co2s, correlation = corARMA(form = ~ c.month, p = 2))
+co2s_gamm_AR3 <- gamm(co2 ~ s(c.month, k = 200,bs = 'tp') + s(month,bs = 'cc'), knots=list(month=seq(1,13,length =10)),data = co2s, correlation = corARMA(form = ~ c.month, p = 3))
+co2s_gamm_AR4 <- gamm(co2 ~ s(c.month, k = 200,bs = 'tp') + s(month,bs = 'cc'), knots=list(month=seq(1,13,length =10)),data = co2s, correlation = corARMA(form = ~ c.month, p = 4))
+```
+
+<br/>
+We should note that *gamm* actually returns two models: a GAM and an LME. We can compare covariance models using LMEs. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+anova(co2s_gamm$lme,co2s_gamm_AR1$lme, co2s_gamm_AR2$lme, co2s_gamm_AR3$lme, co2s_gamm_AR4$lme)
+```
+
+<br/>
+We observe that our original model, which assumes independent errors, is clearly the worst. The remaining models seem to be quite close. Hence, we will use the simplest AR(1) covariance structure. The summary of the GAMM model is as follows. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+summary(co2s_gamm_AR1$gam)
+```
+
+<br/>
+We immediately notice that the EDF of s(month) is much lower; a significant part of the wiggliness is now modeled via the AR(1) error structure. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+draw(co2s_gamm_AR1$gam)
+```
+
+```{r, message=FALSE, warning=FALSE}
+deriv <- derivatives(co2s_gamm_AR1$gam, data = co2s,type = 'central', select = 'c.month',partial_match = TRUE)
+
+ggplot(data = deriv) +
+  geom_line(data = deriv, aes(x = c.month, y = .derivative),col = 'red', lwd = 0.75) +
+  geom_ribbon(data = deriv, aes(x = c.month,ymin=.lower_ci ,ymax=.upper_ci),alpha=0.3) + 
+  labs(x = 'Cummulative Month', y = 'Derivative of s(c.month,bs = "tp")', title = 'Derivative of trend c.month smooth')
+
+
+deriv <- derivatives(co2s_gamm_AR1, data = co2s[1:12,],type = 'central', select = 's(month)',partial_match = TRUE)
+ggplot(data = deriv) +
+  geom_line(data = deriv, aes(x = month, y = .derivative),col = 'red', lwd = 0.75) +
+  geom_ribbon(data = deriv, aes(x = month,ymin=.lower_ci ,ymax=.upper_ci),alpha=0.3) + 
+  labs(x = 'Month', y = 'Derivative of s(month, bs = "cc")', title = 'Derivative of sesonal effect')
+```
+
+<br/>
+Derivatives of the trend seem much more reasonable. Let us check the model's diagnostics. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+acf(residuals(co2s_gamm_AR1$lme,type = 'normalized'))
+pacf(residuals(co2s_gamm_AR1$lme,type = 'normalized'))
+```
+
+<br/>
+The normalized residuals are much less autocorrelated.  
+<br/>
+
+```{r, message=FALSE, warning=FALSE,echo = FALSE}
+appraise(co2s_gamm_AR1$gam)
+```
+
+### Initial Public Offering Dataset
+
+<br/>
+This dataset from Exercise 6 contains data on the number of ‘Initial Public Offerings’ (IPOs) per month in the US financial markets between 1960 and 2002 [6]. IPOs are the process by which companies go public. 
+
+* **n.ipo** - the number of IPOs for a given month
+* **ir** - the average initial return from investing in an IPO, measured as a percentage difference between the offer price of shares and the share price after the first
+day of trading in the shares
+* **dp** - the average percentage difference between the middle of the share price
+range proposed when the IPO is first filed, and the final offer price
+* **reg.t** - the average time (in days) it takes from filing to offer
+
+The goal is to find a suitable model for explaining the number of IPOs, **n.ipo**, in terms of the remaining variables and time. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+data(ipo)
+head(ipo)
+dim(ipo)
+```
+
+```{r, message=FALSE, warning=FALSE,echo = FALSE}
+plot(ipo$t,ipo$n.ipo, xlab = 'Time', ylab = 'Number of IPOs')
+```
+
+<br/>
+Let us check the predictors.
+<br/>
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+summary(ipo)
+```
+
+<br/>
+Variable **reg.t** is significantly skewed. Hence, we might consider a logarithm transform.
+<br/>
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+hist(ipo$reg.t)
+hist(log(ipo$reg.t))
+```
+
+<br/>
+The assignment in [1] suggests using a lagged version of the variables **ir** and **dp**, since the registration process **reg.t** of IPO takes too long for the number of IPOs in a month being driven by the initial returns in that
+same month. Hence, let us create the appropriate lagged variables and fit the model (since we are modelling counts we will use the poisson model). 
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+library(Hmisc)
+ir1 <- Lag(ipo$ir,+1)
+ir2 <- Lag(ipo$ir,+2)
+ir3 <- Lag(ipo$ir,+3)
+
+dp1 <- Lag(ipo$dp,+1)
+dp2 <- Lag(ipo$dp,+2)
+dp3 <- Lag(ipo$dp,+3)
+
+ipo_ext <- cbind(ipo,ir1,ir2,ir3,dp1,dp2,dp3)
+```
+
+<br/>
+Note that we have merely 150 observations; thus, we cannot reasonably include any interactions in the model.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+ipo_gam <- gam(n.ipo ~ s(ir1, k = 20,bs = 'tp') + s(ir2, k = 20,bs = 'tp') + s(ir3, k = 20,bs = 'tp') +
+                        + s(dp1, k = 20,bs = 'tp') + s(dp2, k = 20,bs = 'tp') + s(dp3, k = 20,bs = 'tp')  
+                        + s(month,bs = 'cc') +  s(t, k = 20,bs = 'tp') + s(log(reg.t), k = 20,bs = 'tp'),
+                       knots=list(month=seq(1,13,length = 10)),family=poisson,data = ipo_ext,method = 'REML')
+summary(ipo_gam)
+```
+
+<br/>
+The fit used quite a lot of EDF in comparison to the number of observations.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+sum(ipo_gam$edf)
+```
+
+<br/>
+Let us evaluate the model.
+<br/>
+
+```{r, message=FALSE, warning=FALSE,echo = FALSE}
+draw(ipo_gam)
+appraise(ipo_gam)
+acf(residuals(ipo_gam))
+pacf(residuals(ipo_gam))
+```
+
+<br/>
+We do not observe any major issues with the fit in terms of residuals. As for the effects of the predictors, the number of IPOs appears to increase with **dp**. The effect of **ir** seems to be non-trivial. Simon N. Wood in [1] notes that **ir** tends to be associated with an increase in IPO volume of around 20%, followed by a decline. The predictor **s(ir3)** does not exactly follow this trend. However, we should note that this latter part of the fit is quite uncertain due to the low number of observations, as shown in a partial effects plot of the residuals.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+draw(ipo_gam, residuals = TRUE)
+```
+
+<br/>
+We still need to keep in mind that this is 50 EDFs fit to 150 observations, after all, so we cannot read too much into the results.
+<br/>
+
+### Bordeaux Wines
+
+<br/>
+The dataset (Exercise 7) contains prices and growth characteristics of 25 Bordeaux wines from 1952 to 1998 (produced between 1952 and 1989). 
+
+* **year** - year of production
+* **price** - average price of the wines as a percentage of the 1961 price
+* **h.rain** - mm of rain in the harvest month
+* **s.temp** - average temperature (°C) over the summer preceding harvest
+* **w.rain** - mm of rain in the winter preceding harvest
+* **h.temp** - average temperature (°C) at harvest
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+data(wine)
+wine
+```
+
+<br/>
+The dataset contains merely 40 observations; hence, we will consider a simple smooth model with no interactions. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+wine_gam <-  gam(price ~ s(h.rain, k = 5,bs = 'tp') + s(s.temp, k = 5,bs = 'tp') + s(w.rain, k = 5,bs = 'tp') + s(h.temp, k = 5,bs = 'tp') + s(year, k = 5,bs = 'tp'),family=gaussian,data = wine,method = 'REML')
+summary(wine_gam)
+```
+
+<br/>
+Let us evaluate the model.
+<br/>
+
+```{r, message=FALSE, warning=FALSE,echo = FALSE}
+k.check(wine_gam)
+appraise(wine_gam)
+acf(residuals(wine_gam))
+pacf(residuals(wine_gam))
+draw(wine_gam, residuals = TRUE)
+```
+
+<br/>
+We observe noticeable autocorrelation of residuals. Let us fit the GAM model with correlated errors via the *gamm* function.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+wine_gamm <-  gamm(price ~ s(h.rain, k = 5,bs = 'tp') + s(s.temp, k = 5,bs = 'tp') + s(w.rain, k = 5,bs = 'tp') + s(h.temp, k = 5,bs = 'tp') + s(year, k = 5,bs = 'tp'),family=gaussian,data = wine)
+
+wine_gamm_cor <-  gamm(price ~ s(h.rain, k = 5,bs = 'tp') + s(s.temp, k = 5,bs = 'tp') + s(w.rain, k = 5,bs = 'tp') + s(h.temp, k = 5,bs = 'tp') + s(year, k = 5,bs = 'tp'),family=gaussian,data = wine, correlation = corARMA(form = ~ year, p = 1))
+
+wine_gamm_cor2 <-  gamm(price ~ s(h.rain, k = 5,bs = 'tp') + s(s.temp, k = 5,bs = 'tp') + s(w.rain, k = 5,bs = 'tp') + s(h.temp, k = 5,bs = 'tp') + s(year, k = 5,bs = 'tp'),family=gaussian,data = wine, correlation = corARMA(form = ~ year, p = 2))
+
+anova(wine_gamm$lme,wine_gamm_cor$lme,wine_gamm_cor2$lme)
+```
+
+<br/>
+We observe that the fit significantly improved. Let us check the residuals.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+plot(predict(wine_gamm_cor$gam),residuals(wine_gamm_cor$lme,type = 'normalized'),xlab = 'Predicte Response', ylab = 'Normalized Residuals')
+
+qqnorm(residuals(wine_gamm_cor$lme,type = 'normalized'))
+qqline(residuals(wine_gamm_cor$lme,type = 'normalized'))
+
+hist(residuals(wine_gamm_cor$lme,type = 'normalized'), main = 'Normalized Residuals')
+
+acf(residuals(wine_gamm_cor$lme,type = 'normalized'),main = 'Normalized Residuals ACF')
+pacf(residuals(wine_gamm_cor$lme,type = 'normalized'),main = 'Normalized Residuals pACF')
+```
+
+<br/>
+The estimated autocorrelation dropped significantly. Let us look at the effects of the predictors.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+summary(wine_gamm_cor$gam)
+draw(wine_gamm_cor$gam, residuals = TRUE)
+```
+
+<br/>
+The biggest difference from the original model is that rainfall during the harvest month **h.rain** seems to have little effect. Otherwise, it seems that wine quality increases with rain in winter and with average temperatures in summer and during harvest. In addition, older wines tend to be more expensive, as expected.  
+
+We should note that the solution provided in [1] takes a somewhat different approach and uses the gamma model (perhaps motivated by the fact that the residuals from the original Gaussian model appear slightly heteroskedastic).
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+wine_gam_gamma <-  gam(price ~ s(h.rain, k = 5,bs = 'tp') + s(s.temp, k = 5,bs = 'tp') + s(w.rain, k = 5,bs = 'tp') + s(h.temp, k = 5,bs = 'tp') + s(year, k = 5,bs = 'tp'),family=Gamma(link=identity),data = wine,method = 'REML')
+summary(wine_gam_gamma)
+draw(wine_gam_gamma, residuals = TRUE)
+```
+
+<br/>
+The gamma model seems to be more appropriate than the Gaussian model based on the AIC. We should note that the big difference is that the effect of **w.rain** now seem largely insignificant (at least in term of p-values).
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+AIC(wine_gam)
+AIC(wine_gam_gamma)
+```
+
+<br/>
+However, moving to the gamma model does not resolve the issue of correlated residuals. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+acf(residuals(wine_gam_gamma))
+pacf(residuals(wine_gam_gamma))
+```
+
+<br/>
+Unfortunately, the full gamma model with autocorrelated errors yields a singular fit (the resulting random-effects model used for estimation fails to converge). To achieve a successful fit, we simplified the model by removing the smooths except **h.temp**, which had the largest EDF in all previous models. This, of course, introduces a bias in the inference, but we at least obtain a successful fit. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+wine_gamm_gamma <-  gamm(price ~ h.rain + s.temp + w.rain + s(h.temp, k = 5,bs = 'tp') + year,family=Gamma(link=identity),data = wine)
+
+wine_gamm_gamma_cor <-  gamm(price ~ h.rain + s.temp + w.rain + s(h.temp, k = 5,bs = 'tp') + year,family=Gamma(link=identity),data = wine, correlation = corARMA(form = ~ year, p = 1))
+
+anova(wine_gamm_gamma$lme,wine_gamm_gamma_cor$lme)
+```
+
+<br/>
+Again, the model with correlated errors fit the data a bit better. However, the gamma model seems to be slightly worse than the Gaussian model with the same predictors.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+wine_gamm_cor_alt <-  gamm(price ~ h.rain + s.temp + w.rain + s(h.temp, k = 5,bs = 'tp') + year,family=gaussian(link=identity),data = wine, correlation = corARMA(form = ~ year, p = 1))
+
+AIC(wine_gamm_gamma_cor$lme)
+AIC(wine_gamm_cor_alt$lme)
+```
+
+<br/>
+In terms of the prediction, the difference is again that **h.rain** appears to have the effect in the gamma model with correlated errors. Adding autocorrelation structure also increased the effect **w.rain**, making the gamma model consistent with the Gaussian model with correlated errors in terms of the effects of other predictors.
+<br/>
+
+```{r, message=FALSE, warning=FALSE,echo = FALSE}
+library(ggpubr)
+ggarrange(plot_model(wine_gamm_gamma_cor, type = "pred", terms = "h.rain",title = ''),
+          plot_model(wine_gamm_gamma_cor, type = "pred", terms = "s.temp",title = ''),
+          plot_model(wine_gamm_gamma_cor, type = "pred", terms = "w.rain",title = ''),
+          plot_model(wine_gamm_gamma_cor, type = "pred", terms = "h.temp",title = ''),
+          plot_model(wine_gamm_gamma_cor, type = "pred", terms = "year",title = ''),
+          ncol = 3, nrow = 2)
+```
+
+### Satellite Calibration
+
+<br/>
+The following dataset is from Exercise 9. It consists of direct ship measurements of chlorophyll concentrations in the top 5 meters of ocean water and estimates of chlorophyll concentration from the SeaWiFS satellite. The goal is to calibrate the estimates so they better correlate with the actual values. 
+
+* **lon** - longitude
+* **lat** - latitude
+* **jul.day** - day of the year
+* **bath** - ocean depth in meters
+* **chl** - direct chlorophyll concentration measured at a given location from a bottle sample
+* **chl.sw** - chlorophyll concentration as measured by Seawifs Satellite
+
+The hint for this exercise is to start with a multiplicative model. Let us check the dataset.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+data(chl)
+head(chl)
+dim(chl)
+```
+
+<br/>
+We should keep in mind that the distribution of the variables is skewed. We should also note that there are zero responses in the data.
+<br/>
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+par(mfrow = c(2, 2))
+hist(chl$chl.sw,main = '',xlab = 'chl.sw')
+hist(chl$bath,main = '',xlab = 'bath')
+hist(chl$chl,main = '',xlab = 'chl')
+hist(chl$chl[chl$chl < 2],main = '',xlab = 'chl')
+```
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+sum(chl$chl == 0)
+```
+
+<br/>
+Now, the question we should consider is whether the zero responses are just due to randomness, and the expected value of chlorophyll concentration in our case is always positive. If this is the case, we can proceed as usual and use, e.g., a Gaussian model with a log link, with a caveat that we cannot fit the gamma and the inverse Gaussian models directly. However, we can use the quasi-likelihood approach and fit a model with the log link and the variance function corresponding to the gamma/inverse Gaussian model. 
+
+Alternatively, there could be instances (in our case, locations) where the chlorophyll concentration is always zero (or is always measured as zero to be more precise). Then it would be more appropriate to model these zeros using zero-inflated/hurdle models or Tweedie models. 
+
+In our case, we have merely 235 zeros in over 10000 observations, and hence, the first approach should be satisfactory.
+We start with the Gaussian model with a log link. We will use $bam$ used to fit large datasets. We also use cubic regression splines rather than thin-plate regression splines to reduce computational cost.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+chl_gam <- bam(chl ~ s(chl.sw, k = 20,bs = 'cr') +  s(sqrt(bath), k = 20,bs = 'cr')+s(jul.day, k = 20,bs = 'cr'),
+data=chl,family=gaussian(link=log),method = 'fREML')
+k.check(chl_gam)
+```
+
+<br/>
+We observe that the number of knots $k$ for **jul.day** may not be sufficient (the EDF is close to the allocated $k$); hence, we will refit the model with a larger $k$.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+chl_gam <- bam(chl ~ s(chl.sw, k = 20,bs = 'cr') +  s(sqrt(bath), k = 20,bs = 'cr')+s(jul.day, k = 60,bs = 'cr'),
+data=chl,family=gaussian(link=log),method = 'fREML')
+k.check(chl_gam)
+```
+
+<br/>
+Let us check the model.
+<br/>
+
+```{r, message=FALSE, warning=FALSE,echo = FALSE}
+appraise(chl_gam)
+```
+
+<br/>
+The residuals are clearly heteroskedastic. Hence, we should consider non-Gaussian models. As we already mentioned, our data contain exact zeros, so we cannot use our usual remedy —the gamma model —directly.  
+<br/>
+
+```{r, message=FALSE, warning=FALSE, error = TRUE}
+chl_gam_gamma <- bam(chl ~ s(chl.sw, k = 20,bs = 'cr') +  s(sqrt(bath), k = 20,bs = 'cr')+s(jul.day, k = 60,bs = 'cr'),
+data=chl,family=Gamma(link=log),method = 'fREML')
+```
+
+<br/>
+Instead, we can consider the quasi-likelihood approach. Let us fit the quasi-likelihood models corresponding to the Poisson and gamma variance functions. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+quasi_fam1 <- quasi(link=log,var=mu)
+quasi_fam2 <- quasi(link=log,var=mu^2)
+
+chl_gam_quasi1 <- bam(chl ~ s(chl.sw, k = 20,bs = 'cr') +  s(sqrt(bath), k = 20,bs = 'cr')+s(jul.day, k = 60,bs = 'cr'), data=chl,family=quasi_fam1,method = 'fREML')
+
+chl_gam_quasi2 <- bam(chl ~ s(chl.sw, k = 20,bs = 'cr') +  s(sqrt(bath), k = 20,bs = 'cr')+s(jul.day, k = 60,bs = 'cr'), data=chl,family=quasi_fam2,method = 'fREML')
+```
+
+```{r, message=FALSE, warning=FALSE,echo =FALSE}
+appraise(chl_gam_quasi1)
+appraise(chl_gam_quasi2)
+```
+
+<br/>
+The model with the linear variance function still indicates heteroskedasticity. The quadratic variance function seems mostly appropriate. The deviance residuals have a slightly heavier right tail. However, we should note that deviance residuals are not always normal [7, Section 7.5].
+
+We are constructing the model mostly to make predictions. The root mean square error (RMSE) and the mean absolute error (MAE) for the original satellite estimates are as follows.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+mean((chl$chl.sw - chl$chl)^2)
+mean(abs(chl$chl.sw - chl$chl))
+```
+
+<br/>
+Let's compare these with our models.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+# RMSE
+rmse <- rbind(
+  sqrt(mean((chl$chl.sw - chl$chl)^2)),
+  sqrt(mean((predict(chl_gam,type='response') - chl$chl)^2)),
+  sqrt(mean((predict(chl_gam_quasi1,type='response') - chl$chl)^2)),
+  sqrt(mean((predict(chl_gam_quasi2,type='response') - chl$chl)^2))
+  )
+
+colnames(rmse) <- 'RMSE'
+rownames(rmse) <- c('original','gaussian','linear variancef','quadratic variancef')
+rmse
+
+#AE
+ae <- rbind(
+  summary(abs(chl$chl.sw - chl$chl)),
+  summary(abs(predict(chl_gam,type='response') - chl$chl)),
+  summary(abs(predict(chl_gam_quasi1,type='response') - chl$chl)),
+  summary(abs(predict(chl_gam_quasi2,type='response') - chl$chl))
+  )
+rownames(ae) <- c('original','gaussian','linear variancef','quadratic variancef')
+ae
+```
+
+<br/>
+We observe that our calibration substantially improved the estimates. Let us validate our models via 10-fold cross-validation. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+library(caret)
+
+set.seed(123)
+
+## Number of repetitions and folds
+rep <- 50
+folds <- 10
+
+RMSE_cv_original <- matrix(NA,rep*folds,1)
+AE_cv_original <- matrix(NA,rep*folds,6)
+
+RMSE_cv_gauss <- matrix(NA,rep*folds,1)
+AE_cv_gauss <- matrix(NA,rep*folds,6)
+RMSE_cv_quasi1 <- matrix(NA,rep*folds,1)
+AE_cv_quasi1 <- matrix(NA,rep*folds,6)
+RMSE_cv_quasi2 <- matrix(NA,rep*folds,1)
+AE_cv_quasi2 <- matrix(NA,rep*folds,6)
+
+k <- 1
+
+for(j in 1:rep){
+  
+  d <- createFolds(seq(1,dim(chl)[1],1), k = folds)
+
+  for(i in 1:folds){
+    train_set <- chl[-unlist(d[i]),]
+    test_set <- chl[unlist(d[i]),]
+    
+    chl_gam_cv <- bam(chl ~ s(chl.sw, k = 20,bs = 'cr') +  s(sqrt(bath), k = 20,bs = 'cr') + s(jul.day, k = 60,bs = 'cr'), data=train_set,family=gaussian(link=log),method = 'fREML')
+    
+    chl_gam_quasi1_cv <- bam(chl ~ s(chl.sw, k = 20,bs = 'cr') +  s(sqrt(bath), k = 20,bs = 'cr')+s(jul.day, k = 60,bs = 'cr'), data=train_set,family=quasi_fam1,method = 'fREML')
+
+chl_gam_quasi2_cv <- bam(chl ~ s(chl.sw, k = 20,bs = 'cr') +  s(sqrt(bath), k = 20,bs = 'cr')+s(jul.day, k = 60,bs = 'cr'), data=train_set,family=quasi_fam2,method = 'fREML')
+    
+    
+    RMSE_cv_original[k] <- sqrt(mean((test_set$chl.sw - test_set$chl)^2))
+    AE_cv_original[k,] <- summary(abs(test_set$chl.sw - test_set$chl))
+    
+    pred <- predict(chl_gam_cv,newdata = test_set,type = 'response')
+    RMSE_cv_gauss[k] <- sqrt(mean((pred - test_set$chl)^2))
+    AE_cv_gauss[k,] <- summary(abs(pred - test_set$chl))
+    
+    pred <- predict(chl_gam_quasi1_cv,newdata = test_set,type = 'response')
+    RMSE_cv_quasi1[k] <- sqrt(mean((pred - test_set$chl)^2))
+    AE_cv_quasi1[k,] <- summary(abs(pred - test_set$chl))
+    
+    pred <- predict(chl_gam_quasi2_cv,newdata = test_set,type = 'response')
+    RMSE_cv_quasi2[k] <- sqrt(mean((pred - test_set$chl)^2))
+    AE_cv_quasi2[k,] <- summary(abs(pred - test_set$chl))
+  
+    k <- k + 1
+  }
+}
+
+
+rmse_cv_res <- rbind(
+  apply(RMSE_cv_original,2,mean),
+  apply(RMSE_cv_gauss,2,mean),
+  apply(RMSE_cv_quasi1,2,mean),
+  apply(RMSE_cv_quasi2,2,mean)
+)
+
+colnames(rmse_cv_res) <- 'RMSE'
+rownames(rmse_cv_res) <- c('original','gaussian','linear variancef','quadratic variancef')
+rmse_cv_res
+
+ae_cv_res <- rbind(
+  apply(AE_cv_original,2,mean),
+  apply(AE_cv_gauss,2,mean),
+  apply(AE_cv_quasi1,2,mean),
+  apply(AE_cv_quasi2,2,mean)
+)
+
+colnames(ae_cv_res) <- c('Min','1st Qu,','Median','Mean','3rd Qu.','Max.')
+rownames(ae_cv_res) <- c('original','gaussian','linear variancef','quadratic variancef')
+ae_cv_res
+```
+
+<br/>
+The calibration models indeed improved the predictions. We observe that no model is clearly the best one. If we wanted to pursue this exercise further and look for a better model, we could also consider more complex tensor-product smooths, such as the following.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+chl_gam_te <- bam(chl ~ s(chl.sw, k = 20,bs = 'cr') +  te(sqrt(bath),jul.day, k = 15,bs = 'cr'),
+data=chl,family=gaussian(link=log),method = 'fREML')
+
+draw(chl_gam_te)
+
+sqrt(mean((predict(chl_gam_te,type='response') - chl$chl)^2))
+summary(abs(predict(chl_gam_te,type='response') - chl$chl))
+```
+
+
+### Mackerel Eggs
+
+<br/>
+The last dataset (Exercise 11) in this section contains data on mackerel (Scomber scombrus) eggs collected from the 2010 mackerel survey (ICES Eggs and Larvae Dataset 2012, ICES, Copenhagen). The variables we will use in our model are as follows.
+
+* **count** - number of stage I eggs in the sample.
+* **la** - sample station latitude
+* **lo** - sample station longitude
+* **vol** - volume of water sampled
+* **ship** - vessel ID
+* **T.surf** - surface temperature in centigrade
+* **T.20** - temperature at 20 metres depth
+* **gear** - type of sampling gear used
+* **Sal20** -  the salinity at 20m depth
+* **b.depth** -  the seabed depth in meters 
+* **DT** - sample data and time
+<br/>
+
+
+```{r, message=FALSE, warning=FALSE}
+data(med)
+med <- med[,c('count','DT','la','lo','vol','ship','T.surf','T.20','gear','Sal20','b.depth')]
+head(med)
+summary(med)
+```
+
+<br/>
+The variable **b.depth** is highly skewed; we may consider a transformation.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+hist(med$b.depth)
+```
+
+<br/>
+These are geographical data, hence, we can plot the location of observations on the map.  
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+data(coast) # coastline
+
+par(mfrow = c(1, 1))
+plot(med$lo,med$la,cex=0.2+med$count^.5/20,col="grey", pch=19,xlab="lo",ylab="la",main="Mackerel Eggs")
+ind <- med$count==0
+points(med$lo[ind],med$la[ind],cex=0.1,pch=19)
+lines(coast)
+```
+
+<br/>
+The modeled response variable is the **count** of mackerel eggs. The volume of the sample **vol** is the offset (i.e., model of the conditional mean is $\mathrm{log} \mathrm{E} \frac{\mathrm{count}}{\mathrm{vol} } = X\beta$). We will treat the variables **ship** and **gear** as random effects. The remaining variables will be fixed effects. We also need to extract the Julian days from the **DT** (all the data are from the same year) 
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+dates <- as.Date(med$DT)
+
+summary(as.numeric(format(dates, '%Y')))
+
+jday <- as.numeric(format(dates, '%j'))
+med <- cbind(med,jday)
+```
+
+<br/>
+Since we are modeling count data, we will start with the quasi-Poisson model. We should note that we model the location via 2-D  thin plate regression splines (*s(lo,la,bs = 'tp')*). We also include the interaction smooth between sample time and location (*ti(jday,lo,la)*). We should also note that our data contains some missing values; we will perform a complete-case analysis for simplicity (about 5% of the rows are missing). 
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+ctrl <- gam.control(nthreads = 4) # multiple threads to speed up the fit 
+med_complete <- med[rowSums(is.na(med)) == 0,] # 
+
+med_gam_qp <- gam(count ~ offset(log(vol)) +  s(lo,la,k=20,bs = 'tp') + s(T.surf,k=20,bs = 'tp') + s(T.20,k=20,bs = 'tp') + s(Sal20,k=20,bs = 'tp') + s(log(b.depth),k=20,bs = 'tp') + s(jday,k=20,bs = 'tp') + ti(lo,la,jday,k=5) + s(ship,bs='re')  + s(gear,bs='re'),data=med_complete,family=quasipoisson,method = 'REML', control = ctrl)
+k.check(med_gam_qp)
+```
+
+<br/>
+We observe that we did not allocate enough degrees of freedom for some smooths. We eventually settled down on the following fit.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+med_gam_qp <- gam(count ~ offset(log(vol)) +  s(lo,la,k=120,bs = 'tp') + s(T.surf,k=50,bs = 'tp') + s(T.20,k=30,bs = 'tp') + s(Sal20,k=20,bs = 'tp') + s(log(b.depth),k=20,bs = 'tp') +  s(jday,k=40,bs = 'tp') + ti(lo,la,jday,k=6) + s(ship,bs='re') +  s(gear,bs='re'),data=med_complete,family=quasipoisson(link = "log"),method = 'REML', control = ctrl)
+k.check(med_gam_qp)
+```
+
+<br/>
+Let us assess the model. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE,echo = FALSE}
+appraise(med_gam_qp)
+
+pred_qp <- predict(med_gam_qp, type = 'response')
+
+par(mfrow = c(1, 1))
+plot(sqrt(pred_qp), residuals(med_gam_qp), xlab = 'SQRT of Predicted Response', ylab = 'Deviance Residuals')
+```
+
+```{r, message=FALSE, warning=FALSE,echo = FALSE}
+index <- seq(1,1404,1)
+index <- sort_by(index,factor(med_complete$DT,ordered = TRUE))
+
+par(mfrow = c(1, 4))
+acf(residuals(med_gam_qp)[index[med_complete$ship == '06NI']], main = 'ACF (06NI)')
+acf(residuals(med_gam_qp)[index[med_complete$ship == '26MH']], main = 'ACF (26MH)')
+acf(residuals(med_gam_qp)[index[med_complete$ship == '29CS']], main = 'ACF (29CS)')
+acf(residuals(med_gam_qp)[index[med_complete$ship == '29IN']], main = 'ACF (29IN)')
+acf(residuals(med_gam_qp)[index[med_complete$ship == '45CE']], main = 'ACF (45CE)')
+acf(residuals(med_gam_qp)[index[med_complete$ship == '45CV']], main = 'ACF (45CV)')
+acf(residuals(med_gam_qp)[index[med_complete$ship == '46FR']], main = 'ACF (46FR)')
+acf(residuals(med_gam_qp)[index[med_complete$ship == '58JH']], main = 'ACF (58JH)')
+acf(residuals(med_gam_qp)[index[med_complete$ship == '64T2']], main = 'ACF (64T2)')
+acf(residuals(med_gam_qp)[index[med_complete$ship == '748S']], main = 'ACF (748S)')
+acf(residuals(med_gam_qp)[index[med_complete$ship == '74RY']], main = 'ACF (74RY)')
+acf(residuals(med_gam_qp)[index[med_complete$ship == '74UT']], main = 'ACF (74UT)')
+```
+
+<br/>
+The data include a significant proportion of low counts (< 3), and thus the deviance residuals may not be approximately normal [7, Section 7.5]. However, we observe that the spread of the residuals (quantile, deviance) increases with the response, indicating that the variance function is off [7, Section 8.7.3]. We also plotted the ACF for residuals per ship and observed that the residuals do not appear to be significantly autocorrelated. 
+
+Let us have a look at other models with stronger variance function. We will fit a negative binomial model and a Tweedie model. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+med_gam_tw <- gam(count ~ offset(log(vol)) +  s(lo,la,k=120,bs = 'tp') + s(T.surf,k=50,bs = 'tp') + s(T.20,k=30,bs = 'tp') + s(Sal20,k=20,bs = 'tp') + s(log(b.depth),k=20,bs = 'tp') +  s(jday,k=40,bs = 'tp') + ti(lo,la,jday,k=6) + s(ship,bs='re') +  s(gear,bs='re'),data=med_complete,family=tw(link = "log"),method = 'REML', control = ctrl)
+
+med_gam_nb <- gam(count ~ offset(log(vol)) +  s(lo,la,k=120,bs = 'tp') + s(T.surf,k=50,bs = 'tp') + s(T.20,k=30,bs = 'tp') + s(Sal20,k=20,bs = 'tp') + s(log(b.depth),k=20,bs = 'tp') +  s(jday,k=40,bs = 'tp') + ti(lo,la,jday,k=6) + s(ship,bs='re') +  s(gear,bs='re'),data=med_complete,family=nb(link = "log"),method = 'REML', control = ctrl)
+```
+
+<br/>
+Both models seem to fit the data much better. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+appraise(med_gam_tw)
+appraise(med_gam_nb)
+```
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+par(mfrow = c(1, 2))
+pred_tw <- predict(med_gam_tw, type = 'response')
+pred_nb <- predict(med_gam_nb, type = 'response')
+                   
+plot(sqrt(pred_tw), residuals(med_gam_tw), xlab = 'SQRT of Predicted Response', ylab = 'Deviance Residuals (tw)')
+plot(sqrt(pred_nb), residuals(med_gam_nb), xlab = 'SQRT of Predicted Response', ylab = 'Deviance Residuals (nb)')
+```
+
+<br/>
+Let us check the simulation-based residuals using the *DHARMa* package (https://cran.r-project.org/web/packages/DHARMa/vignettes/DHARMa.html) that supports *gam* models. Provided that the model is correctly specified, these residuals should have a uniform distribution.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+library(DHARMa)
+
+# tweedie
+simulationOutput_tw <- simulateResiduals(fittedModel = med_gam_tw)
+plotQQunif(simulationOutput_tw,testUniformity = TRUE, testOutliers = FALSE, testDispersion = TRUE)
+plotResiduals(simulationOutput_tw)
+
+# negative binomial
+simulationOutput_nb <- simulateResiduals(fittedModel = med_gam_nb)
+plotQQunif(simulationOutput_nb,testUniformity = TRUE, testOutliers = FALSE, testDispersion = TRUE)
+plotResiduals(simulationOutput_nb)
+```
+
+<br/>
+We observe that the negative binomial model fits the data noticeably better than the Tweedie model. Let us compare the AIC.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+AIC(med_gam_tw)
+AIC(med_gam_nb)
+```
+
+<br/>
+The negative binomial model is again significantly better. Hence, let us check the effects of the predictors in the negative binomial model. We will also include the ACF plots of residuals per ship.
+<br/>
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+par(mfrow = c(1, 4))
+acf(residuals(med_gam_nb)[index[med_complete$ship == '06NI']], main = 'ACF (06NI)')
+acf(residuals(med_gam_nb)[index[med_complete$ship == '26MH']], main = 'ACF (26MH)')
+acf(residuals(med_gam_nb)[index[med_complete$ship == '29CS']], main = 'ACF (29CS)')
+acf(residuals(med_gam_nb)[index[med_complete$ship == '29IN']], main = 'ACF (29IN)')
+acf(residuals(med_gam_nb)[index[med_complete$ship == '45CE']], main = 'ACF (45CE)')
+acf(residuals(med_gam_nb)[index[med_complete$ship == '45CV']], main = 'ACF (45CV)')
+acf(residuals(med_gam_nb)[index[med_complete$ship == '46FR']], main = 'ACF (46FR)')
+acf(residuals(med_gam_nb)[index[med_complete$ship == '58JH']], main = 'ACF (58JH)')
+acf(residuals(med_gam_nb)[index[med_complete$ship == '64T2']], main = 'ACF (64T2)')
+acf(residuals(med_gam_nb)[index[med_complete$ship == '748S']], main = 'ACF (748S)')
+acf(residuals(med_gam_nb)[index[med_complete$ship == '74RY']], main = 'ACF (74RY)')
+acf(residuals(med_gam_nb)[index[med_complete$ship == '74UT']], main = 'ACF (74UT)')
+```
+
+```{r, message=FALSE, warning=FALSE}
+summary(med_gam_nb)
+```
+
+```{r, message=FALSE, warning=FALSE,echo = FALSE}
+draw(med_gam_nb, select = c(2,3,4,5))
+```
+
+```{r, message=FALSE, warning=FALSE,echo = FALSE}
+library(dplyr)
+
+sm_est <- smooth_estimates(med_gam_nb)
+sm_est_red <- sm_est[sm_est$.smooth == 's(lo,la)',]
+
+ggplot() + geom_tile(data = sm_est_red, aes(x=lo, y=la,fill=.estimate)) + scale_fill_gradient(low="white", high="blue") + geom_segment(data =coast, aes(x = lon,y = lat),xend = lead(coast$lon),yend = lead(coast$lat)) + geom_point(data = med_complete, aes(x = lo,y = la),col="grey",alpha = 0.15) + labs(title="Partial Effect s(lo,la)")
+```
+
+```{r, message=FALSE, warning=FALSE,echo = FALSE}
+draw(med_gam_nb, select = c(6))
+draw(med_gam_nb, select = c(7))
+```
+
+<br/>
+We observe that the number of eggs increases with sea temperature up to a point, then decreases. The number of eggs seems to increase with salinity and decrease with greater depths. 
+
+For comparison, we can look at the results of the analysis [8] that investigated the data about mackerel eggs between 2001 and 2019 (the data are collected every three years) by a Random Forest model. They concluded that mackerel generally prefer spawning at water temperatures in the range between 8.5°C and 13.5°C. The probability of egg presence increased in the range 35.0 ppm to 35.5 ppm of saltiness, and the probability of egg presence was highest at depths between 100 m and 200 m, with a low probability at depths <50 m and >1000 m. In certain years, the probability of the presence of eggs at latitudes greater than 48°N was higher. Our model mostly corresponds with these observations (if we take the confidence intervals for the estimates into account).
+<br/>
+
+## Clementinum Dataset Revisited
+
+<br/>
+In this section, we will return to the dataset in the Sixth Circle. Namely, we will consider a model for the return levels (i.e., quantiles of the generalized extreme value distribution) of the maximum yearly temperature at Clementinum in Prague in the Czech Republic 14:00:00 CET (i.e, 13:00:00 UTC) based on the Clementinum records (https://opendata.chmi.cz/meteorology/climate/historical_csv/data/daily/temperature ; dataset dly-0-203-0-11514-T.csv ; 0-203-0-11514 is the Clementinum WIGOS Station Identifier).
+
+We will consider the mean and variance trend approach, which models time-series trends to obtain a stationary residual time series. This residual time series is then subjected to the usual extreme value analysis.
+
+In the Sixth Circle, we used the LOESS regression and picked the default smoothing parameter. By visual checking, we deemed the resulting fit reasonable. With the GAMs now at hand, we can take a more systematic approach by estimating the smoothing via REML. Let us load the dataset and extract the temperatures for summer days.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+library(readr)
+
+clementinum_all <- read_csv('C:/Users/elini/Desktop/nine circles/clementinum.csv')
+clementinum_all$TIME <- factor(clementinum_all$TIME)
+
+clementinum <- clementinum_all[clementinum_all$TIME == '13:00',]
+clementinum <- clementinum %>% select(-c('WSI','EG_EL_ABBREVIATION','TIME','FLAG1','QUALITY','...8'))
+
+clementinum$Year <- as.numeric(format(as.Date(clementinum$DT, format="%Y-%m-%d"),"%Y"))
+clementinum$Month <- as.numeric(format(as.Date(clementinum$DT, format="%Y-%m-%d"),"%m"))
+clementinum$Day <- as.numeric(format(as.Date(clementinum$DT, format="%Y-%m-%d"),"%d"))
+clementinum$Index <- seq(1,dim(clementinum)[1],1)
+
+# summer days
+clementinum_summer <- clementinum[clementinum$Month > 5 & clementinum$Month < 9,]
+clementinum_summer$Index <- seq(1,dim(clementinum_summer)[1],1)
+summer_days_index <- rep(seq(1,92,1), each=250)
+```
+
+<br/>
+The LOESS smooth we used to extract the mean trend in the series was as follows.
+<br/>
+
+```{r, message=FALSE, warning=FALSE,echo = FALSE}
+ggplot(clementinum_summer, aes(x = Index, y = VALUE)) + geom_line() + geom_smooth(formula = y~x,colour='red',method = 'loess', se = FALSE) + xlab('Summer days (1775-2024)') +  ylab('Temperature')
+```
+
+<br/>
+Let us use a GAM instead. The predictor is simply the cumulative number of summer days. We will also include a seasonality term provided that some seasonality still persists in the data.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+clementinum_gam0 <- gamm(VALUE  ~ s(Index,k=30,bs = 'tp') + s(summer_days_index, bs = 'cc'), knots=list(month=seq(1,93,length=30)),data=clementinum_summer,family=gaussian,method = 'REML')
+```
+
+<br/>
+We observe that the trends are extremely wiggly. This is not surprising, given that the data are highly autocorrelated.
+<br/>
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+draw(clementinum_gam0$gam)
+
+par(mfrow = c(1, 1))
+acf(residuals(clementinum_gam0$lme, type = 'normalized'))
+```
+
+<br/>
+Let us include the autocorrelation in the fit. We will use the fact that summer day temperatures across different years are not correlated, and thus we will model the autocorrelation for each year separately (which speeds up the computational time required to fit the model).
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+clementinum_gam1 <- gamm(VALUE  ~ s(Index,k=30,bs = 'tp') + s(summer_days_index, bs = 'cc'), knots=list(month=seq(1,93,length=30)),data=clementinum_summer,family=gaussian,method = 'REML', control = ctrl,  correlation = corARMA(form = ~ Index|Year, p = 1))
+```
+
+<br/>
+The trend estimate is much more reasonable. We also notice that there is almost no seasonal effect.
+<br/>
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+draw(clementinum_gam1$gam)
+
+par(mfrow = c(1, 1))
+acf(residuals(clementinum_gam1$lme, type = 'normalized'))
+```
+
+<br/>
+Let us fit several models with ARMA correlation structures with various values of $p$. We will drop the seasonal trend to speed up the fit.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+clementinum_gam1 <- gamm(VALUE  ~ s(Index,k=30,bs = 'tp'),data=clementinum_summer,family=gaussian,method = 'REML',  correlation = corARMA(form = ~ Index|Year, p = 1))
+
+clementinum_gam2 <- gamm(VALUE  ~ s(Index,k=30,bs = 'tp'),data=clementinum_summer,family=gaussian,method = 'REML',  correlation = corARMA(form = ~ Index|Year, p = 2))
+
+clementinum_gam3 <- gamm(VALUE  ~ s(Index,k=30,bs = 'tp'),data=clementinum_summer,family=gaussian,method = 'REML',  correlation = corARMA(form = ~ Index|Year, p = 3))
+
+clementinum_gam4 <- gamm(VALUE  ~ s(Index,k=30,bs = 'tp'),data=clementinum_summer,family=gaussian,method = 'REML',  correlation = corARMA(form = ~ Index|Year, p = 4))
+
+clementinum_gam5 <- gamm(VALUE  ~ s(Index,k=30,bs = 'tp'),data=clementinum_summer,family=gaussian,method = 'REML',  correlation = corARMA(form = ~ Index|Year, p = 5))
+
+clementinum_gam6 <- gamm(VALUE  ~ s(Index,k=30,bs = 'tp'),data=clementinum_summer,family=gaussian,method = 'REML',  correlation = corARMA(form = ~ Index|Year, p = 6))
+```
+
+<br/>
+Let us compare the fits.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+anova(clementinum_gam0$lme,clementinum_gam1$lme,clementinum_gam2$lme,clementinum_gam3$lme,clementinum_gam4$lme,clementinum_gam5$lme,clementinum_gam6$lme)
+```
+
+<br/>
+The ARMA correlation structure for $p = 4$ should be sufficient. Let us check the fit.
+<br/>
+
+```{r, message=FALSE, warning=FALSE,echo = FALSE}
+k.check(clementinum_gam4$gam)
+summary(clementinum_gam4$gam)
+
+draw(clementinum_gam4$gam)
+
+par(mfrow = c(1, 1))
+acf(residuals(clementinum_gam4$lme, type = 'normalized'))
+
+appraise(clementinum_gam4$gam)
+```
+
+<br/>
+We detect no significant residual autocorrelation. The estimated trend fit is much more varied than the one we guessed via the LOESS (without tuning the smooth parameter). We can compute the trend's derivatives and their confidence intervals. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+deriv <- derivatives(clementinum_gam5$gam, data = clementinum_summer,type = 'central', select = 'Index',partial_match = TRUE)
+
+ggplot(data = deriv) +
+  geom_line(data = deriv, aes(x = Index, y = .derivative),col = 'red', lwd = 0.75) +
+  geom_ribbon(data = deriv, aes(x = Index,ymin=.lower_ci ,ymax=.upper_ci),alpha=0.3) + 
+  labs(x = 'Cummulative Day', y = 'Derivative of s(cum.day)', title = 'Derivative of trend cum.day smooth')
+```
+
+<br/>
+Next, we need to estimate the trend in the variance. We subtract the estimated trend from the mean and fit the GAM model using squared residuals. We will use the gamma (squared normal random variable has a gamma distribution) GAM with the same autocorrelation structure as for the mean. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+gam_fit_mean <- predict(clementinum_gam4$gam)
+clementinum_summer_mean_adjust_gam <-  clementinum_summer$VALUE - gam_fit_mean
+
+clementinum_summer2 <- cbind(clementinum_summer,clementinum_summer_mean_adjust_gam^2)
+colnames(clementinum_summer2) <- c(colnames(clementinum_summer),'mean_adj')
+
+clementinum_adj_gam <- gamm(mean_adj  ~ s(Index,k=30,bs = 'tp'),data=clementinum_summer2,family=Gamma(link=log),method = 'REML',  correlation = corARMA(form = ~ Index|Year, p = 4))
+```
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+summary(clementinum_adj_gam$gam)
+
+draw(clementinum_adj_gam$gam)
+
+par(mfrow = c(1, 1))
+acf(residuals(clementinum_adj_gam$lme, type = 'normalized'))
+
+appraise(clementinum_adj_gam$gam)
+```
+
+<br/>
+Let us obtain the residual temperature series.
+<br/>
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+gam_fit_var <- predict(clementinum_adj_gam$gam, type = 'response')
+clementinum_summer_resid_gam <- clementinum_summer_mean_adjust_gam/sqrt(gam_fit_var)
+```
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+plot(clementinum_summer_resid_gam,type = 'l',ylab = 'Residual summer temperatues', xlab = 'Summer days (1775-2024)')
+```
+
+<br/>
+We can formally test for the trend in the series via the Mann-Kendall test.
+<br/>
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+library(Kendall)
+MannKendall(clementinum_summer_resid_gam)
+```
+
+<br/>
+Now, let us estimate the parameters of the generalized extreme value (GEV) distribution of the residual series using the Poisson point process approach. We will not go through all the steps in detail since we did so already in the Sixth Circle.
+
+We first evaluate the number of threshold excesses for various thresholds, and then we estimate a satisfactory threshold using *mrlplot* and *threshrange.plot*.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+library(extRemes)
+
+years <- seq(1775,2024,1)
+
+num_exces_resid <- numeric(12)
+
+for (i in 1:12){
+  num_exces_resid[i] <- sum(clementinum_summer_resid_gam>0+i/4)
+}
+
+names(num_exces_resid) <- c('>0.25','>0.5','>0.75','>1','>1.25','>1.5','>1.75','>2','>2.25','>2.5','>2.75','>3')
+num_exces_resid
+```
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+mrlplot(clementinum_summer_resid_gam, xlim = c(0.25, 3))
+threshrange.plot(clementinum_summer_resid_gam, r = c(0.25, 3), nint = 25)
+```
+
+<br/>
+Based on the plot, we will set the threshold to 1.5. Next, we need to decluster the excesses.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+VALUE_decl_resid <- decluster(clementinum_summer_resid_gam, 1.5)
+VALUE_decl_resid <- as.numeric(VALUE_decl_resid)
+atdf(VALUE_decl_resid, 0.95)
+```
+
+<br/>
+We can finally fit the Poisson point process model. Let us check whether the stationary model is sufficient. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+library(rms)
+clementinum_summer_exc_data <- as.data.frame(cbind(VALUE_decl_resid,(clementinum_summer$Year - 1774)/250))
+colnames(clementinum_summer_exc_data) <- c('summer_exc','year')
+clementinum_summer_exc_data <- as.data.frame(clementinum_summer_exc_data)
+
+
+pp_adjust_1 <- fevd(VALUE_decl_resid,data = clementinum_summer_exc_data, threshold = 1.5, type = 'PP', time.units = '92/year')
+pp_adjust_2 <- fevd(VALUE_decl_resid,data = clementinum_summer_exc_data, threshold = 1.5, type = 'PP', time.units = '92/year', location.fun = ~rcs(year,5))
+pp_adjust_3 <- fevd(VALUE_decl_resid,data = clementinum_summer_exc_data, threshold = 1.5, type = 'PP', time.units = '92/year', scale.fun = ~rcs(year,5), use.phi = TRUE)
+pp_adjust_4 <- fevd(VALUE_decl_resid,data = clementinum_summer_exc_data, threshold = 1.5, type = 'PP', time.units = '92/year', location.fun = ~rcs(year,5), scale.fun = ~rcs(year,5), use.phi = TRUE)
+
+lr.test(pp_adjust_1,pp_adjust_2)
+lr.test(pp_adjust_1,pp_adjust_3)
+lr.test(pp_adjust_1,pp_adjust_4)
+```
+
+<br/>
+The stationary model indeed seems sufficient. Let us diagnose the residuals. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+par(mfrow = c(1, 2))
+plot(pp_adjust_1  ,'qq', main = 'PP model (standardized)')
+plot(pp_adjust_1  ,'qq2', main = 'PP model (standardized)')
+```
+
+<br/>
+The models seem to fit the data well. We can now compute the predicted return levels for the years 2024 and 1775.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+library(evd)
+
+pp_pars_adjust <- distill.fevd(pp_adjust_1)
+
+# 2024
+qgev(c(0.5,0.2,0.1,0.05,0.02,0.01,0.002,0.001),
+                             loc=pp_pars_adjust[1]*sqrt(gam_fit_var[23000]) +gam_fit_mean[23000],
+                             scale=pp_pars_adjust[2]*sqrt(gam_fit_var[23000]),
+                             shape=pp_pars_adjust[3], lower.tail = FALSE)
+
+# 1775
+qgev(c(0.5,0.2,0.1,0.05,0.02,0.01,0.002,0.001),
+                             loc=pp_pars_adjust[1]*sqrt(gam_fit_var[1]) +gam_fit_mean[1],
+                             scale=pp_pars_adjust[2]*sqrt(gam_fit_var[1]),
+                             shape=pp_pars_adjust[3], lower.tail = FALSE)
+```
+
+<br/>
+We can compare these predictions with those produced by the mean and variance approach using LOESS with the default smoothing. The predicted 1000-year return level for 2024 using our model is about 1°C higher than the one we obtained via the LOESS. The predicted 1000-year return level for 1775 using our model is about 0.3°C higher. Of course, the main benefit of using GAM is that the smoothing parameters are estimated algorithmically, and we can bootstrap the whole procedure (using the moving-block bootstrap) to obtain confidence intervals (although this would be computationally expensive). 
+<br/>
+
+## Arthropod abundance
+
+<br/>
+The last dataset contains information on the abundance of arthropods collected at sites in Alb, Hainich, and Schorfheide between 2008 and 2017 [9]. The variables that will be some interest to us are as follows; see enclosed *datastructure.html*.
+
+* **Habitat_type** - forest or grassland
+* **Exploratory** - 	specifies Region: Alb, Hainich, Schorfheide
+* **PlotID** - number of plot
+* **CollectionYear** - year of sampling
+* **abundance_identified** - abundance of all arthropods identified to species level
+* **landuse_intensity** - landuse intensity: LUI in grasslands and ForMI in forests
+* **mean_winter_temperature** - 	mean temperature for winter months (Nov-Feb) as derived from plot weather stations with gap filling from neighboring stations and DWD stations
+* **precipitation_sum_growing_preriod** - precipitation sum for months of the growing season (Mar-Oct) derived from the RADOLAN product of the German Weather Service
+* **grassland_cover_1000* - percentage cover of grassland and semi-natural vegetation within 1000m surrounding a plot based on ATKIS DLM 2010
+* **arable_cover_1000** - percentage cover of arable crops within 1000m surrounding a plot based on ATKIS DLM 2010
+
+The code below follows the lecture by Gavin Simpson on GAMs (https://www.youtube.com/watch?v=Ukfvd8akfco; the original R code can be found at https://github.com/eco4cast/Statistical-Methods-Seminar-Series/blob/main/simpson-gams/code/arthropod.R). I am enclosing it here because it nicely illustrates more advanced capabilities of GAMs in modeling trends in the data. 
+
+We first load the dataset and shorten some variable names. We also specify the factor variables. We also add a new factor variable **year_f**, which will be usefull later.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+seibold <- read_csv('C:/Users/elini/Desktop/nine circles/seibold.csv')
+
+# renaming, converting variables to factor, creating year factor variable (we will use it to model year random effect)
+seibold <- seibold %>% rename(year = CollectionYear, region  = Exploratory, habitat = Habitat_type, sampling_regime = Sampling_regime, plot_id = PlotID, plot_id_year = PlotIDYear) %>% mutate(across(c(habitat,sampling_regime,region,plot_id_year,plot_id),as.factor)) %>% mutate(year_f = factor(year))
+head(seibold)
+```
+
+<br/>
+We will reduce our attention on modeling abundance in the *grassland* habitat. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+seibold <- seibold %>% filter(habitat == 'grassland')
+```
+
+<br/>
+Let us check the number of observations per plot.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+seibold %>% group_by(plot_id) %>% count() %>% plot()
+```
+
+<br/>
+We observe we have at most 10 observations per plot (observations were taken once each year). But for some plots, some yearly records are missing. We can plot the trends in the abundance for each region.
+<br/>
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+ggplot(aes(x = year, y = abundance_identified, group = plot_id),data = seibold) + geom_line() + facet_grid(region~habitat)
+```
+
+### Extracting trends
+
+<br/>
+Let us start with modeling the trends. First, we will consider the case with no covariates. The simplest model would simply model 
+the overall yearly trend. Since we are modeling the counts, we will use the negative binomial model. Note that we can use the basis $k = 10$ at most since no plot has more than 10 observations. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+ctrl <- gam.control(nthreads = 4) # multiple threads to speed up the fit 
+
+m1 <- gam(abundance_identified ~ s(year,k = 10,bs = 'tp'), data = seibold, method = 'REML',family = nb(link = 'log'), control = ctrl)
+summary(m1)
+```
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+draw(m1)
+appraise(m1)
+```
+
+<br/>
+We did not expect this model to be particularly great (abundance in all plots is clearly not the same). Let us complicate the model a bit. First, we add random effects to model the individual effects of each plot.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+m2 <- gam(abundance_identified ~ s(year,k = 10,bs = 'tp') + s(plot_id, bs = 're'), data = seibold, method = 'REML',family = nb(link = 'log'), control = ctrl)
+
+summary(m2)
+```
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+draw(m2)
+appraise(m2)
+AIC(m2)
+```
+
+<br/>
+Let us consider a model in which every region has its own trend (the model uses a separate smooth for each level of the factor). We should note that we need to include the factor term to account for the factor means.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+m3 <- gam(abundance_identified ~ region + s(year,k = 10,bs = 'tp', by = region) + s(plot_id, bs = 're'), data = seibold, method = 'REML',family = nb(link = 'log'), control = ctrl)
+summary(m3)
+AIC(m3)
+```
+  
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+draw(m3)
+appraise(m3)
+```
+
+<br/>
+This model fits the data reasonably well. But let us try another approach. Instead of assuming a random intercept for each plot, let us assume an individual smooth trend for each plot (*fs* is a factor smooth basis in which every smooth has the same smoothing parameter; see https://stat.ethz.ch/R-manual/R-patched/library/mgcv/html/smooth.construct.fs.smooth.spec.html )
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+m4 <- gam(abundance_identified ~ region + s(year,plot_id, k = 5,bs = 'fs'), data = seibold, method = 'REML',family = nb(link = 'log'), control = ctrl)
+summary(m4)
+AIC(m4)
+```
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+draw(m4)
+appraise(m4)
+```
+
+<br/>
+We can extract the region-specific part from these trends by including the appropriate smooth. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+m5 <- gam(abundance_identified ~ region # region mean effect
+          + s(year,k = 10,bs = 'tp', by = region) # region-specific trend
+          + s(year,plot_id, bs = 'fs',k=5),  # plot-specific trend
+          data = seibold, method = 'REML',family = nb(link = 'log'), control = ctrl)
+
+summary(m5)
+AIC(m5)
+```
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+draw(m5)
+appraise(m5)
+```
+
+<br/>
+Notice that smooths s(year,plot_id) require much less edf; the AIC also significantly dropped. In our final model, we also consider year random effects.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+m6 <- gam(abundance_identified ~ region # region mean effect
+          + s(year_f,bs = 're') # year random effects
+          + s(year,k = 10,bs = 'tp', by = region) # region-specific trend
+          + s(year,plot_id, bs = 'fs',k=5),  # plot-specific trend
+          data = seibold, method = 'REML',family = nb(link = 'log'), control = ctrl)
+summary(m6)
+AIC(m6)
+```
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+draw(m6)
+appraise(m6)
+```
+
+<br/>
+Let us have a look at the comparison of all our models using the AIC. Remember that the AIC is computed from the conditional (and dof-corrected) log-likelihood, so we can compare models with different random effects structures.
+<br/>
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+AIC(m1,m2,m3,m4,m5,m6)
+```
+
+<br/>
+The model with region-specific trends appears to be the best. 
+<br/>
+
+### Model with covariates
+
+<br/>
+Let us now use the covariates to explain the abundance. We start with the overall trend model.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+m_cov1 <- gam(abundance_identified ~
+               region +
+               s(year,k = 10,bs = 'tp') + # overall trend
+               s(landuse_intensity,bs = 'tp') +
+               s(mean_winter_temperature,bs = 'tp') +
+               s(precipitation_sum_growing_preriod,bs = 'tp') +
+               s(grassland_cover_1000,bs = 'tp') +
+               s(arable_cover_1000,bs = 'tp') +
+               ti(mean_winter_temperature,precipitation_sum_growing_preriod,bs = 'tp') +
+               ti(year, landuse_intensity,bs = 'tp') +
+               ti(year, grassland_cover_1000,bs = 'tp') +
+               ti(year, arable_cover_1000,bs = 'tp') +
+               s(year_f, bs = "re") + # year random effects
+               s(plot_id, bs = "re"), # plot specific random effects
+             family = nb(),
+             method = 'REML',
+             control = ctrl,
+             data = seibold)
+
+summary(m_cov1)
+AIC(m_cov1)
+```
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+draw(m_cov1,select = c(1,2,3,4))
+draw(m_cov1,select = c(5,6,11,12))
+draw(m_cov1,select = c(7,8,9,10))
+appraise(m_cov1)
+```
+
+<br/>
+Next, we fit the regional trend model.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+m_cov2 <- gam(abundance_identified ~
+               region + 
+               s(year,k = 10,bs = 'tp',by = region) + # regional trend
+               s(landuse_intensity,bs = 'tp') +
+               s(mean_winter_temperature,bs = 'tp') +
+               s(precipitation_sum_growing_preriod,bs = 'tp') +
+               s(grassland_cover_1000,bs = 'tp') +
+               s(arable_cover_1000,bs = 'tp') +
+               ti(mean_winter_temperature,precipitation_sum_growing_preriod,bs = 'tp') +
+               ti(year, landuse_intensity,bs = 'tp') +
+               ti(year, grassland_cover_1000,bs = 'tp') +
+               ti(year, arable_cover_1000,bs = 'tp') +
+               s(year_f, bs = "re") + # year random effects
+               s(plot_id, bs = "re"), # plot specific random effects
+             family = nb(),
+             method = 'REML',
+             control = ctrl,
+             data = seibold)
+
+summary(m_cov2)
+AIC(m_cov2)
+```
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+draw(m_cov2)
+draw(m_cov2,select = c(1,2,3))
+appraise(m_cov1)
+```
+
+<br/>
+The last model we will consider includes the individual trends for each plot.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+m_cov3 <- gam(abundance_identified ~
+                s(year,bs = 'tp') +
+                s(landuse_intensity,bs = 'tp') +
+                s(mean_winter_temperature,bs = 'tp') +
+                s(precipitation_sum_growing_preriod,bs = 'tp') +
+                s(grassland_cover_1000,bs = 'tp') +
+                s(arable_cover_1000,bs = 'tp') +
+                ti(mean_winter_temperature,
+                   precipitation_sum_growing_preriod,bs = 'tp') +
+                ti(year, landuse_intensity,bs = 'tp') +
+                ti(year, grassland_cover_1000,bs = 'tp') +
+                ti(year, arable_cover_1000,bs = 'tp') +
+                s(year_f, bs = "re") + # year random effects
+                s(year, plot_id, bs = "fs", k = 5), # plot specific trends
+              family = nb(),
+              method = "REML",
+              control = ctrl,
+              data = seibold)
+
+summary(m_cov3)
+AIC(m_cov3)
+```  
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+draw(m_cov3)
+draw(m_cov3,select = 12)
+appraise(m_cov3)
+```
+
+<br/>
+Again, the model with the regional trends appears to be the most appropriate.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+AIC(m_cov1,m_cov2,m_cov3)
+```
+
+
+## Conclusion
+
+There is little to add to conclude the Eighth Circle. Generalized additive models provide much-needed flexibility for traditional statistical models, enabling us to model complex nonlinear relationships common in longitudinal and hierarchical data. We also observed the importance of penalization in limiting the model's complexity. 
+
+In the last circle of this series, we will look at another family of methods that uses penalized likelihood. However, instead of just controlling the complexity of a particular dependence (**wiggliness**), we will seek to control whether a given predictor should be included in the model (**sparseness**). 
+
+## References
+
+[1] WOOD, Simon N. *Generalized additive models: an introduction with R*. Chapman and Hall/CRC, 2017.
+
+[2] WOOD, Simon; WOOD, Maintainer Simon. Package ‘mgcv’. R package version, 2015, 1.29: 729.
+
+[3] FREEDMAN, Wendy L., et al. *Final Results from the Hubble Space Telescope Key Project to Measure the Hubble Constant*. The Astrophysical Journal, 2001, 553.1: 47.
+
+[4] WOOD, Simon N.; PYA, Natalya; SÄFKEN, Benjamin. Smoothing parameter and model selection for general smooth models. *Journal of the American Statistical Association*, 2016, 111.516: 1548-1563.
+
+[5] SILVERMAN, Bernhard W. Some aspects of the spline smoothing approach to non‐parametric regression curve fitting. *Journal of the Royal Statistical Society: Series B (Methodological)*, 1985, 47.1: 1-21.
+
+[6] LOWRY, Michelle; SCHWERT, G. William. IPO market cycles: Bubbles or sequential learning?. *The Journal of Finance*, 2002, 57.3: 1171-1200.
+
+[7] DUNN, Peter K., et al. *Generalized linear models with examples in R*. New York: Springer, 2018.
+
+[8] COSTAS, Gersom. Analysis of the spatio-temporal variability of spawning mackerel in the Northeast Atlantic. *Frontiers in Marine Science*, 2025, 11: 1461982.
+
+[9] SEIBOLD, Sebastian, et al. Arthropod decline in grasslands and forests is associated with landscape-level drivers. *Nature*, 2019, 574.7780: 671-674.
+
+[10] SIMPSON, Gavin L. gratia: An R package for exploring generalized additive models. *Journal of Open Source Software*, 2024, 9(104), 6962.

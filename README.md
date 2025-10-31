@@ -30,4 +30,5 @@ All solutions will programmed in R and provided as R markdown documents and gith
 5. Survival analysis (Kaplan-Meier estimator; Cox proportional hazards model; accelerated failure time models; discrimination measures and calibration for survival data)
 6. Extreme value analysis (block maxima (GEV), threshold excess (GP), and Poisson point process models; methods for non-stationary time series: time-varying parameters and the mean & variance trend approach)
 7. Quantile regression (log-linear model; GLM models for skewed response: gamma, inverse Gaussian, and Tweedie)
-8. Generalized additive models (TBD)
+8. Generalized additive models
+9. LASSO
