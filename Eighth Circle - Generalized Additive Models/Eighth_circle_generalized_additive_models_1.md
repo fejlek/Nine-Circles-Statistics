@@ -165,7 +165,7 @@ the corresponding tensor product smooth is
 $X = X_1 \odot X_2 \odot \cdots \odot X_p$, where $\odot$ denotes
 row-wise Kronecker product \[1\]. The penalty for the tensor product
 smooth is chosen as $\sum_i \beta^T \tilde S_{x_i} \beta$ where
-$\tilde{S}_{x_i}$  = $ I_{x_1} \odot I_{x_2}  \odot \cdots  \odot S_{x_i}  \odot  \cdots  \odot I_{x_p}$,
+$\tilde S_{x_i} = I_{x_1} \odot I_{x_2}  \odot \cdots  \odot S_{x_i}  \odot I_{x_{i+1}}  \odot \cdots  \odot I_{x_p}$,
 where $I_{x_{i}}$ is an identity matrix of rank that equals the number
 of basis vectors for smooth $f_{x_i}$. We should note that marginal
 smooths $f_{x_i}$ are often reparametrized such that the overall penalty
