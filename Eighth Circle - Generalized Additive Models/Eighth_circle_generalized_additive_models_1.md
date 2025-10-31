@@ -120,7 +120,7 @@ $\lambda$. The first standard method of estimating appropriate $\lambda$
 for the data is based on minimization of the prediction error, namely,
 via leave-one-out cross-validation (LOOC)
 $\nu_0 =\frac{1}{n} \sum_i (f_i^{[-i]} - y_i)^2$, where
-$f^{[-i]}_i$ is the predicted value of the ith observation for a model
+$f_i^{[-i]}$ is the predicted value of the ith observation for a model
 in which the ith observation is omitted. It can be shown that for linear
 regression
 $\nu_0 = \frac{1}{n} \sum_i\frac{(y_i -\hat\mu_i)^2}{(1-H_{ii})^2}$,
