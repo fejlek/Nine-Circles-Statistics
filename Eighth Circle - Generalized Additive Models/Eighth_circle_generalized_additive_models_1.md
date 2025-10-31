@@ -119,7 +119,7 @@ need to determine an appropriate value of smoothing parameters
 $\lambda$. The first standard method of estimating appropriate $\lambda$
 for the data is based on minimization of the prediction error, namely,
 via leave-one-out cross-validation (LOOC)
-$\nu_0 =\frac{1}{n} \sum_i (\hat f^{-i}_i - y_i)^2$, where
+$\nu_0 =\frac{1}{n}$, where
 $f^{[-i]}_i$ is the predicted value of the ith observation for a model
 in which the ith observation is omitted. It can be shown that for linear
 regression
