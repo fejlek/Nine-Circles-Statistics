@@ -9,7 +9,7 @@ Jiří Fejlek
 - [Introduction to GAM](#introduction-to-gam)
   - [Univariate smooths](#univariate-smooths)
   - [Penalized likelihood](#penalized-likelihood)
-  - [Estimation of $\lambda$](#estimation-of-lambda)
+  - [Estimation of lambda](#estimation-of-lambda)
   - [Multivariate smooths](#multivariate-smooths)
 - [Solutions to excersises from *Generalized Additive Models: An
   Introduction with
@@ -110,7 +110,7 @@ regression, since linear functions have zero wiggliness; i.e., a high
 wiggliness penalty will not force the estimated effects to be zero,
 dropping some covariate from the model in the process. <br/>
 
-### Estimation of $\lambda$
+### Estimation of lambda
 
 <br/> To estimate model parameters $\beta$ and $\phi$ from the penalized
 likelihood
