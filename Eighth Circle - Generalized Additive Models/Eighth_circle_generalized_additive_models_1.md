@@ -37,7 +37,7 @@ broad applicability of GAMs. <br/>
 
 ## Introduction to GAM
 
-<br/> Generalized additive model (GAM) is a generalization of
+Generalized additive model (GAM) is a generalization of
 generalized linear model (GLM) in which effects of covariates on the
 conditional mean of the response variable are modeled as
 $g(\mu) = f_{x_1}(x_1) + f_{x_2}(x_2) + \ldots + f_{x_1,x_2}(x_1,x_2) + f_{x_1,x_3}(x_1,x_3) + \ldots + f_{x_1,x_2,x_3}(x_1, x_2, x_3) + \ldots$,
@@ -54,7 +54,7 @@ Before we proceed to use GAMs, let us first review the theory a bit.
 
 ### Univariate smooths
 
-<br/> Let us first describe what the smooth functions actually are. For
+Let us first describe what the smooth functions actually are. For
 simplicity’s sake, we start with univariate smooths which are given as
 $f(x) = \sum_{j = 1}^k \beta_jb_j(x)$, where $b_j$ are some appropriate
 prespecified basis functions \[1\]. Examples of smooth functions that
@@ -77,7 +77,7 @@ introduce *penalization* into the fitting procedure. <br/>
 
 ### Penalized likelihood
 
-<br/> The penalization term used in GAMs is the so-called *wigglines*.
+The penalization term used in GAMs is the so-called *wigglines*.
 The term *wigglines* is literal; the penalization term penalizes the
 regression curve for being too wiggly, i.e., for fitting the data too
 closely.
@@ -112,7 +112,7 @@ dropping some covariate from the model in the process. <br/>
 
 ### Estimation of lambda
 
-<br/> To estimate model parameters $\beta$ and $\phi$ from the penalized
+To estimate model parameters $\beta$ and $\phi$ from the penalized
 likelihood
 $L(\beta,\phi) -\frac{1}{2\phi}\sum_i \lambda_i\beta^TS_i\beta$, we also
 need to determine an appropriate value of smoothing parameters
@@ -154,7 +154,7 @@ the smooth parameters $\lambda$ \[1\]. <br/>
 
 ### Multivariate smooths
 
-<br/> We introduced GAM models for univariate smooth. An extension to
+We introduced GAM models for univariate smooth. An extension to
 multivariate smooths $f_{x_1,x_2, \ldots}(x_1,x_2, \ldots)$ is quite
 straightforward. We can use smooths such as thin plate regression
 splines, which are naturally defined for any number of covariates.
@@ -193,7 +193,7 @@ from $\tilde{X}$. <br/>
 
 ## Solutions to excersises from *Generalized Additive Models: An Introduction with R*
 
-<br/> In this project, we will not have a look at a single dataset to
+In this project, we will not have a look at a single dataset to
 demonstrate the application of GAMs. Instead, we provide multiple
 smaller demonstrations to have a look at different types of problems
 that GAM can solve. We start with datasets presented as modeling
@@ -201,7 +201,7 @@ exercises in \[1, Chapter 7\]. <br/>
 
 ### Hubble dataset
 
-<br/> Exercise 1 considers the data about the distance (in megaparsecs)
+Exercise 1 considers the data about the distance (in megaparsecs)
 and relative velocity (in kilometers per second) of 24 galaxies. The
 distance of a galaxy is estimated from observations (by the Hubble Space
 Telescope) of Cepheids, variable stars with a known relationship between
@@ -631,7 +631,7 @@ are much narrower). <br/>
 
 ### Simulated Motorcycle Accident Dataset
 
-<br/> The following dataset for Exercises 2 and 3 contains 133
+The following dataset for Exercises 2 and 3 contains 133
 observations from a simulated motorcycle accident used to test helmets.
 Two variables in the dataset are **times** in milliseconds from the time
 of impact and **accel** acceleration of the head in g \[5\]. This
@@ -741,7 +741,7 @@ solutions in \[1\]. <br/>
 
 ### CO2 Dataset
 
-<br/> The next dataset (Exercise 5) considers CO2 measurements
+The next dataset (Exercise 5) considers CO2 measurements
 (concentration in parts per million ) at the South Pole from January
 1957 onwards. <br/>
 
@@ -993,7 +993,7 @@ pacf(residuals(co2s_gamm_AR1$lme,type = 'normalized'))
 
 ### Initial Public Offering Dataset
 
-<br/> This dataset from Exercise 6 contains data on the number of
+This dataset from Exercise 6 contains data on the number of
 ‘Initial Public Offerings’ (IPOs) per month in the US financial markets
 between 1960 and 2002 \[6\]. IPOs are the process by which companies go
 public.
@@ -1153,7 +1153,7 @@ observations, after all, so we cannot read too much into the results.
 
 ### Bordeaux Wines
 
-<br/> The dataset (Exercise 7) contains prices and growth
+The dataset (Exercise 7) contains prices and growth
 characteristics of 25 Bordeaux wines from 1952 to 1998 (produced between
 1952 and 1989).
 
@@ -1507,7 +1507,7 @@ with correlated errors in terms of the effects of other predictors.
 
 ### Satellite Calibration
 
-<br/> The following dataset is from Exercise 9. It consists of direct
+The following dataset is from Exercise 9. It consists of direct
 ship measurements of chlorophyll concentrations in the top 5 meters of
 ocean water and estimates of chlorophyll concentration from the SeaWiFS
 satellite. The goal is to calibrate the estimates so they better
@@ -1818,7 +1818,7 @@ summary(abs(predict(chl_gam_te,type='response') - chl$chl))
 
 ### Mackerel Eggs
 
-<br/> The last dataset (Exercise 11) in this section contains data on
+The last dataset (Exercise 11) in this section contains data on
 mackerel (Scomber scombrus) eggs collected from the 2010 mackerel survey
 (ICES Eggs and Larvae Dataset 2012, ICES, Copenhagen). The variables we
 will use in our model are as follows.
@@ -2137,7 +2137,7 @@ years, the probability of the presence of eggs at latitudes greater than
 
 ## Clementinum Dataset Revisited
 
-<br/> In this section, we will return to the dataset in the Sixth
+In this section, we will return to the dataset in the Sixth
 Circle. Namely, we will consider a model for the return levels (i.e.,
 quantiles of the generalized extreme value distribution) of the maximum
 yearly temperature at Clementinum in Prague in the Czech Republic
@@ -2489,7 +2489,7 @@ estimated algorithmically, and we can bootstrap the whole procedure
 
 ## Arthropod abundance
 
-<br/> The last dataset contains information on the abundance of
+The last dataset contains information on the abundance of
 arthropods collected at sites in Alb, Hainich, and Schorfheide between
 2008 and 2017 \[9\]. The variables that will be some interest to us are
 as follows; see enclosed *datastructure.html*.
@@ -2573,7 +2573,7 @@ missing. We can plot the trends in the abundance for each region. <br/>
 
 ### Extracting trends
 
-<br/> Let us start with modeling the trends. First, we will consider the
+Let us start with modeling the trends. First, we will consider the
 case with no covariates. The simplest model would simply model the
 overall yearly trend. Since we are modeling the counts, we will use the
 negative binomial model. Note that we can use the basis $k = 10$ at most
@@ -2856,7 +2856,7 @@ random effects structures. <br/>
 
 ### Model with covariates
 
-<br/> Let us now use the covariates to explain the abundance. We start
+Let us now use the covariates to explain the abundance. We start
 with the overall trend model. <br/>
 
 ``` r
