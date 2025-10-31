@@ -309,7 +309,7 @@ covariance matrix is also used to evaluate the significance of smooth
 terms (and unpenalized terms); see \[1, Section 6.12.1\] for more
 details.
 
-Secondly, the *edf* stands for estimated degrees of freedom (edf), and
+Secondly, the *EDF* stands for estimated degrees of freedom, and
 it is an estimate of how many degrees of freedom were actually used in
 the fit. If the fit was not penalized, we would use 10 degrees of
 freedom in our case (nine predictors correspond to basis vectors +
@@ -326,7 +326,7 @@ better than the unpenalized estimate due to overfitting. <br/>
 ``` r
 library(Matrix)
 
-# edf using the formula
+# EDF using the formula
 mm <- model.matrix(hubble_gam)
 S <- bdiag(list(0,hubble_gam$sp[1]*hubble_gam$smooth[[1]]$S[[1]])) # block diagonal matrix
 
@@ -339,13 +339,13 @@ diag(solve(t(mm) %*% mm + S)%*%t(mm)%*%mm ) # trace of F
     ## -0.12801323 -0.02403907  0.93620614  1.00000000
 
 ``` r
-sum(diag(solve(t(mm) %*% mm + S)%*%t(mm)%*%mm )) # total edf
+sum(diag(solve(t(mm) %*% mm + S)%*%t(mm)%*%mm )) # total EDF
 ```
 
     ## [1] 2.765627
 
 ``` r
-sum(diag(solve(t(mm) %*% mm + S)%*%t(mm)%*%mm )[2:10]) # x edf
+sum(diag(solve(t(mm) %*% mm + S)%*%t(mm)%*%mm )[2:10]) # x EDF
 ```
 
     ## [1] 1.765627
@@ -445,7 +445,7 @@ AIC(hubble_lm )
 linear model is sufficient. We should note that the AIC for the GAM is
 based on the penalized log-likelihood (the so-called *conditional AIC*).
 However, if we evaluate the log-likelihood of the GAM model, we notice
-that edf differs from the one estimated by the fit (we expect 2.765627 +
+that EDF differs from the one estimated by the fit (we expect 2.765627 +
 1 for the scale parameter). <br/>
 
 ``` r
@@ -467,7 +467,7 @@ logLik.gam(hubble_gam) #logLik
     ## [1] 339.0023
 
 ``` r
-hubble_gam$aic # we can actually get the AIC with the original estimate of edf from the GAM model
+hubble_gam$aic # we can actually get the AIC with the original estimate of EDF from the GAM model
 ```
 
     ## [1] 339.0023
@@ -789,7 +789,7 @@ draw(co2s_gam, residuals = TRUE)
 
 ![](Eighth_circle_generalized_additive_models_1_files/figure-GFM/unnamed-chunk-31-1.png)<!-- -->
 
-<br/> We should note that the trend is still quite wiggly (the edf for
+<br/> We should note that the trend is still quite wiggly (the EDF for
 **c.month** is over 90!). The package *gratia* allows us to evaluate the
 derivatives of smooth terms. <br/>
 

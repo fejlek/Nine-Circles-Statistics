@@ -19,7 +19,6 @@ In the penultimate part of our series on statistical modeling, we will have a lo
 
 ## Introduction to GAM
 
-<br/>
 Generalized additive model (GAM) is a generalization of generalized linear model (GLM) in which effects of covariates on the conditional mean of the response variable are modeled as $g(\mu) = f_{x_1}(x_1) + f_{x_2}(x_2) + \ldots + f_{x_1,x_2}(x_1,x_2) + f_{x_1,x_3}(x_1,x_3) + \ldots + f_{x_1,x_2,x_3}(x_1, x_2, x_3) + \ldots$, where functions $f$ are so-called *smooth* functions. GAMs represent a family of very flexible models which, however, still keep *additive* structure; effects of covariates are still interpretable in the sense of their split into 'main effects' and effects of interactions. Thus, GAMs lie on the boundary between traditional regression models and general nonlinear models (represented by neural networks and random forests) [1].
 
 Before we proceed to use GAMs, let us first review the theory a bit.
@@ -27,7 +26,6 @@ Before we proceed to use GAMs, let us first review the theory a bit.
 
 ### Univariate smooths
 
-<br/>
 Let us first describe what the smooth functions actually are. For simplicity's sake, we start with univariate smooths which are given as $f(x) = \sum_{j = 1}^k \beta_jb_j(x)$, where $b_j$ are some appropriate prespecified basis functions [1]. Examples of smooth functions that can be represented this way include cubic regression splines, B-splines, P-splines, thin plate regression splines, and Duchon splines [1]. One important thing to notice is that this specification is still linear in parameters $\beta$. 
 <br/>
 
@@ -46,7 +44,6 @@ Consequently, using smooths can still lead to the usual GLM models. We essential
 
 ### Penalized likelihood
 
-<br/>
 The penalization term used in GAMs is the so-called *wigglines*. The term *wigglines* is literal; the penalization term penalizes the regression curve for being too wiggly, i.e., for fitting the data too closely.
 
 Let us assume GAM model $g(\mu) = X_1\beta_1 + X_2\beta_2 + X_3\beta_3 + \cdots X_p\beta_p$, where terms $X_i\beta_i$ correspond to univariate smooths $f(x_i) = \sum_{j = 1}^k \beta_{ij}b_j(x_{i})$ for the values of the ith predictor. The wiggliness penalty for the aforementioned univariate smooths of the ith predictor is defined as $\beta^T_iS_i\beta_i$ for some smoothing penalty matrix $S_i$. Hence, the total wiggliness penalty for all smooths is  $\sum_{i = p}^k \beta_i^T S_i \beta_i$. A typical example of the wiggliness penalty is $\int f''(x)^2 \mathrm{d}x$. However, some splines use different penalization, e.g., squared difference of coefficients $\sum (\beta_{i+1} - \beta_{i})^2$ for P-splines [1]. 
@@ -54,10 +51,9 @@ Let us assume GAM model $g(\mu) = X_1\beta_1 + X_2\beta_2 + X_3\beta_3 + \cdots 
 Let $Y_i \sim \mathrm{EF}(\mu_i,\sigma)$ (EF denotes exponential family of distributions with mean $\mu$ and the scale parameter $\sigma$) and  $g(\mu_i) = X\beta$ , and let the wiggliness penalty term be $\sum_{i = 1}^p \beta^T S_i \beta$. To estimate $\beta$ and $\phi$ in a way that fits the data well, we need to consider a compromise between maximizing a likelihood $L(\beta,\phi)$ and minimizing the wiggliness penalty; we consider a *penalized likelihood function* $L(\beta,\phi) -\frac{1}{2\phi}\sum_i \lambda_i\beta^TS_i\beta$, where $\lambda_i$ are some weights that balances the precision of the fit and the wiggliness. We should note that for values $\lambda_i \rightarrow \infty$ for all $i$, we obtain ordinary linear regression, since linear functions have zero wiggliness; i.e., a high wiggliness penalty will not force the estimated effects to be zero, dropping some covariate from the model in the process.
 <br/>
 
-### Estimation of $\lambda$
+### Estimation of lambda
 
-<br/>
-To estimate model parameters $\beta$ and $\phi$ from the penalized likelihood $L(\beta,\phi) -\frac{1}{2\phi}\sum_i \lambda_i\beta^TS_i\beta$, we also need to determine an appropriate value of smoothing parameters $\lambda$. The first standard method of estimating appropriate $\lambda$ for the data is based on minimization of the prediction error, namely, via leave-one-out cross-validation (LOOC) $\nu_0 =\frac{1}{n} \sum_i (\hat f^{[-i]}_i - y_i)^2$, where $f^{[-i]}_i$ is the predicted value of the ith observation for a model in which the ith observation is omitted. It can be shown that for linear regression $\nu_0 = \frac{1}{n} \sum_i\frac{(y_i -\hat\mu_i)^2}{(1-H_{ii})^2}$, where $H$ is the hat matrix of the model with all observations, i.e., we do need to repeatedly refit the model [1, Section 6.2.1]. We should note that $H_{ii}$ is usually replaced by $\mathrm{trace } H/n$ leading to so-called *generalized cross-validation* (GCV) [1].
+To estimate model parameters $\beta$ and $\phi$ from the penalized likelihood $L(\beta,\phi) -\frac{1}{2\phi}\sum_i \lambda_i\beta^TS_i\beta$, we also need to determine an appropriate value of smoothing parameters $\lambda$. The first standard method of estimating appropriate $\lambda$ for the data is based on minimization of the prediction error, namely, via leave-one-out cross-validation (LOOC) $\nu_0 =\frac{1}{n} \sum_i (f_i^{[-i]} - y_i)^2$, where $f_i^{[-i]}$ is the predicted value of the ith observation for a model in which the ith observation is omitted. It can be shown that for linear regression $\nu_0 = \frac{1}{n} \sum_i\frac{(y_i -\hat\mu_i)^2}{(1-H_{ii})^2}$, where $H$ is the hat matrix of the model with all observations, i.e., we do need to repeatedly refit the model [1, Section 6.2.1]. We should note that $H_{ii}$ is usually replaced by $\mathrm{trace } H/n$ leading to so-called *generalized cross-validation* (GCV) [1].
 
 The LOOC/GCV formulas can be used even for a GLM, since the MLE estimator $\hat\beta$ meets $\hat\beta \approx X(X^T WX)^{-1}X^TW z$, where $W$ is diagonal matrix of 'working' weights and $z$ are 'working' (also called adjusted) responses [1,2] of the iteratively re-weighted least squares algorithm that is used to numerically maximize the likelihood, i.e., $\hat\beta$ approximately solves weighted least squares problem $\sum_i w_i (z_i - X_i\beta)^2$.
 
@@ -66,8 +62,7 @@ A notable issue with LOOCV/GCV for estimating smoothing parameters is that it te
 
 ### Multivariate smooths
 
-<br/>
-We introduced GAM models for univariate smooth. An extension to multivariate smooths $f_{x_1,x_2, \ldots}(x_1,x_2, \ldots)$ is quite straightforward. We can use smooths such as thin plate regression splines, which are naturally defined for any number of covariates. Alternatively, we can use tensor product smooths to combine multiple univariate smooths. Let $X_1, X_2, \ldots X_p$ be model  matrices of univariate smooths $f_{x_1},\ldots, f_{x_p}$. Then the model matrix of the corresponding tensor product smooth is $X = X_1 \odot X_2 \odot \cdots \odot X_p$, where $\odot$ denotes row-wise Kronecker product [1]. The penalty for the tensor product smooth is chosen as $\sum_i \beta^T \tilde S_{x_i} \beta$ where $\tilde{S}_{x_i} = I_{x_1} \odot I_{x_2}  \odot \cdots  \odot S_{x_i}  \odot I_{x_{i+1}}  \odot \cdots  \odot I_{x_p}$, where $I_{x_{i}}$ is an identity matrix of rank that equals the number of basis vectors for smooth $f_{x_i}$. We should note that marginal smooths $f_{x_i}$ are often reparametrized such that the overall penalty has the interpretation in terms of (averaged) wiglinnes; see [1, Section 5.6.2].
+We introduced GAM models for univariate smooth. An extension to multivariate smooths $f_{x_1,x_2, \ldots}(x_1,x_2, \ldots)$ is quite straightforward. We can use smooths such as thin plate regression splines, which are naturally defined for any number of covariates. Alternatively, we can use tensor product smooths to combine multiple univariate smooths. Let $X_1, X_2, \ldots X_p$ be model  matrices of univariate smooths $f_{x_1},\ldots, f_{x_p}$. Then the model matrix of the corresponding tensor product smooth is $X = X_1 \odot X_2 \odot \cdots \odot X_p$, where $\odot$ denotes row-wise Kronecker product [1]. The penalty for the tensor product smooth is chosen as $\sum_i \beta^T \tilde S_{x_i} \beta$ where $S_{x_i} = I_{x_1} \odot I_{x_2}  \odot \cdots  \odot S_{x_i}  \odot I_{x_{i+1}}  \odot \cdots  \odot I_{x_p}$, where $I_{x_{i}}$ is an identity matrix of rank that equals the number of basis vectors for smooth $f_{x_i}$. We should note that marginal smooths $f_{x_i}$ are often reparametrized such that the overall penalty has the interpretation in terms of (averaged) wiglinnes; see [1, Section 5.6.2].
 
 The last thing we add is an useful observation that the tensor product smooth can be split into the smooth 'main effects' and smooth 'interaction' components, e.g., $f_{x_1} + f_{x_2} + f_{x_1x_2}$, since the tensor product basis constructions is precisely the same as the construction of interaction terms in a linear model. Provided that the marginal smooths are first subjected to sum-to-zero identifiability constraint $1^TX_i = 0$ (i.e., the unit function is removed from the span of all bases or in other words, the intercept is extracted from the smooths), then the tensor product smooth will not include the products of basis with a unit functions, i.e., the tensor product smooth will not include the main effects [1]. 
 
@@ -77,13 +72,11 @@ We should note here that the sum-to-zero identifiability constraint must be empl
 
 ## Solutions to excersises from *Generalized Additive Models: An Introduction with R*
 
-<br/>
 In this project, we will not have a look at a single dataset to demonstrate the application of GAMs. Instead, we provide multiple smaller demonstrations to have a look at different types of problems that GAM can solve. We start with datasets presented as modeling exercises in [1, Chapter 7]. 
 <br/>
 
 ### Hubble dataset
 
-<br/>
 Exercise 1 considers the data about the distance (in megaparsecs) and relative velocity (in kilometers per second) of 24 galaxies. The distance of a galaxy is estimated from observations (by the Hubble Space Telescope) of Cepheids, variable stars with a known relationship between brightness and period. The galaxy's velocity is estimated from its mean redshift. The resulting estimates of galaxy distances and velocities were taken from [3].
 
 The goal is to estimate the so-called Hubble constant $\beta$ in the Hubble's law $y = \beta x$, which expresses the relative velocity of any two galaxies $y$ separated by distance $x$ under the standard Big Bang model. 
@@ -123,19 +116,19 @@ We observe that the smooth fit remains fairly linear, with a bit of curvature at
 
 Firstly, we should comment on the computation of the confidence intervals for parameters/predictions. The confidence intervals are computed using Bayesian credible intervals based on posterior Bayes covariance matrix for $\hat\beta$ (remember that the estimation of GAMs via REML is based on empirical Bayes) that equals $V_\beta= (X^TWX+S_\lambda)^{-1}\phi$, where $S_\lambda = \sum_j\lambda_jS_j$ and $W$ is a matrix of 'working' weights. Now, these are credible intervals, not confidence intervals. However, it was shown (see Nychka’s coverage probability argument [1]) that these intervals have close to nominal coverage. The Bayes covariance matrix is also used to evaluate the significance of smooth terms (and unpenalized terms); see [1, Section 6.12.1] for more details.
 
-Secondly, the *edf* stands for estimated degrees of freedom (edf), and it is an estimate of how many degrees of freedom were actually used in the fit. If the fit was not penalized, we would use 10 degrees of freedom in our case (nine predictors correspond to basis vectors + intercept). However, thanks to the wiggliness penalization, some predictors are not 'fully' utilized and are *shrinked*. Namely, $\mathrm{E}\hat\beta = F\beta$, where $F = (X^TX + S_\lambda)^{-1}X^TX$ and $S_\lambda = \sum_j \lambda_jS_j$ ($F$ is quite similar to the hat matrix of GAM $H = X(X^TX + S_\lambda)^{-1}X^T$). The trace of $F$ represents the effective degrees of freedom [1]. We should note that this relation clearly implies that the penalized-likelihood estimates are biased. However, for finite samples, biased estimates can perform better than the unpenalized estimate due to overfitting.
+Secondly, the *EDF* stands for estimated degrees of freedom, and it is an estimate of how many degrees of freedom were actually used in the fit. If the fit was not penalized, we would use 10 degrees of freedom in our case (nine predictors correspond to basis vectors + intercept). However, thanks to the wiggliness penalization, some predictors are not 'fully' utilized and are *shrinked*. Namely, $\mathrm{E}\hat\beta = F\beta$, where $F = (X^TX + S_\lambda)^{-1}X^TX$ and $S_\lambda = \sum_j \lambda_jS_j$ ($F$ is quite similar to the hat matrix of GAM $H = X(X^TX + S_\lambda)^{-1}X^T$). The trace of $F$ represents the effective degrees of freedom [1]. We should note that this relation clearly implies that the penalized-likelihood estimates are biased. However, for finite samples, biased estimates can perform better than the unpenalized estimate due to overfitting.
 <br/>
 
 ```{r, message=FALSE, warning=FALSE}
 library(Matrix)
 
-# edf using the formula
+# EDF using the formula
 mm <- model.matrix(hubble_gam)
 S <- bdiag(list(0,hubble_gam$sp[1]*hubble_gam$smooth[[1]]$S[[1]])) # block diagonal matrix
 
 diag(solve(t(mm) %*% mm + S)%*%t(mm)%*%mm ) # trace of F
-sum(diag(solve(t(mm) %*% mm + S)%*%t(mm)%*%mm )) # total edf
-sum(diag(solve(t(mm) %*% mm + S)%*%t(mm)%*%mm )[2:10]) # x edf
+sum(diag(solve(t(mm) %*% mm + S)%*%t(mm)%*%mm )) # total EDF
+sum(diag(solve(t(mm) %*% mm + S)%*%t(mm)%*%mm )[2:10]) # x EDF
 
 # or simply
 hubble_gam$edf
@@ -177,7 +170,7 @@ AIC(hubble_lm )
 ```
 
 <br/>
-We observe that the AIC is almost identical, indicating that the linear model is sufficient. We should note that the AIC for the GAM is based on the penalized log-likelihood (the so-called *conditional AIC*). However, if we evaluate the log-likelihood of the GAM model, we notice that edf differs from the one estimated by the fit (we expect 2.765627 + 1 for the scale parameter).
+We observe that the AIC is almost identical, indicating that the linear model is sufficient. We should note that the AIC for the GAM is based on the penalized log-likelihood (the so-called *conditional AIC*). However, if we evaluate the log-likelihood of the GAM model, we notice that EDF differs from the one estimated by the fit (we expect 2.765627 + 1 for the scale parameter).
 <br/>
 
 ```{r, message=FALSE, warning=FALSE}
@@ -185,7 +178,7 @@ logLik.gam(hubble_gam) #logLik
 165.7355*2 + 2*4.187244 # AIC as provided by the function AIC.
 
 165.7355*2 + 2*(sum(hubble_gam$edf)+1) # AIC that we would expect
-hubble_gam$aic # we can actually get the AIC with the original estimate of edf from the GAM model
+hubble_gam$aic # we can actually get the AIC with the original estimate of EDF from the GAM model
 ```
 
 <br/>
@@ -264,7 +257,6 @@ Various estimates of the Hubble constant can be found at https://en.wikipedia.or
 
 ### Simulated Motorcycle Accident Dataset
 
-<br/>
 The following dataset for Exercises 2 and 3 contains 133 observations from a simulated motorcycle accident used to test helmets. Two variables in the dataset are **times** in milliseconds from the time of impact and **accel** acceleration of the head in g [5]. This dataset is widely used to demonstrate univariate smooths. Let us plot the data.
 <br/>
 
@@ -353,7 +345,6 @@ This approach is, of course, somewhat ad hoc (the observed heteroskedasticity do
 
 ### CO2 Dataset
 
-<br/>
 The next dataset (Exercise 5) considers CO2 measurements (concentration in parts per million ) at the South Pole from January 1957 onwards.
 <br/>
 
@@ -381,7 +372,7 @@ draw(co2s_gam, residuals = TRUE)
 ```
 
 <br/>
-We should note that the trend is still quite wiggly (the edf for **c.month** is over 90!). The package *gratia* allows us to evaluate the derivatives of smooth terms.
+We should note that the trend is still quite wiggly (the EDF for **c.month** is over 90!). The package *gratia* allows us to evaluate the derivatives of smooth terms.
 <br/>
 
 ```{r, message=FALSE, warning=FALSE}
@@ -546,7 +537,6 @@ appraise(co2s_gamm_AR1$gam)
 
 ### Initial Public Offering Dataset
 
-<br/>
 This dataset from Exercise 6 contains data on the number of ‘Initial Public Offerings’ (IPOs) per month in the US financial markets between 1960 and 2002 [6]. IPOs are the process by which companies go public. 
 
 * **n.ipo** - the number of IPOs for a given month
@@ -649,7 +639,6 @@ We still need to keep in mind that this is 50 EDFs fit to 150 observations, afte
 
 ### Bordeaux Wines
 
-<br/>
 The dataset (Exercise 7) contains prices and growth characteristics of 25 Bordeaux wines from 1952 to 1998 (produced between 1952 and 1989). 
 
 * **year** - year of production
@@ -794,7 +783,6 @@ ggarrange(plot_model(wine_gamm_gamma_cor, type = "pred", terms = "h.rain",title 
 
 ### Satellite Calibration
 
-<br/>
 The following dataset is from Exercise 9. It consists of direct ship measurements of chlorophyll concentrations in the top 5 meters of ocean water and estimates of chlorophyll concentration from the SeaWiFS satellite. The goal is to calibrate the estimates so they better correlate with the actual values. 
 
 * **lon** - longitude
@@ -1028,7 +1016,6 @@ summary(abs(predict(chl_gam_te,type='response') - chl$chl))
 
 ### Mackerel Eggs
 
-<br/>
 The last dataset (Exercise 11) in this section contains data on mackerel (Scomber scombrus) eggs collected from the 2010 mackerel survey (ICES Eggs and Larvae Dataset 2012, ICES, Copenhagen). The variables we will use in our model are as follows.
 
 * **count** - number of stage I eggs in the sample.
@@ -1247,7 +1234,6 @@ For comparison, we can look at the results of the analysis [8] that investigated
 
 ## Clementinum Dataset Revisited
 
-<br/>
 In this section, we will return to the dataset in the Sixth Circle. Namely, we will consider a model for the return levels (i.e., quantiles of the generalized extreme value distribution) of the maximum yearly temperature at Clementinum in Prague in the Czech Republic 14:00:00 CET (i.e, 13:00:00 UTC) based on the Clementinum records (https://opendata.chmi.cz/meteorology/climate/historical_csv/data/daily/temperature ; dataset dly-0-203-0-11514-T.csv ; 0-203-0-11514 is the Clementinum WIGOS Station Identifier).
 
 We will consider the mean and variance trend approach, which models time-series trends to obtain a stationary residual time series. This residual time series is then subjected to the usual extreme value analysis.
@@ -1518,7 +1504,6 @@ We can compare these predictions with those produced by the mean and variance ap
 
 ## Arthropod abundance
 
-<br/>
 The last dataset contains information on the abundance of arthropods collected at sites in Alb, Hainich, and Schorfheide between 2008 and 2017 [9]. The variables that will be some interest to us are as follows; see enclosed *datastructure.html*.
 
 * **Habitat_type** - forest or grassland
@@ -1571,7 +1556,6 @@ ggplot(aes(x = year, y = abundance_identified, group = plot_id),data = seibold) 
 
 ### Extracting trends
 
-<br/>
 Let us start with modeling the trends. First, we will consider the case with no covariates. The simplest model would simply model 
 the overall yearly trend. Since we are modeling the counts, we will use the negative binomial model. Note that we can use the basis $k = 10$ at most since no plot has more than 10 observations. 
 <br/>
@@ -1653,7 +1637,7 @@ appraise(m5)
 ```
 
 <br/>
-Notice that smooths s(year,plot_id) require much less edf; the AIC also significantly dropped. In our final model, we also consider year random effects.
+Notice that smooths s(year,plot_id) require much less EDF; the AIC also significantly dropped. In our final model, we also consider year random effects.
 <br/>
 
 ```{r, message=FALSE, warning=FALSE}
@@ -1685,7 +1669,6 @@ The model with region-specific trends appears to be the best.
 
 ### Model with covariates
 
-<br/>
 Let us now use the covariates to explain the abundance. We start with the overall trend model.
 <br/>
 
@@ -1802,6 +1785,7 @@ AIC(m_cov1,m_cov2,m_cov3)
 There is little to add to conclude the Eighth Circle. Generalized additive models provide much-needed flexibility for traditional statistical models, enabling us to model complex nonlinear relationships common in longitudinal and hierarchical data. We also observed the importance of penalization in limiting the model's complexity. 
 
 In the last circle of this series, we will look at another family of methods that uses penalized likelihood. However, instead of just controlling the complexity of a particular dependence (**wiggliness**), we will seek to control whether a given predictor should be included in the model (**sparseness**). 
+<br/>
 
 ## References
 
