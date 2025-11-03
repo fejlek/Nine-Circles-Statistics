@@ -1938,7 +1938,7 @@ thin plate regression splines (*s(lo,la,bs = ‘tp’)*). We also include
 the interaction smooth between sample time and location
 (*ti(jday,lo,la)*). We should also note that our data contains some
 missing values; we will perform a complete-case analysis for simplicity
-(about 5% of the rows are missing). <br/>
+(about 5% of the rows contain missing data). <br/>
 
 ``` r
 ctrl <- gam.control(nthreads = 4) # multiple threads to speed up the fit 

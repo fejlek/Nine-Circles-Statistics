@@ -1075,7 +1075,7 @@ med <- cbind(med,jday)
 ```
 
 <br/>
-Since we are modeling count data, we will start with the quasi-Poisson model. We should note that we model the location via 2-D  thin plate regression splines (*s(lo,la,bs = 'tp')*). We also include the interaction smooth between sample time and location (*ti(jday,lo,la)*). We should also note that our data contains some missing values; we will perform a complete-case analysis for simplicity (about 5% of the rows are missing). 
+Since we are modeling count data, we will start with the quasi-Poisson model. We should note that we model the location via 2-D  thin plate regression splines (*s(lo,la,bs = 'tp')*). We also include the interaction smooth between sample time and location (*ti(jday,lo,la)*). We should also note that our data contains some missing values; we will perform a complete-case analysis for simplicity (about 5% of the rows contain missing data). 
 <br/>
 
 ```{r, message=FALSE, warning=FALSE}
