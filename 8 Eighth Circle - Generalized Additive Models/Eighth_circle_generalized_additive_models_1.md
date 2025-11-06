@@ -143,7 +143,7 @@ an alternative approach based on REML (restricted maximum likelihood)
 was proposed that often performs better than LOOCV/GCV \[1\]. This
 approach uses the fact that by taking a Bayesian approach to estimate
 the smooth model by assigning improper normal priors on $\beta$ (namely
-$\beta \sim N(0, S^-_\lambda \phi)$, where $S^-_\lambda \phi$ is a
+$\beta \sim N(0, S_\lambda^- \phi)$, where $S_\lambda^-$ is a
 pseudo-inverse of $S_\lambda = \sum_j\lambda_jS_j$), the Bayesian log
 marginal likelihood
 $\nu(\lambda) = \mathrm{log} \int f(y\mid\beta)f(\beta)\mathrm{d}\beta$
