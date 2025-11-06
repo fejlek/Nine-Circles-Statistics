@@ -57,7 +57,7 @@ To estimate model parameters $\beta$ and $\phi$ from the penalized likelihood $L
 
 The LOOC/GCV formulas can be used even for a GLM, since the MLE estimator $\hat\beta$ meets $\hat\beta \approx X(X^T WX)^{-1}X^TW z$, where $W$ is diagonal matrix of 'working' weights and $z$ are 'working' (also called adjusted) responses [1,2] of the iteratively re-weighted least squares algorithm that is used to numerically maximize the likelihood, i.e., $\hat\beta$ approximately solves weighted least squares problem $\sum_i w_i (z_i - X_i\beta)^2$.
 
-A notable issue with LOOCV/GCV for estimating smoothing parameters is that it tends to overfit (i.e., under-smooth) in practice [1]. Hence, an alternative approach based on REML (restricted maximum likelihood) was proposed that often performs better than LOOCV/GCV [1]. This approach uses the fact that by taking a Bayesian approach to estimate the smooth model by assigning improper normal priors on $\beta$ (namely $\beta \sim N(0, S^-_\lambda \phi)$, where $S^-_\lambda \phi$ is a pseudo-inverse of $S_\lambda = \sum_j\lambda_jS_j$), the Bayesian log marginal likelihood $\nu(\lambda) = \mathrm{log} \int f(y\mid\beta)f(\beta)\mathrm{d}\beta$ has the same form as the REML for generalized mixed effects models [1]. Thus, algorithms for estimating variance components in mixed effects models can be used to obtain an *empirical Bayes* estimate of the smooth parameters $\lambda$ [1].
+A notable issue with LOOCV/GCV for estimating smoothing parameters is that it tends to overfit (i.e., under-smooth) in practice [1]. Hence, an alternative approach based on REML (restricted maximum likelihood) was proposed that often performs better than LOOCV/GCV [1]. This approach uses the fact that by taking a Bayesian approach to estimate the smooth model by assigning improper normal priors on $\beta$ (namely $\beta \sim N(0, S_\lambda^- \phi)$, where $S_\lambda^-$ is a pseudo-inverse of $S_\lambda = \sum_j\lambda_jS_j$), the Bayesian log marginal likelihood $\nu(\lambda) = \mathrm{log} \int f(y\mid\beta)f(\beta)\mathrm{d}\beta$ has the same form as the REML for generalized mixed effects models [1]. Thus, algorithms for estimating variance components in mixed effects models can be used to obtain an *empirical Bayes* estimate of the smooth parameters $\lambda$ [1].
 <br/>
 
 ### Multivariate smooths
@@ -1499,7 +1499,9 @@ qgev(c(0.5,0.2,0.1,0.05,0.02,0.01,0.002,0.001),
 ```
 
 <br/>
-We can compare these predictions with those produced by the mean and variance approach using LOESS with the default smoothing. The predicted 1000-year return level for 2024 using our model is about 1°C higher than the one we obtained via the LOESS. The predicted 1000-year return level for 1775 using our model is about 0.3°C higher. Of course, the main benefit of using GAM is that the smoothing parameters are estimated algorithmically, and we can bootstrap the whole procedure (using the moving-block bootstrap) to obtain confidence intervals (although this would be computationally expensive). 
+We can compare these predictions with those produced by the mean and variance approach using LOESS with the default smoothing. The predicted 1000-year return level for 2024 using our model is about 1°C higher than the one we obtained via the LOESS. The predicted 1000-year return level for 1775 using our model is about 0.3°C higher.  
+
+The main benefit of using GAM is that the smoothing parameters are estimated algorithmically, and we can bootstrap the whole procedure (using the moving-block bootstrap) to obtain confidence intervals (although this would be computationally expensive). 
 <br/>
 
 ## Arthropod abundance

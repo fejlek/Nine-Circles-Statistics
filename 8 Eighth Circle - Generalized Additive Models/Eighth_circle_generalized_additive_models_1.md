@@ -2481,8 +2481,9 @@ qgev(c(0.5,0.2,0.1,0.05,0.02,0.01,0.002,0.001),
 and variance approach using LOESS with the default smoothing. The
 predicted 1000-year return level for 2024 using our model is about 1°C
 higher than the one we obtained via the LOESS. The predicted 1000-year
-return level for 1775 using our model is about 0.3°C higher. Of course,
-the main benefit of using GAM is that the smoothing parameters are
+return level for 1775 using our model is about 0.3°C higher. 
+
+The main benefit of using GAM is that the smoothing parameters are
 estimated algorithmically, and we can bootstrap the whole procedure
 (using the moving-block bootstrap) to obtain confidence intervals
 (although this would be computationally expensive). <br/>
