@@ -1,8 +1,8 @@
 # Nine Circles of Statistical Modeling
 
-The primary focus of this repository is *statistical models*, i.e., models based on a set of more or less restricting assumptions about the data-generating process such as linear regression, Poisson regresion, or quantile regresion (I plan to cover nine models at the time of writing this introduction). I will demonstrate their usage on datasets taken from Kaggle (https://www.kaggle.com) and other places such as various *R* packages . Even though each problem will be mainly focused on one particular model, I expect that due to dealing with more or less realistic datasets, I will have to cover other additional topics as the need emerges, e.g., dealing with missing data (multiple imputation) and dealing with dependent/correlated observations. 
+The primary focus of this repository is *statistical models*, i.e., models based on a set of more or less restricting assumptions about the data-generating process such as linear regression, Poisson regresion, or quantile regresion (I plan to cover nine regression models at the time of writing this introduction). I will demonstrate their usage on datasets taken from Kaggle (https://www.kaggle.com) and other places such as various *R* packages . Even though each problem will be mainly focused on one particular model, I expect that due to dealing with more or less realistic datasets, I will have to cover other additional topics as the need emerges, e.g., dealing with missing data (multiple imputation) and dealing with dependent/correlated observations. 
 
-The main motivation behind this work is personal: learning, practice, future reference, and, last but not least, fun. Still, I think that these small projects can be useful for any reader interested in statistical modeling. Kaggle users usually provide their solutions based on machine learning techniques, so these solutions can be unique, at least in this regard. 
+The main motivation behind this work is personal: learning, practice, future reference, and, last but not least, fun. Still, I think that these small projects can be useful for any reader interested in statistical modeling. Kaggle users usually provide their solutions based on machine learning techniques, so these solutions can be a bit unique, at least in this regard. 
 
 ## Regression modeling strategies
 
@@ -19,7 +19,7 @@ In the solutions provided here, I will (or at least try to) follow these steps t
 
 ## Technical solution
 
-All solutions will programmed in R and provided as R markdown documents and github markdown documents.
+All solutions are programmed in R and provided as R markdown documents and github markdown documents.
 
 ## Finished Circles
 
