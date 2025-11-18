@@ -1,0 +1,1629 @@
+---
+title: "The Ninth Circle: LASSO regression"
+author: "Jiří Fejlek"
+date: "2025-11-17"
+output:
+  md_document:
+    toc: true
+    variant: GFM
+code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+<br/>
+In the final part of our series on statistical modeling, we will look at penalized regression for *variable selection*. In previous circles, we avoided selecting predictors based on the dataset itself. We always emphasized having a model with the maximum number of predictors supported by the dataset's effective sample size. 
+
+Oftentimes, we do not have the luxury of a carefully chosen, limited set of predetermined predictors, and we have to deal with a dataset with way too many candidate predictors. While reducing the number of predictors based on expert (prior) knowledge is preferable, algorithmic selection based on the data is possible and, if done properly, not only allows for better predictions (compared to the unpenalized model, if it is even estimable), but also enables so-called post-selection inference. 
+
+Similarly to the previous circle, we will not focus on a single dataset. Instead, we will use three. The first dataset is primarily used to introduce the LASSO and various inference methods. The second dataset will demonstrate post-selection inference in more detail. The last dataset is included to demonstrate the application of LASSO when the number of predictors far exceeds the number of observations. 
+<br/>
+
+## Introduction to LASSO
+
+Let us start with a brief introduction of the LASSO [1]. First, let us assume a linear regression model $Y = X\beta + \varepsilon$. Let us denote the number of observations as $N$ and the number of covariates as $p$. The LASSO estimator for the linear regression is the ordinary least squares (OLS) estimator with $l_1$-regularization, i.e., $\hat\beta_\mathrm{LASSO} = \mathrm{argmin}_\beta ||X\beta - Y||^2 + \lambda ||\beta||_1$ for some $\lambda > 0$, where $||\beta||_1 = \sum_i|\beta_i|$. This minimization is equivalent to the constrained problem $\mathrm{argmin}_\beta ||X\beta - Y||^2$ subject to $||\beta||_1 \leq t$, where $t$ depends on the value of $\lambda$.
+
+The $l_1$-regularization has some nice properties that motivate its use. The resulting optimization is strictly convex when $\mathrm{rank}(X) = p$, and thus the optimization problem has a unique solution that can be found via appropriate algorithms. However, even when $\mathrm{rank}(X) < p$ (most notably in the cases when $p > N$ in which OLS is not an appropriate estimator), the LASSO can still have unique solution under some conditions (so-called *general position* [2], e.g., provide that $X$ is drawn from a continuous probability distribution then it is in *general position* with almost surely). In addition, unlike $l_2$-regularization (the so-called ridge regression), the LASSO provides *sparse* solutions; many of the coefficients in the solution are usually zero. This means that the LASSO employs both *shrinkage* (it biases the coefficients downwards to reduce overfitting) and *selection*.
+
+We should note that discarding predictors based on the data themselves is always a "slippery slope," especially for subsequent inference, as we will discuss later. However, in cases when the number of predictors $p$ is close to $N$ or even greater (consider, for example, a study about the effect of genes, which easily reach a count of  several thousands considered in the study), one may "bet on sparsity": [1]
+
+<br/>
+*Use a procedure that does well in sparse problems, since no procedure does well in dense problems.*
+<br/>
+
+If $p \gg N$ but the actual model is sparse such that merely $k < N$ have non-zero effect, then these coefficients can still be reasonably estimated even when the particular predictors are not known a priori. If the actual model is not sparse, then the number of samples $N$ is simply too small to allow for accurate estimation of the effects of predictors using any method.
+
+We established the LASSO estimator for solving linear regression problems. However, the LASSO can be straightforwardly generalized to the class of generalized linear models or Cox proportional hazards models [1]. Before we discuss further intricacies of the LASSO, such as its asymptotic properties and "post-LASSO" inference, let us move to the first dataset of this project.
+<br/>
+
+
+## Diabetes dataset
+
+The first dataset we will use in this project is the diabetes study from [3], which is also used in [1] in the chapter on inference for LASSO regression. However, the text in [1] does not show the implementation; it only shows the results. Thus, it might be helpful to demonstrate how the aforementioned methods are actually implemented in R. 
+
+The dataset contains the following information about 442 patients. 
+
+* **age**
+* **sex**
+* **BMI** - body mass index
+* **BP** - average blood pressure
+* **S1**-**S6** - blood serum measurements
+* **Y** - quantitative measure of disease progression one year after baseline
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+library(readr)
+diabetes <- read_delim('C:/Users/elini/Desktop/nine circles/diabetes.txt')
+head(diabetes)
+dim(diabetes)
+```
+
+### LASSO fit
+
+When using LASSO, we typically standardize the predictors to ensure that the LASSO solution (and, consequently, the variable selection) does not depend on their scale. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+diabetes_std <- as.data.frame(cbind(scale(diabetes[,1:10], center = TRUE, scale = TRUE),diabetes$Y))
+colnames(diabetes_std) <- colnames(diabetes)
+model_matrix_diab <- as.matrix(diabetes_std[,1:10])
+```
+
+<br/>
+Let us fit the LASSO model (based on ordinary linear regression, i.e., the Gaussian model) using the *glmnet* package (https://cran.r-project.org/web/packages/glmnet/index.html). The parameter $\alpha$ corresponds to the general *elastic net* [1] penalty $\lambda((1-\alpha)||\beta||_2^2 + \alpha ||\beta||_1)$, i.e., we get LASSO for $\alpha = 1$ and the so-called *ridge regression* for $\alpha = 0$
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+library(glmnet)
+diabetes_lasso <- glmnet(model_matrix_diab,diabetes_std$Y,alpha=1,family='gaussian')
+```
+
+<br/>
+The function *glmnet* actually does not fit a single model. It fits multiple ones for various values of the parameter $\lambda$. We can visualize these fits using the *LASSO path*.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+plot(diabetes_lasso,xvar = 'lambda', label = TRUE)
+```
+
+<br/>
+This plot shows the evolution of the regression coefficients as the penalization parameter $\lambda$ increases. We observe that, for sufficiently large penalty, all predictors are dropped from the model. Since the minimization of the negative log-likelihood with an $l_1$ penalty is equivalent to the minimization of the negative log-likelihood with a constraint $||\beta||_1 \leq k$, we can use a plot in terms of varying bound on $||\beta||_1$ instead.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+plot(diabetes_lasso,xvar = 'norm', label = TRUE)
+```
+
+<br/>
+The question is which value of $\lambda$ should we use. In terms of fit, *glmnet* evaluates the model using the percentage of explained deviance (which equals $R^2$ for linear regression). The best model in this regard is naturally always the one that contains all the variables.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+plot(diabetes_lasso,xvar = 'dev', label = TRUE)
+```
+
+<br/>
+To have a chance to pick another model, we can choose the penalization that minimizes the prediction error on the unseen data. As usual, we estimate the prediction error using the k-fold cross-validation [1]. We do not have to write this cross-validation in R ourselves. It is implemented in *glmnet* as follows. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+set.seed(123) 
+diabetes_lasso_cv <- cv.glmnet(model_matrix_diab,diabetes_std$Y,alpha=1,family='gaussian',nfolds = 10,type.measure = 'mse')
+diabetes_lasso_cv 
+```
+
+<br/>
+The *min* row corresponds to the value of $\lambda$ for which the minimum mean cross-validated error was attained. The second row *1se* corresponds to the maximum value of $\lambda$ such that its mean cross-validated error is within one standard error of the minimum. We can plot the mean cross-validated error as follows.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+plot(diabetes_lasso_cv)
+```
+
+<br/>
+We observe that the curve is relatively flat, indicating that the full fit is reasonable (the number of predictors is safely within our rule-of-thumb guidelines). To illustrate better a typical *bias-variance trade-off*, let us consider the model with all interactions.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+model_matrix_diab_int <- scale(model.matrix(lm(Y~.^2,data = diabetes_std))[,2:56], center = TRUE, scale = TRUE)
+
+set.seed(123)
+diabetes_lasso_cv_inter <- cv.glmnet(model_matrix_diab_int,diabetes_std$Y,alpha=1,family='gaussian',nfolds = 10,type.measure = 'mse')
+```
+
+```{r, message=FALSE, warning=FALSE, echo = FALSE}
+plot(diabetes_lasso_cv_inter)
+```
+
+<br/>
+The model with all main effects and interactions has 56 parameters (+ the scale parameter), which is much less reasonable for the 442 observations. The cross-validation results confirm that. The penalized fit attained noticeably lower mean cross-validated error.
+
+Let us return to our original model with no interactions. The coefficients for the lambda that attained the minimum mean cross-validation error and "1se" error are as follows. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+# minimum CV
+diabetes_lasso_cv$glmnet.fit$beta[,diabetes_lasso_cv$index[1]]
+# 1se CV
+diabetes_lasso_cv$glmnet.fit$beta[,diabetes_lasso_cv$index[2]]
+```
+
+<br/>
+Let us assess both fits.
+<br/>
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+beta_min <- diabetes_lasso_cv$glmnet.fit$beta[,diabetes_lasso_cv$index[1]]
+beta0_min <- diabetes_lasso_cv$glmnet.fit$a0[diabetes_lasso_cv$index[1]]
+
+beta_1se <- diabetes_lasso_cv$glmnet.fit$beta[,diabetes_lasso_cv$index[2]]
+beta0_1se <- diabetes_lasso_cv$glmnet.fit$a0[diabetes_lasso_cv$index[2]]
+
+
+residuals_min <- diabetes_std$Y - model_matrix_diab %*% beta_min - beta0_min
+residuals_1se <- diabetes_std$Y - model_matrix_diab %*% beta_1se - beta0_1se
+
+
+par(mfrow = c(1, 2))
+
+# QQ plot
+qqnorm(residuals_min, main = 'min')
+qqline(residuals_min)
+qqnorm(residuals_1se, main = '1se')
+qqline(residuals_1se)
+
+# resid vs predicted
+plot(model_matrix_diab %*% beta_min,residuals_min + beta0_min, xlab = 'Predicted response', ylab = 'Residuals', main = 'min')
+plot(model_matrix_diab %*% beta_min,residuals_1se + beta0_1se, xlab = 'Predicted response', ylab = 'Residuals', main = '1se')
+
+# actual vs predicted
+plot(diabetes_std$Y,model_matrix_diab %*% beta_min + beta0_min, xlab = 'Response', ylab = 'Predicted response', main = 'min')
+abline(0,1)
+plot(diabetes_std$Y,model_matrix_diab %*% beta_1se + beta0_1se, xlab = 'Response', ylab = 'Predicted response', main = '1se')
+abline(0,1)
+```
+
+<br/>
+Both fits seem reasonable.
+<br/>
+
+### Variability of LASSO coefficients
+
+We have obtained coefficient estimates, but we have no standard errors or confidence intervals for the estimates. Let us first discuss the asymptotic properties of LASSO estimates for a bit. 
+
+#### Asymptotic properties of LASSO 
+
+Provided that $X$ is not singular, the LASSO is consistent when $\frac{\lambda_N}{N} \rightarrow 0$ and is $\sqrt{N}$-consistent when $\lambda(N) \leq \mathrm{conts}\cdot\sqrt{N}$. Variable selection by the LASSO is inconsistent for $\lambda(N) \leq \mathrm{conts}\cdot\sqrt{N}$ [4]. This means that LASSO cannot be both $\sqrt{N}$-consistent and attain consistent variable selection; however, it can attain consistent variable selection and be consistent (sub-$\sqrt{N}$) provided that the columns of the model matrix are not too correlated [5]. Similar asymptotic properties can be for $p \gg N$  provided that the problem is sufficiently sparse and the eigenvalues of $X$ are bounded from zero (consistency) and columns are not too correlated (consistent selection) [1].
+
+There is one important caveat to these consistency theorems. While these results imply that LASSO can asymptotically provide consistent estimates and consistent variable selection, these theorems are merely point-wise for a particular true value $\beta$. The actual convergence will be extremely dependent on the values of $\beta$ (i.e., how small they are) and how much the columns of $X$ are correlated. In other words, the convergence is not uniform (not even locally) [6]. In addition, finite-sample distributions of the parameters are usually far away from the asymptotic distributions; see [6] for some simple examples. This means that estimates are often significantly biased, and the selected predictors do not correspond to the actual model.  
+
+Overall, even though the LASSO has some nice asymptotic properties, in practice, these properties can mean very little. 
+<br/>
+
+#### Bayesian LASSO
+
+As we noted in our brief introduction to the asymptotic properties of the LASSO estimates. It is important to assess the actual sampling variability for the finite number of samples. We first look at resampling based on the Bayesian LASSO [7]. 
+
+Let $y \sim N(X\beta, \sigma^2I)$ and let assume priors on coefficients beta $\beta \mid \lambda,\sigma  \sim \Pi_j \frac{\lambda}{2\sigma} e^{-\lambda|\beta_j|/\sigma}$ (the so-called Laplacian prior). Then the negative log posterior density for $\beta \mid y,\sigma,\lambda$ is $\frac{1}{2\sigma^2}||y-X\beta||_2^2 + \frac{\lambda}{\sigma}||\beta||_1$, i.e., it is the penalized log-likelihood used to obtain LASSO estimates [1]. Using this correspondence, one can fit a Bayesian LASSO model, which yields a similar coefficient path to LASSO for a given $\lambda$; see [8] for a detailed description of the Bayesian LASSO.
+
+The Bayesian estimates are obtained via the MCMC algorithm, hence we need to specify the initial values of $\beta, \lambda, \sigma$. We use default values for the remaining parameters/priors that also need to be specified; see https://www.rdocumentation.org/packages/monomvn/versions/1.9-21/topics/blasso for more details.
+<br/>
+  
+```{r, message=FALSE, warning=FALSE}
+library(monomvn)
+diabetes_blasso <- blasso(X = model_matrix_diab,
+                          y = diabetes_std$Y,
+                          T = 10000, # number of MCMC iterations
+                          beta = rep(1,10), # initial estimate of betas
+                          lambda2 = 1, # initial estimate of lambda
+                          s2 = var(diabetes_std$Y - mean(diabetes_std$Y)), # initial estimate of sigma
+                          verb = 0
+)
+```
+
+<br/>
+Let us plot the trajectories (for the last 1000 samples) of the MCMC algorithm for all model parameters.
+<br/>
+  
+```{r, message=FALSE, warning=FALSE,echo = FALSE}
+par(mfrow = c(3, 1))
+plot(seq(9001,10000,1),diabetes_blasso$beta[9001:10000,1], type = 'l',xlab = 'Iter',ylab = 'Beta 1')
+plot(seq(9001,10000,1),diabetes_blasso$beta[9001:10000,2], type = 'l',xlab = 'Iter',ylab = 'Beta 2')
+plot(seq(9001,10000,1),diabetes_blasso$beta[9001:10000,3], type = 'l',xlab = 'Iter',ylab = 'Beta 3')
+plot(seq(9001,10000,1),diabetes_blasso$beta[9001:10000,4], type = 'l',xlab = 'Iter',ylab = 'Beta 4')
+plot(seq(9001,10000,1),diabetes_blasso$beta[9001:10000,5], type = 'l',xlab = 'Iter',ylab = 'Beta 5')
+plot(seq(9001,10000,1),diabetes_blasso$beta[9001:10000,6], type = 'l',xlab = 'Iter',ylab = 'Beta 6')
+plot(seq(9001,10000,1),diabetes_blasso$beta[9001:10000,7], type = 'l',xlab = 'Iter',ylab = 'Beta 7')
+plot(seq(9001,10000,1),diabetes_blasso$beta[9001:10000,8], type = 'l',xlab = 'Iter',ylab = 'Beta 8')
+plot(seq(9001,10000,1),diabetes_blasso$beta[9001:10000,9], type = 'l',xlab = 'Iter',ylab = 'Beta 9')
+plot(seq(9001,10000,1),diabetes_blasso$beta[9001:10000,10], type = 'l',xlab = 'Iter',ylab = 'Beta 10')
+plot(seq(9001,10000,1),diabetes_blasso$lambda2[9001:10000], type = 'l',xlab = 'Iter',ylab = 'Lambda')
+plot(seq(9001,10000,1),diabetes_blasso$s2[9001:10000], type = 'l',xlab = 'Iter',ylab = 'Scale')
+```
+
+<br/>
+We observe no obvious patterns. Let us plot the posterior distributions of $\beta, \lambda,\sigma$. We will discard the first 1000 samples as burn-in samples (since the first few samples are not generated from the Markov process's stationary distribution).
+<br/>
+  
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+library(car)
+
+par(mfrow = c(1, 5))
+densityPlot(diabetes_blasso$beta[1000:10000,1], xlab = 'Beta 1')
+densityPlot(diabetes_blasso$beta[1000:10000,2], xlab = 'Beta 2')
+densityPlot(diabetes_blasso$beta[1000:10000,3], xlab = 'Beta 3')
+densityPlot(diabetes_blasso$beta[1000:10000,4], xlab = 'Beta 4')
+densityPlot(diabetes_blasso$beta[1000:10000,5], xlab = 'Beta 5')
+densityPlot(diabetes_blasso$beta[1000:10000,6], xlab = 'Beta 6')
+densityPlot(diabetes_blasso$beta[1000:10000,7], xlab = 'Beta 7')
+densityPlot(diabetes_blasso$beta[1000:10000,8], xlab = 'Beta 8')
+densityPlot(diabetes_blasso$beta[1000:10000,9], xlab = 'Beta 9')
+densityPlot(diabetes_blasso$beta[1000:10000,10], xlab = 'Beta 10')
+
+par(mfrow = c(1, 2))
+densityPlot(diabetes_blasso$lambda2[1000:10000], xlab = 'Lambda')
+densityPlot(diabetes_blasso$s2[1000:10000], xlab = 'Scale')
+```
+
+<br/>
+We observe that the selection is definitely not as clear-cut. **Sex**, **BMI**, **BP**, and **S5** were consistently present in the samples. Other serum variables were often omitted (**S2**, **S4**, **S6** were somewhat consistently dropped from the model). Using the *monomvn*package, we get a nice summary of the posterior distributions in the form of boxplots. 
+<br/>
+  
+```{r, message=FALSE, warning=FALSE}
+par(mfrow = c(1, 1))
+plot(diabetes_blasso,burnin = 1000)
+```
+
+<br/>
+The quantile-based credible intervals are as follows.
+<br/>
+  
+```{r, message=FALSE, warning=FALSE}
+apply(diabetes_blasso$beta[1000:10000,],2,function(x) quantile(x,c(0.025,0.975)))
+```
+
+<br/>
+We can also compute the selection probabilities.
+<br/>
+  
+```{r, message=FALSE, warning=FALSE}
+apply(diabetes_blasso$beta[1000:10000,] != 0,2,mean)
+```
+
+<br/>
+We should note that *blasso* achieves the variable selection (some coefficients are exact zeros) via the "reversible jump (RJ) MCMC", a Bayesian model selection. Without such selection, the Bayesian LASSO will not perform variable selection, making the Bayesian LASSO a "compromise" between the LASSO and the ridge regression [3].
+<br/>
+  
+```{r, message=FALSE, warning=FALSE}
+diabetes_blasso_noRJ <- blasso(X = model_matrix_diab,
+                               y = diabetes_std$Y,
+                               T = 10000, # number of MCMC iterations
+                               beta = rep(1,10), # initial estimate of betas
+                               lambda2 = 1, # initial estimate of lambda
+                               s2 = var(diabetes_std$Y - mean(diabetes_std$Y)), # initial estimate of sigma
+                               RJ = FALSE, # no variable selection
+                               verb = 0
+)
+```
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+par(mfrow = c(1, 5))
+densityPlot(diabetes_blasso_noRJ$beta[1000:10000,1], xlab = 'Beta 1')
+densityPlot(diabetes_blasso_noRJ$beta[1000:10000,2], xlab = 'Beta 2')
+densityPlot(diabetes_blasso_noRJ$beta[1000:10000,3], xlab = 'Beta 3')
+densityPlot(diabetes_blasso_noRJ$beta[1000:10000,4], xlab = 'Beta 4')
+densityPlot(diabetes_blasso_noRJ$beta[1000:10000,5], xlab = 'Beta 5')
+densityPlot(diabetes_blasso_noRJ$beta[1000:10000,6], xlab = 'Beta 6')
+densityPlot(diabetes_blasso_noRJ$beta[1000:10000,7], xlab = 'Beta 7')
+densityPlot(diabetes_blasso_noRJ$beta[1000:10000,8], xlab = 'Beta 8')
+densityPlot(diabetes_blasso_noRJ$beta[1000:10000,9], xlab = 'Beta 9')
+densityPlot(diabetes_blasso_noRJ$beta[1000:10000,10], xlab = 'Beta 10')
+
+par(mfrow = c(1, 1))
+plot(diabetes_blasso_noRJ,burnin = 1000)
+```
+
+```{r, message=FALSE, warning=FALSE}
+# quantile-based credible intervals
+apply(diabetes_blasso_noRJ$beta[1000:10000,],2,function(x) quantile(x,c(0.025,0.975)))
+```
+
+```{r, message=FALSE, warning=FALSE}
+# selection probability
+apply(diabetes_blasso_noRJ$beta[1000:10000,] != 0,2,mean)
+```
+
+<br/>
+Indeed, we observe that the posterior distributions no longer have a point mass at zero.
+
+A disadvantage of the Bayesian Lasso is that it is computationally expensive (approximately $O(p^2)$ by numerical experiments [1]). If we again consider the model with all interactions, the fit is already noticeably slower. 
+<br/>
+  
+```{r, message=FALSE, warning=FALSE}
+diabetes_blasso_int <- blasso(X = model_matrix_diab_int,
+                              y = diabetes_std$Y,
+                              T = 10000, # number of MCMC iterations
+                              beta = rep(1,55), # initial estimate of betas
+                              lambda2 = 1, # initial estimate of lambda
+                              s2 = var(diabetes_std$Y - mean(diabetes_std$Y)), # initial estimate of sigma
+                              verb = 0                       
+)
+```
+
+```{r, message=FALSE, warning=FALSE}
+plot(diabetes_blasso_int,burnin = 1000)
+apply(diabetes_blasso_int$beta[1000:10000,],2,function(x) quantile(x,c(0.025,0.975)))
+```
+
+#### Nonparametric bootstrap
+
+An alternative way to assess the variability of the LASSO estimates is a nonparametric bootstrap.
+<br/>
+  
+```{r, message=FALSE, warning=FALSE}
+set.seed(123)
+nb <- 1000
+
+betas_boot <- matrix(NA,nb,10)
+colnames(betas_boot) <- colnames(diabetes_blasso$beta)
+
+for(i in 1:nb){
+  
+  diabetes_new <-  diabetes_std[sample(nrow(diabetes_std) , rep=TRUE),]
+  
+  diabetes_lasso_cv_new <- cv.glmnet(as.matrix(diabetes_new[,1:10]),diabetes_new$Y,alpha=1,family='gaussian',nfolds = 10,type.measure = 'mse')
+  
+  betas_boot[i,] <- diabetes_lasso_cv_new$glmnet.fit$beta[,diabetes_lasso_cv_new$index[1]]
+}
+```
+
+<br/>
+Let us compare the selection probabilities of LASSO and Bayesian LASSO with variable selection. 
+<br/>
+  
+```{r, message=FALSE, warning=FALSE}
+sel_prob <- rbind(apply(betas_boot != 0,2,mean),
+                  apply(diabetes_blasso$beta[1000:10000,] != 0,2,mean),
+                  apply(diabetes_blasso_noRJ$beta[1000:10000,] != 0,2,mean))
+
+rownames(sel_prob) <- c('LASSO (bootstrap)', 'Bayesian LASSO', 'Bayesian LASSO (no selection)')
+sel_prob
+```
+
+<br/>
+The Bayesian LASSO with variable selection is a bit more aggressive in dropping the variables (**age** and **S6** probabilities differ the most). Still, the variables that were almost always kept in the model are the same (**sex**,**BP**, and **S5**). Let us compare the distributions of the parameter estimates next. 
+<br/>
+  
+```{r, message=FALSE, warning=FALSE}
+betas_box1 <- cbind(as.vector(betas_boot), rep(colnames(diabetes_blasso$beta),each = nb))
+betas_box2 <- cbind(as.vector(diabetes_blasso$beta[1000:10000,]), rep(colnames(diabetes_blasso$beta),each = 9001))
+betas_box3 <- cbind(as.vector(diabetes_blasso_noRJ$beta[1000:10000,]), rep(colnames(diabetes_blasso$beta),each = 9001))
+
+
+par(mfrow = c(1, 3))
+boxplot(as.numeric(betas_box1[,1])~factor(betas_box1[,2], levels = colnames(diabetes_blasso$beta)),ylim = c(-100,100), xlab = '', ylab = 'coef',main = 'LASSO (bootstrap)')
+boxplot(as.numeric(betas_box2[,1])~factor(betas_box2[,2], levels = colnames(diabetes_blasso$beta)),ylim = c(-100,100), xlab = '', ylab = 'coef',main = 'Bayesian LASSO (with variable sel.)')
+boxplot(as.numeric(betas_box3[,1])~factor(betas_box3[,2], levels = colnames(diabetes_blasso$beta)),ylim = c(-100,100), xlab = '', ylab = 'coef',main = 'Bayesian LASSO (no variable sel.)')
+```
+
+<br/>
+We observe that the boxplots are very similar for all three resampling methods. For completeness's sake, let us also plot the densities of the bootstrap resamples.
+<br/>
+  
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+par(mfrow = c(1, 5))
+densityPlot(betas_boot[,1], xlab = 'Beta 1')
+densityPlot(betas_boot[,2], xlab = 'Beta 2')
+densityPlot(betas_boot[,3], xlab = 'Beta 3')
+densityPlot(betas_boot[,4], xlab = 'Beta 4')
+densityPlot(betas_boot[,5], xlab = 'Beta 5')
+densityPlot(betas_boot[,6], xlab = 'Beta 6')
+densityPlot(betas_boot[,7], xlab = 'Beta 7')
+densityPlot(betas_boot[,8], xlab = 'Beta 8')
+densityPlot(betas_boot[,9], xlab = 'Beta 9')
+densityPlot(betas_boot[,10], xlab = 'Beta 10')
+```
+
+<br/>
+We again observe that the bootstrap densities show inconsistent variable selection. To conclude, let us compute the bootstrap resamples of the LASSO coefficients for the model with interactions.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+set.seed(123)
+nb <- 1000
+
+betas_int_boot <- matrix(NA,nb,55)
+colnames(betas_int_boot) <- names(diabetes_lasso_cv_inter$glmnet.fit$beta[,1])
+full_matrix <- cbind(model_matrix_diab_int,diabetes_std$Y)
+
+for(i in 1:nb){
+  
+  diabetes_int_new <-  full_matrix[sample(nrow(full_matrix) , rep=TRUE),]
+  
+  diabetes_lasso_cv_new <- cv.glmnet(as.matrix(diabetes_int_new)[,1:55],diabetes_int_new[,56],alpha=1,family='gaussian',nfolds = 10,type.measure = 'mse')
+  
+  betas_int_boot[i,] <- diabetes_lasso_cv_new$glmnet.fit$beta[,diabetes_lasso_cv_new$index[1]]
+}
+
+par(mfrow = c(1, 1))
+betas_box_int <- cbind(as.vector(betas_int_boot), rep(names(diabetes_lasso_cv_inter$glmnet.fit$beta[,1]),each = nb))
+boxplot(as.numeric(betas_box_int[,1])~factor(betas_box_int[,2], levels = names(diabetes_lasso_cv_inter$glmnet.fit$beta[,1])),ylim = c(-100,100), xlab = '', ylab = 'coef',main = 'LASSO (bootstrap)')
+abline(0,0)
+```
+
+
+### Post-Selection Inference
+
+Since the LASSO, due to the penalization, often produces substantially biased estimates (due to shrinkage coefficients), one could consider using LASSO merely to select the predictors in the model and then refit the model using the usual non-penalized regression methods (so-called *Post-LASSO estimator*). However, there are several issues with this procedure. 
+
+The default confidence intervals and P-values from the non-penalized regression can be overly optimistic because they ignore the prior selection procedure. The LASSO selection could also miss some important covariates, leading to omitted-variable bias in the final model [7]. Although using asymptotical properties of the LASSO estimates mentioned in our brief review, one could obtain a valid inference under "ideal" circumstances; see [9] for a more detailed investigation of the "naive" post-selection inference.
+
+Let us demonstrate methods that attempt to provide a valid inference post-selection. 
+<br/>
+
+#### Covariance Test
+
+The covariance test assigns P-values to predictors as they enter the LASSO path [10]. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+plot(diabetes_lasso,xvar = 'norm', label = TRUE)
+```
+
+<br/>
+The test is based on the least angle regression (LAR). The LASSO for a given penalty is usually estimated by the so-called coordinate descent algorithm [1]. The LAR algorithm is an alternative to LASSO for finding the LASSO solution [2] (and it also provides a nice insight into what LASSO estimates look like). 
+
+The LAR is quite similar to the standard forward stepwise selection. The predictors are gradually entered into the model based on their correlation with the remaining residuals (starting with the most correlated). However, rather than performing the full OLS as in forward stepwise selection, the coefficients are gradually shifted toward the OLS solution; see [1] for the full algorithm.
+
+We can fit the least angle regression in R using the package *selectiveInference* (https://cran.r-project.org/web/packages/selectiveInference/index.html).
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+library(selectiveInference)
+diabetes_lar <- lar(x = model_matrix_diab, y = diabetes_std$Y, maxsteps=2000, minlam=0)
+```
+
+<br/>
+The resulting LAR coefficient path is identical to the LASSO path we obtained using the coordinate descent (using *cv.glmnet*).
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+plot(diabetes_lar)
+```
+
+<br/>
+The covariance test evaluates the significance of predictors as they enter the LAR. Namely, at each stage of the LAR, we are testing the conditional hypothesis whether the coefficients of all other predictors not yet in the model are zero (*complete null hypothesis*), adjusting for the variables that are in the model [1]. 
+
+Let $\lambda_1 > \lambda_2 > \cdots$ denotes the values of $\lambda$s for which new predictors were added. The test statistic for the $k$-th predictor that was added to the model is $T_k = \frac{1}{\sigma^2}(y^TX\hat\beta(\lambda_{k+1}) - y^TX\hat\beta_{A_{k-1}}(\lambda_{k+1}))$, where $\hat\beta(\lambda_{k+1})$ are the values of coefficients after the predictor was added for the value $\lambda = \lambda_{k+1}$ and $\hat\beta_{A_{k-1}}(\lambda_{k+1})$ are the values of LASSO coefficients for $\lambda = \lambda_{k+1}$ when the the $k$-th predictor would *not* be added. It can be shown that under some conditions on the model matrix $X$ (the "signal" variables are not too correlated with the "noise" variables), $T_k$ converges under the null hypothesis (that all signal variables are in the model) to an exponential distribution $\mathrm{Exp}(1)$ [1]. 
+
+The covariance test (and other tests) for the LAR can be performed in R using the *larInf*function.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+larinf_diabetes <- larInf(diabetes_lar, alpha = 0.05)
+cov_test <-  cbind(larinf_diabetes$vars, round(larinf_diabetes$pv.covtest,4))
+colnames(cov_test) <- c('Variable', 'Cov.test (P-value)')
+rownames(cov_test) <- 1:10
+cov_test
+```
+
+<br/>
+We observe that adding only five variables was deemed significant. Let us repeat the analysis for the model with all interactions.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+diabetes_lar_int <- lar(x = model_matrix_diab_int, y = diabetes_std$Y, maxsteps=2000, minlam=0)
+larinf_diabetes_int <- larInf(diabetes_lar_int)
+cov_test_int <-  cbind(larinf_diabetes_int$vars, round(larinf_diabetes_int$pv.covtest,4))
+colnames(cov_test_int) <- c('Variable', 'Cov.test (P-value)')
+rownames(cov_test_int) <- 1:55
+cov_test_int[1:15,]
+```
+
+<br/>
+Only four predictors were deemed significant (**BMI**, **BP**, **S5**, and **S3**) at the 0.05 level.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+sum(cov_test_int[,2] < 0.05)
+```
+
+<br/>
+For comparison, let us perform the forward selection based on the p-values. We will use the *olsrr* package (https://cran.r-project.org/web/packages/olsrr/index.html) to perform the forward selection.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+library(olsrr)
+fw <- ols_step_forward_p(lm(Y ~ .^2, data = diabetes_std), p_val = 0.05)
+fw$model
+```
+
+<br/>
+The forward selection procedure sequentially selected 13 significant predictors, demonstrating the overly optimistic nature of this procedure (i.e., a downward bias in the P-values). The forward selection ignores the fact that the chi-squared test assumes that the models were prespecified. The reason why the covariance test based on the LAR/LASSO is more conservative is *shrinkage* - the models in the LAR are not fitted fully - and this shrinkage compensates for the inflation due to the selection [1]. 
+<br/>
+
+#### Spacing Test
+
+The spacing test is an alternative to the covariance test based on the *polyhedral lemma* about the distribution of the events $\{Ay \leq b\}$, where $y \sim N(\mu,\sigma^2I_n)$ (the selection in the forward step selection and the solution of LASSO for a given $\lambda$ is characterized by these events) [1].
+
+Let us assume the LAR algorithm and the first selected predictor. Then it can be shown from the polyhedral lemma that $R_1 = \frac{1-\Phi(\lambda_1/\sigma)}{1-\Phi(\lambda_2/\sigma)} \sim U(0,1)$ under the global null hypothesis. Remarkably, this test is *exact* for any finite $N$ and $p$ [1]. 
+
+The spacing tests for the subsequent steps can also be made, although the formula becomes more complicated; see [1, Section 6.3.3.2] for more details. One important aspect we need to mention is that these additional tests do not test the global null hypothesis (that all coefficients not in the model are zero). Instead, they test the so-called *incremental null hypothesis*: whether the partial correlation of the predictor that entered is zero, adjusting for the variables in the model. 
+
+The spacing test can be computed using the function *larInf* (in two variants; see [5]). The result for the model without interactions is as follows.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+space_test <-  cbind(larinf_diabetes$vars, round(larinf_diabetes$pv.spacing,4), round(larinf_diabetes$pv.modspac,4))
+colnames(space_test) <- c('Variable', 'Spacing test (P-value)', 'Mod. spacing test (P-value)')
+rownames(space_test) <- 1:10
+space_test
+```
+
+<br/>
+As for the model with interactions, adding only the first five predictors was again deemed significant. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+space_test_int <-  cbind(larinf_diabetes_int$vars, round(larinf_diabetes_int$pv.spacing,4), round(larinf_diabetes_int$pv.modspac,4))
+colnames(space_test_int) <- c('Variable', 'Spacing test (P-value)', 'Mod. spacing test (P-value)')
+rownames(space_test_int) <- 1:55
+t(space_test_int)
+```
+
+#### Fixed-Lambda Inference 
+
+The covariance test and the spacing test assess the significance of adding new predictors to the model; they were corrections for forward stepwise selection. The fixed-lambda inference focuses on computing confidence intervals and P-values for the LASSO-selected model [1,11]. 
+
+Let us assume the model selection (for the model without interactions) based on $\lambda$ that attained the *1se* CV error. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+# lambda
+diabetes_lasso_cv$lambda.1se
+# beta
+diabetes_lasso_cv$glmnet.fit$beta[,diabetes_lasso_cv$index[2]]
+```
+
+<br/>
+Naively, we could refit the model via OLS to obtain the confidence intervals and the P-values for the coefficients in the reduced model. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+beta <- diabetes_lasso_cv$glmnet.fit$beta[,diabetes_lasso_cv$index[2]]
+lm_diabetes <- lm(diabetes_std$Y ~ .,data = diabetes_std[,beta != 0])
+
+summary(lm_diabetes)
+confint(lm_diabetes)
+```
+
+<br/>
+However, these would be overly optimistic because we had already "looked" at the data and performed variable selection. Instead, we can use the function *fixedLassoInf*, which computes confidence intervals and significance levels using the polyhedral lemma. We should note that these are  *conditional* on the selection for a given value of $\lambda$ [1,10], i.e., they test whether the coefficient of any given predictor is zero in the reduced model.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+lambda <- diabetes_lasso_cv$lambda.1se
+beta <- diabetes_lasso_cv$glmnet.fit$beta[,diabetes_lasso_cv$index[2]]
+
+# fixedLassoInf uses a different scaling of lambda than glmnet
+fixed_infer <- fixedLassoInf(model_matrix_diab,diabetes_std$Y,beta,lambda*dim(diabetes_std[,1:10])[1],family = 'gaussian', alpha = 0.05)
+
+lm_diabetes <- lm(diabetes_std$Y ~ .,data = diabetes_std[,beta != 0])
+
+infer <- cbind(fixed_infer$coef0,
+               confint(lm_diabetes)[-1,],
+               round(summary(lm_diabetes)$coefficients[-1,4],4),
+               fixed_infer$ci,
+               round(fixed_infer$pv,4)
+               )
+colnames(infer) <- c('Coef ','2.5 % (ols)','97.5 % (ols)','P-value (ols)','2.5 % (adj.)','97.5 % (adj.)','P-value (adj.)')
+infer
+```
+
+<br/>
+We observe that the results are pretty similar. Only noticeable change is that the confidence interval for **S3** is a bit wider. We should note that the method did not incorporate the fact that the parameter $\lambda$ itself was selected. However, simulations suggest that including $\lambda$ selection does not widen the confidence intervals substantially [1].
+
+For the model with interactions, the following predictors were kept in the model for *1se* $\lambda$. 
+<br/>
+  
+```{r, message=FALSE, warning=FALSE}
+beta_int <- diabetes_lasso_cv_inter$glmnet.fit$beta[,diabetes_lasso_cv_inter$index[2]]
+beta_int[abs(beta_int) >0]
+```
+
+<br/>
+The confidence intervals and the P-values for the partial coefficients are as follows. 
+<br/>
+  
+```{r, message=FALSE, warning=FALSE}
+lambda_int <- diabetes_lasso_cv_inter$lambda.1se
+
+fixed_infer_int <- fixedLassoInf(as.matrix(model_matrix_diab_int),diabetes_std$Y,beta_int,lambda_int*dim(diabetes_std[,1:10])[1],family = 'gaussian', alpha = 0.05)
+
+lm_diabetes_int <- lm(diabetes_std$Y ~ ., data = as.data.frame(model_matrix_diab_int)[,beta_int != 0])
+
+infer_int <- cbind(fixed_infer_int$coef0,
+                   confint(lm_diabetes_int)[-1,],
+                   round(summary(lm_diabetes_int)$coefficients[-1,4],4),
+                   fixed_infer_int$ci,
+                   round(fixed_infer_int$pv,4))
+rownames(infer_int) <- names(beta_int[abs(beta_int) >0])
+colnames(infer_int) <- c('coef','2.5 % (ols)','97.5 % (ols)','P-value (ols)','2.5 % (adj.)','97.5 % (adj.)','P-value (adj.)')
+infer_int
+```
+
+<br/>
+We observe that many variables no longer appear significant after the adjustment for the selection. 
+<br/>
+  
+#### PoSI method
+  
+The PoSI (Post-Selection Inference) method [12] adjusts standard confidence intervals to account for all possible models that the selection procedure might have selected; i.e., it does not depend on the selection procedure.
+
+Namely, it considers the confidence intervals $\hat\beta_{j,M} \pm K\hat\sigma(X_M^TX_M)^{-1}$, where $\hat\beta_M$ is the OLS estimate in the selected model,  $X_M$ is the model matrix of the selected model, and $K$ is a constant estimated by the PoSI method. This constant is selected such that $P[\hat\beta_{j,M} \in \mathrm{CI}_{j,M}] \geq 1-2\alpha$ over all possible model selection procedures. 
+
+The constant $K$ for a given model can be computed via the package *PoSI* (https://cran.r-project.org/web/packages/PoSI/index.html).
+<br/>
+  
+```{r, message=FALSE, warning=FALSE}
+library(PoSI)
+posi_inf <- PoSI(diabetes_std, verbose = FALSE)
+summary(posi_inf)
+```
+
+<br/>
+The confidence interval for $\beta_i$ is given as $\hat \beta_i \pm K\hat\sigma \sqrt{(X_M^TX_M)_{ii}^{-1}}$, where $X_M$ is the model matrix of the reduced model. Thus, we use the usual computation of the standard error for $\hat \beta_i$ but replace the quantile function of normal/t-distribution with the value $K$ computed via *PoSI*.
+<br/>
+  
+```{r, message=FALSE, warning=FALSE}
+hat_beta <- summary(lm_diabetes)$coefficients[,1]
+std_error <- summary(lm_diabetes)$coefficients[,2]
+
+ci_PoSI <- cbind(hat_beta - std_error*summary(posi_inf)[1,1], hat_beta + std_error*summary(posi_inf)[1,1])
+colnames(ci_PoSI) <- c('2.5 % (PoSI)','97.5 % (PoSI)')
+cbind(infer[,c(1,2,3,5,6)],ci_PoSI[2:dim(ci_PoSI)[1],])
+```
+
+<br/>
+We observe that the PoSI confidence intervals are much more conservative. The main disadvantage of this approach is computational complexity. The model without interactions contains 11 variables, i.e., there are $2^11 - 1 = 2047$ possible reduced models. If we consider the model with interactions, this number increases to $2^{55}-1 \approx 3,6 \cdot 10^{16}$. Hence, we can consider merely models with a limited number of selected variables. 
+
+For example, if we consider models with 53-55 parameters, we need to investigate 1541 models. If we increase this range to 52-55, the number of models increases to 27776. 
+<br/>
+  
+```{r, message=FALSE, warning=FALSE}  
+posi_inf_int <- PoSI(model_matrix_diab_int, modelSZ = 52:55)
+summary(posi_inf_int)
+```
+
+<br/>
+We observe that this approach becomes very easily numerically intractable, limiting its practical application.
+<br/>
+
+### Debiased LASSO
+
+The fixed-lambda considers the inference about *partial coefficients* in the reduced models. The debiased LASSO instead infers about the full model with all regression variables [1]. Provided that the number of predictors does not exceed the number of observations, this is not that interesting, since we could fit the model without regularization and obtain unbiased estimates in the first place. 
+
+However, consider the case when the number of observations $N$ is greater than the number of predictors $p$. Then, we cannot fit an unpenalized OLS model, but we can still fit the LASSO model. However, the LASSO coefficients are shrinked (i.e., biased to zero). The debiased LASSO attempts to correct the shrinkage bias and obtain the unbiased estimates of the full model.
+
+The debiasing is given by the formula $\hat \beta^d = \hat\beta_\mathrm{LASSO} + \frac{1}{N}\Theta X^T(y-X\hat\beta_\mathrm{LASSO})$ for some matrix $\Theta$, where $N$ is number of observations. If the number of predictors does not exceed the number of observations, we can put $\Theta = N(X^TX)^{-1}$ and obtain the usual OLS estimates. If this is not the case, the matrix inverse can be performed only approximately; see [1, Section 6.4] for more details.
+
+In our dataset, we have more predictors than observations, so using the debiased LASSO does not make much sense. Still, for completeness' sake, let us perform it. We just need to add argument *type = 'full'* in the function *fixedLassoInf*.
+<br/>
+  
+```{r, message=FALSE, warning=FALSE}
+lm_diabetes_int_full <- lm(Y ~ .^2,data = diabetes_std)
+index <- c(FALSE,beta_int!=0)
+
+
+fixed_infer_int <- fixedLassoInf(as.matrix(model_matrix_diab_int),diabetes_std$Y,beta_int,lambda_int*dim(diabetes_std[,1:10])[1],family = 'gaussian', alpha = 0.05, type = 'full')
+
+lm_diabetes_int <- lm(diabetes_std$Y ~ ., data = as.data.frame(model_matrix_diab_int)[,beta_int != 0])
+
+infer_int_full <- cbind(lm_diabetes_int_full$coefficients[index],
+                   fixed_infer_int$coef0,
+                   confint(lm_diabetes_int_full)[index,],
+                   round(summary(lm_diabetes_int_full)$coefficients[index,4],4),
+                   fixed_infer_int$ci,
+                   round(fixed_infer_int$pv,4))
+rownames(infer_int_full) <- names(beta_int[abs(beta_int) >0])
+colnames(infer_int_full) <- c('coef (OLS)','coef (debiased)','2.5 % (ols)','97.5 % (ols)','P-value (ols)','2.5 % (adj.)','97.5 % (adj.)','P-value (adj.)')
+infer_int_full
+```
+
+<br/>
+We observe that the debiased LASSO coefficients are just the OLS coefficients, as expected. Thus, the only notable thing we obtained for our trouble is unnecessarily large confidence intervals.
+<br/>
+
+### Adaptive LASSO
+
+If we remind ourselves of the asymptotic properties of the LASSO estimates, we notice that the LASSO cannot be both $\sqrt{N}$-consistent and attain consistent selection. The adaptive LASSO is a modification of the LASSO algorithm that is $\sqrt{N}$-consistent, the non-zero estimates are asymptotically normal, and the adaptive LASSO attains consistent selection, achieving the so-called *oracle property* [13].
+
+The modification concerns penalization. The penalization in the adaptive LASSO is $\hat\beta_\mathrm{aLASSO} = \mathrm{argmin}_\beta ||X\beta - Y||^2 + \lambda \sum_i w_i|\beta_i|$ for some $\lambda > 0$, where $w_i$ are weights. The weights are chosen as $w_i = 1/|\tilde\lambda_i|^\gamma$, where $\tilde\lambda$ is some initial $\sqrt{N}$-consistent estimator and $\gamma >0$ is a free parameter [13]. 
+
+We already discussed that the asymptotic properties do not tell the whole story in practice. Still, the adaptive LASSO has the nice property of reducing shrinkage bias in the estimation of large effects (by weighing the corresponding columns down) while still selecting by penalizing minor effects more.
+
+Let us perform the adaptive LASSO on the model without interactions. First, we estimate the coefficients using the simple OLS.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+lm_diabetes_full <- lm(Y ~ .,data = diabetes_std)
+beta_full <- coefficients(lm_diabetes_full)[-1]
+```
+
+<br/>
+We can fit the adaptive LASSO by fitting the ordinary LASSO for the rescaled columns. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+diabetes_resc <- scale(diabetes_std[,1:10], center = FALSE, scale = 1/abs(beta_full))
+
+set.seed(123)
+diabetes_alasso_cv <- cv.glmnet(diabetes_resc,diabetes_std$Y,alpha=1,family='gaussian',nfolds = 10,type.measure = 'mse', standardize = FALSE)
+```
+
+<br/>
+Let us compare the results of the LASSO and the adaptive LASSO.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+beta_adaptive_1 <- diabetes_alasso_cv$glmnet.fit$beta[,diabetes_alasso_cv$index[1]]
+beta_adaptive_2 <- diabetes_alasso_cv$glmnet.fit$beta[,diabetes_alasso_cv$index[2]]
+
+diabetes_coefs <- rbind(
+  diabetes_lasso_cv$glmnet.fit$beta[,diabetes_lasso_cv$index[1]],
+  beta_adaptive_1*abs(beta_full),
+  diabetes_lasso_cv$glmnet.fit$beta[,diabetes_lasso_cv$index[2]],
+  beta_adaptive_2*abs(beta_full)
+)
+
+rownames(diabetes_coefs) <- c('LASSO lambda_min','aLASSO lambda_min','LASSO lambda_1se','aLASSO lambda_1se')
+diabetes_coefs
+```
+
+<br/>
+We can observe two typical differences between the adaptive LASSO and the ordinary LASSO. The fit for the minimal $\lambda$ has a smaller number of non-zero predictors. In addition, notice that the fit for 1se $\lambda$ has slightly higher values of coefficients for larger effects. 
+
+Since the adaptive LASSO can be fitted using the usual LASSO algorithm. We can use the inference methods that we derived for the LASSO. The P-values of the spacing test and the covariance test are as follows.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+larinf_diabetes_alasso <- 
+  larInf(lar(x = diabetes_resc, y = diabetes_std$Y, maxsteps=2000, minlam=0, normalize = FALSE))
+
+pvalues_diabetes_alasso <- round(cbind(larinf_diabetes_alasso$pv.spacing,larinf_diabetes_alasso$pv.covtest),4)
+rownames(pvalues_diabetes_alasso) <- larinf_diabetes_alasso$vars
+colnames(pvalues_diabetes_alasso) <- c('Spacing test','Covariance test')
+pvalues_diabetes_alasso
+```
+
+<br/>
+We can also get the fixed-lambda inference.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+# lambda_min
+fixedLassoInf(diabetes_resc,diabetes_std$Y,beta_adaptive_1,diabetes_alasso_cv$lambda.min*dim(diabetes_std[,1:10])[1],family = 'gaussian', alpha = 0.05)
+
+# lambda_1se
+fixedLassoInf(diabetes_resc,diabetes_std$Y,beta_adaptive_2,diabetes_alasso_cv$lambda.1se*dim(diabetes_std[,1:10])[1],family = 'gaussian', alpha = 0.05)
+```
+
+## Growth dataset
+
+The next dataset we will use to demonstrate the application of LASSO is the *growth* dataset from the *hdm* package (https://cran.r-project.org/web/packages/hdm/index.html), based on the dataset [14]. The goal is to investigate the Solow-Swan-Ramsey growth model for countries' GDP per capita. One of the model's consequences is the observation that poorer countries grow faster and catch up to richer countries over time. Hence, the effect of the initial level of GDP on the growth should be negative. The dataset contains the following information about 90 countries.
+<br/>
+
+* **Outcome** - national growth rates in GDP per capita for the periods 1965-1975 and 1975-1985
+* **gdpsh465** - GDP per capita (1980 international prices) in 1965
+* **bmp1l** -  black market premium Log (1+BMP)
+* **freeop** - free trade openness
+* **freetar** - tariff restriction
+* **h65** - total gross enrollment ratio for higher education in 1965
+* **hm65** - male gross enrollment ratio for higher education in 1965
+* **hf65** - female gross enrollment ratio for higher education in 1965
+* **p65** - total gross enrollment ratio for primary education in 1965
+* **pm65** -  male gross enrollment ratio for primary education in 1965
+* **pf65** - female gross enrollment ratio for primary education in 1965
+* **s65** - total gross enrollment ratio for secondary education in 1965
+* **sm65** - male gross enrollment ratio for secondary education in 1965
+* **sf65** - female gross enrollment ratio for secondary education in 1965
+* **fert65** - total fertility rate (children per woman) in 1965
+* **mort65** - infant Mortality Rate in 1965
+* **lifee065** - life expectancy at age 0 in 1965
+* **gpop1** - growth rate of population
+* **fert1** - total fertility rate (children per woman)
+* **mort1** - infant Mortality Rate (ages 0-1)
+* **invsh41** - ratio of real domestic investment (private plus public) to real GDP
+* **geetot1** - ratio of total nominal government expenditure on education to nominal GDP
+* **geerec1** - ratio of recurring nominal government expenditure on education to nominal GDP
+* **gde1** - ratio of nominal government expenditure on defense to nominal GDP
+* **govwb1** - ratio of nominal government "consumption" expenditure to nominal GDP (using current local currency)
+* **govsh41** - ratio of real government "consumption" expenditure to real GDP (period average)
+* **gvxdxe41** - ratio of real government "consumption" expenditure net of spending on defense and on education to real GDP
+* **high65** - percentage of "higher school attained" in the total pop in 1965
+* **highm65** - percentage of "higher school attained" in the male pop in 1965
+* **highf65** - percentage of "higher school attained" in the female pop in 1965
+* **highc65** - percentage of "higher school complete" in the total pop
+* **highcm65** - percentage of "higher school complete" in the male pop
+* **highcf65** - percentage of "higher school complete" in the female pop
+* **human65** -  average schooling years in the total population over age 25 in 1965
+* **humanm65** - average schooling years in the male population over age 25 in 1965
+* **humanf65** - average schooling years in the female population over age 25 in 1965
+* **hyr65** - average years of higher schooling in the total population over age 25
+* **hyrm65** - average years of higher schooling in the male population over age 25
+* **hyrf65** - average years of higher schooling in the female population over age 25
+* **no65** - percentage of "no schooling" in the total population
+* **nom65** - percentage of "no schooling" in the male population
+* **nof65** -  percentage of "no schooling" in the female population
+* **pinstab1** - measure of political instability
+* **pop65** - total Population in 1965
+* **worker65** - ratio of total Workers to population
+* **pop1565** - population Proportion under 15 in 1965
+* **pop6565** - population Proportion over 65 in 1965
+* **sec65** - percentage of "secondary school attained" in the total pop in 1965
+* **secm65** - percentage of "secondary school attained" in male pop in 1965
+* **secf65** - percentage of "secondary school attained" in female pop in 1965
+* **secc65** - percentage of "secondary school complete" in the total pop in 1965
+* **seccm65** - percentage of "secondary school complete" in the male pop in 1965
+* **seccf65** - percentage of "secondary school complete" in female pop in 1965
+* **syr65** - average years of secondary schooling in the total population over age 25 in 1965
+* **syrm65** - average years of secondary schooling in the male population over age 25 in 1965
+* **syrf65** - average years of secondary schooling in the female population over age 25 in 1965
+* **teapri65** - pupil/Teacher Ratio in primary school
+* **teasec65** - pupil/Teacher Ratio in secondary school
+* **ex1** - ratio of export to GDP (in current international prices)
+* **im1** - ratio of imports to GDP (in current international prices)
+* **xr65** - exchange rate (domestic currency per U.S. dollar) in 1965
+* **tot1** - terms of trade shock (growth rate of export prices minus growth rate of import prices)
+
+<br/>
+Merely the effect of **gdpsh465** on **Outcome** is of interest; the remaining variables serve as control. Let us load the dataset. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+GrowthData <- read_csv('C:/Users/elini/Desktop/nine circles/GrowthData.csv')[,c(-1,-3)]
+head(GrowthData)
+dim(GrowthData)
+```
+
+<br/>
+We have 90 observations and 61 covariates. Hence, to investigate the effect of **gdpsh465**, we could simply use OLS. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+summary(lm(Outcome~ .,data = GrowthData))
+```
+
+<br/>
+We observe that the effect **gdpsh465** is indeed negative as expected; however, the effect is largely insignificant. However, it is reasonable to assume that many adjusting covariates have comparatively small effects. Hence, by removing these predictors, we could increase the power of estimating the **gdpsh465** effect. 
+
+Before we move on to LASSO regression, let us check whether linear regression is appropriate for the data.
+<br/>
+
+```{r, message=FALSE, warning=FALSE, echo = FALSE}
+par(mfrow = c(1, 3))
+qqnorm(residuals(lm(Outcome~ .,data = GrowthData)), main = 'Q-Q Residual Plot')
+qqline(residuals(lm(Outcome~ .,data = GrowthData)))
+
+
+plot(GrowthData$Outcome,residuals(lm(Outcome~ .,data = GrowthData)), xlab = 'Predicted', ylab = 'Residuals', main = 'Predicted vs Residual')
+
+plot(GrowthData$Outcome,predict(lm(Outcome~ .,data = GrowthData)), xlab = 'Predicted', ylab = 'Actual', main = 'Predicted vs Actual')
+abline(0,1)
+```
+
+### Adaptive LASSO
+
+<br/>
+We start with the inference using the adaptive LASSO. First, we need to compute the weights. Since $p$ is quite close to $N$, we will use the ridge regression instead of OLS. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+# standardize the predictors
+growth_std <- as.matrix(scale(GrowthData[,-1], center = TRUE, scale = TRUE))
+
+# ridge regression
+set.seed(123)
+growth_ridge_cv <- cv.glmnet(growth_std,GrowthData$Outcome,alpha=0,family='gaussian', nfolds = 10,type.measure = 'mse')
+beta_ridge <- growth_ridge_cv$glmnet.fit$beta[,growth_ridge_cv$index[1]]
+
+# rescaling
+growth_rsc <- scale(growth_std,center = FALSE,scale = 1/abs(beta_ridge))
+```
+
+<br/>
+Let us analyze the LASSO path.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+lar_growth <- lar(x = growth_rsc, y = GrowthData$Outcome, maxsteps=2000, minlam=0, normalize=FALSE)
+
+# We use estimateSigma to estimate the variance since p>N/2
+set.seed(123)
+larinf_growth_alasso <- larInf(lar_growth,sigma = estimateSigma(growth_rsc, GrowthData$Outcome, intercept=TRUE, standardize=FALSE)$sigmahat)
+
+pvalues_growth_alasso <- round(cbind(larinf_growth_alasso$pv.spacing,larinf_growth_alasso$pv.covtest),4)
+rownames(pvalues_growth_alasso) <- larinf_growth_alasso$vars
+colnames(pvalues_growth_alasso) <- c('Spacing test','Covariance test')
+pvalues_growth_alasso[1:5,]
+```
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+par(mfrow = c(1, 1))
+plot(lar_growth)
+```
+
+<br/>
+We observe that the addition of the first variable (**gdpsh465**) was deemed significant by the spacing test and not by the covariance test. However, we should remember that the spacing test is exact and considers an incremental null hypothesis, whereas the covariance test is merely asymptotic and tests a complete null hypothesis.
+
+Let us move to the fixed-lambda inference. To obtain a more stable estimate of $\lambda$, we will repeat the cross-validation multiple times. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+set.seed(123)
+repeats <- 100
+lambda_min <- rep(NaN,repeats)
+
+for (i in 1:repeats){
+growth_lasso_cv <- cv.glmnet(growth_rsc,GrowthData$Outcome,alpha=1,family='gaussian',nfolds = 10,type.measure = 'mse', standardize = FALSE)
+lambda_min[i] <- growth_lasso_cv$lambda.min
+}
+
+lambda <- mean(lambda_min)
+beta  <- coef(growth_lasso_cv,x = growth_rsc,y = GrowthData$Outcome,s = lambda, exact = TRUE)[-1]
+
+fixedLassoInf(growth_rsc,GrowthData$Outcome,beta,lambda*90,family = 'gaussian', alpha = 0.05,sigma = estimateSigma(growth_rsc, GrowthData$Outcome, intercept=TRUE, standardize=FALSE)$sigmahat)
+```
+
+<br/>
+We observe that the effect of **gdpsh465** is borderline significant and negative. However, the P-value depends on the particular selected value of $\lambda$. For example, if we use the (lower) median value obtained from CVs ($\lambda \approx 2,9\cdot10^-6$) instead of the mean ($\lambda \approx 6,2\cdot10^-6$), the effect is not significant.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+lambda <- median(lambda_min)
+beta  <- coef(growth_lasso_cv,x = growth_rsc,y = GrowthData$Outcome,s = lambda, exact = TRUE)[-1]
+
+fixedLassoInf(growth_rsc,GrowthData$Outcome,beta,lambda*90,family = 'gaussian', alpha = 0.05,sigma = estimateSigma(growth_rsc, GrowthData$Outcome, intercept=TRUE, standardize=FALSE)$sigmahat)
+```
+
+<br/>
+Let us bootstrap the entire estimation process to evaluate sampling variability (we will use one 10-fold cross-validation to estimate $\lambda$ to speed up computations).
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+set.seed(123)
+nb <- 1000
+
+betas_int_boot2 <- rep(NA,nb)
+
+for(i in 1:nb){
+  
+  # resample and standardize
+  GrowthData_new <-  GrowthData[sample(nrow(GrowthData) , rep=TRUE),]
+  growth_std_new <- as.matrix(scale(GrowthData_new[,-1], center = TRUE, scale = TRUE))
+  scale_std_new <- attr(growth_std_new,"scaled:scale")
+  
+  
+  # weights via ridge
+  growth_ridge_cv_new <- cv.glmnet(growth_std_new,GrowthData_new$Outcome,
+                                   alpha=0,family='gaussian', nfolds = 10,type.measure ='mse')
+  
+  beta_ridge_new <- growth_ridge_cv_new$glmnet.fit$beta[,growth_ridge_cv_new$index[1]]
+  growth_rsc_new <- scale(growth_std_new,center = FALSE,scale = 1/abs(beta_ridge_new))
+  
+  
+  # adaptive LASSO
+  growth_lasso_cv_new <- cv.glmnet(growth_rsc_new,GrowthData_new$Outcome,
+                                   alpha=1,family='gaussian',nfolds = 10,type.measure = 'mse', standardize = FALSE)
+  betas_int_boot2[i] <- 
+    growth_lasso_cv_new$glmnet.fit$beta[1,growth_lasso_cv_new$index[1]]*abs(beta_ridge_new)[1]*scale_std_new[1]
+  
+}
+
+quantile(betas_int_boot2, c(0.025,0.975))
+sum(abs(betas_int_boot2) > 0)
+```
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+densityPlot(betas_int_boot2, xlab = 'gdpsh465', main = 'lambda min')
+```
+
+<br/>
+The estimation of the effect of **gdpsh465** is relatively stable via the adaptive LASSO. The LASSO selection picked **gdpsh465** as non-zero in the vast majority of cases. The percentile-based confidence interval of the parameter estimate also shows that the coefficient was almost always non-positive.
+
+However, this approach has a notable weakness. As we mentioned when discussing least angle regression, the LASSO selects predictors based on their correlation with the "residual" response; see [1, Section 5.6]. This means that once **gdpsh465** enters the model, it is less likely that other covariates correlated with **gdpsh465** enter the model as well. Consequently, the effect of **gdpsh465** could be overstated due to the absence of other covariates that could also explain the estimated effect of **gdpsh465** on the response. 
+<br/>
+
+### Double-Selection LASSO 
+
+<br/>
+The double-selection LASSO is a popular inference method proposed in [15]. Let us assume a model $Y = \alpha Z + X\beta$, where $Z$ is the effect of interest and $X$ are other control variables and goals. The double-selection LASSO proceeds as follows.
+<br/>
+
+* 1. Run a LASSO $Z = X\beta$
+* 2. Run a LASSO $Y = X\beta$
+* 3. Run OLS $Y = \alpha Z + \hat X\hat\beta$, where $\hat X$ includes all variables selected by 1. and 2.
+
+<br/>
+The advantage of double-selection is that it considers both covariates correlated with the response and those correlated with the variable of interest. 
+
+We should note that the inference in [15] is based on the asymptotic properties of the LASSO selection (by using OLS, the inference ignores the selection procedure). Thus, finite-sample inference might be invalid, as we discussed (omitted-variable bias seems to be the biggest concern [16]). Hence, we should probably combine the inference with a bootstrap to better estimate the variability of the estimates. 
+
+Let us first perform the variable selection 1. and 2. using the adaptive LASSO. We will use a repeated 10-fold cross-validation to estimate the optimal $\lambda$.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+growth_std2 <- growth_std[,-1]
+
+set.seed(123)
+
+# ridge regression
+growth_ridge_cv_x <- cv.glmnet(growth_std2,GrowthData$gdpsh465,alpha=0,family='gaussian', nfolds = 10,type.measure = 'mse')
+growth_ridge_cv_y <- cv.glmnet(growth_std2,GrowthData$Outcome,alpha=0,family='gaussian', nfolds = 10,type.measure = 'mse')
+
+beta_ridge_x <- growth_ridge_cv_x$glmnet.fit$beta[,growth_ridge_cv_x$index[1]]
+beta_ridge_y <- growth_ridge_cv_y$glmnet.fit$beta[,growth_ridge_cv_y$index[1]]
+
+# rescaling
+growth_rsc_x <- scale(growth_std2,center = FALSE,scale = 1/abs(beta_ridge_x))
+growth_rsc_y <- scale(growth_std2,center = FALSE,scale = 1/abs(beta_ridge_y))
+
+repeats <- 100
+lambda_min_x <- rep(NaN,repeats)
+lambda_min_y <- rep(NaN,repeats)
+
+for (i in 1:repeats){
+growth_lasso_cv_x <- cv.glmnet(growth_rsc_x,GrowthData$gdpsh465,alpha=1,family='gaussian',nfolds = 10,type.measure = 'mse', standardize = FALSE)
+growth_lasso_cv_y <- cv.glmnet(growth_rsc_y,GrowthData$Outcome,alpha=1,family='gaussian',nfolds = 10,type.measure = 'mse', standardize = FALSE)
+
+lambda_min_x[i] <- growth_lasso_cv_x$lambda.min
+lambda_min_y[i] <- growth_lasso_cv_y$lambda.min
+}
+
+lambda_x <- mean(lambda_min_x)
+lambda_y <- mean(lambda_min_y)
+
+beta_x  <- coef(growth_lasso_cv_x,x = growth_rsc_x,y = GrowthData$gdpsh465,s = lambda_x, exact = TRUE)[-1]
+beta_y  <- coef(growth_lasso_cv_y,x = growth_rsc_y,y = GrowthData$Outcome,s = lambda_y, exact = TRUE)[-1]
+```
+
+<br/>
+Next, we fit the OLS model. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+beta_ind <- c(TRUE, TRUE,abs(beta_x)> 0 | abs(beta_y)> 0)
+summary(lm(Outcome~ .,data = GrowthData[,beta_ind]))
+```
+
+<br/>
+We observe that after performing double selection by including covariates that could explain the effect of **gdpsh465**, the effect of **gdpsh465** itself is no longer significant. Let us perform the bootstrap.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+set.seed(123)
+nb <- 1000
+
+betas_int_boot3 <- rep(NA,nb)
+
+for(i in 1:nb){
+  
+  # resample and standardize
+  GrowthData_new <-  GrowthData[sample(nrow(GrowthData) , rep=TRUE),]
+  growth_std_new <- as.matrix(scale(GrowthData_new[,c(-1,-2)], center = TRUE, scale = TRUE))
+  scale_std_new <- attr(growth_std_new,"scaled:scale")
+  
+  # weights via ridge
+  growth_ridge_cv_x_new <- cv.glmnet(growth_std_new,GrowthData_new$gdpsh465,
+                                     alpha=0,family='gaussian', nfolds = 10,type.measure = 'mse')
+  
+  growth_ridge_cv_y_new <- cv.glmnet(growth_std_new,GrowthData_new$Outcome,
+                                     alpha=0,family='gaussian', nfolds = 10,type.measure = 'mse')
+  
+  beta_ridge_x_new <- growth_ridge_cv_x_new$glmnet.fit$beta[,growth_ridge_cv_x_new$index[1]]
+  beta_ridge_y_new <- growth_ridge_cv_y_new$glmnet.fit$beta[,growth_ridge_cv_y_new$index[1]]
+  
+  growth_rsc_x_new <- scale(growth_std_new,center = FALSE,scale = 1/abs(beta_ridge_x_new))
+  growth_rsc_y_new <- scale(growth_std_new,center = FALSE,scale = 1/abs(beta_ridge_y_new))
+  
+  
+  # adaptive LASSO
+  
+  growth_lasso_cv_x_new <- cv.glmnet(growth_rsc_x_new,GrowthData_new$gdpsh465,
+                                     alpha=1,family='gaussian',nfolds = 10,type.measure = 'mse', standardize = FALSE)
+  growth_lasso_cv_y_new <- cv.glmnet(growth_rsc_y_new,GrowthData_new$Outcome,
+                                     alpha=1,family='gaussian',nfolds = 10,type.measure = 'mse', standardize = FALSE)
+  
+  beta_x_new  <- growth_lasso_cv_x_new$glmnet.fit$beta[,growth_lasso_cv_x_new$index[1]]
+  beta_y_new  <- growth_lasso_cv_y_new$glmnet.fit$beta[,growth_lasso_cv_y_new$index[1]]
+  beta_ind_new <- c(TRUE, TRUE,abs(beta_x_new)> 0 | abs(beta_y_new)> 0)
+  
+  # OLS
+  betas_int_boot3[i] <- coefficients(lm(Outcome~ .,data = GrowthData_new[,beta_ind_new]))[2]
+
+}
+
+quantile(betas_int_boot3, c(0.025,0.975))
+```
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+densityPlot(betas_int_boot3, xlab = 'gdpsh465')
+```
+
+<br/>
+We confirm that the estimated effect by the double-selection LASSO is not significant.
+<br/>
+
+### Double-Selection LASSO  (partialing-out)
+
+<br/>
+The *partialing-out* estimator [17] based on the double-selection LASSO is an alternative approach for estimating the effect of a variable of interest, adjusted for other covariates; see https://www.stata.com/manuals/lasso.pdf.  
+<br/>
+
+* 1. Run a LASSO $Z = X\beta$. 
+* 2. Run OLS $Z = \hat X \hat \beta$, where $\hat X$ includes all variables selected by 1. and obtain residuals $d_Z$
+* 3. Run a LASSO $Y = X\beta$ and perform OLS.
+* 4. Run OLS $Y = \tilde X \tilde \beta$, where $\tilde X$ includes all variables selected by 3. and obtain residuals $d_Y$
+* 5. Run OLS $d_Y \sim d_Z$.
+
+<br/>
+Using the LASSO regression results from the previous section, we obtain the following OLS.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+
+beta_x_ind <- c(FALSE, FALSE,abs(beta_x)> 0)
+beta_y_ind <- c(FALSE, FALSE,abs(beta_y)> 0)
+
+resid_x <- residuals(lm(GrowthData$gdpsh465 ~ .,data = GrowthData[,beta_x_ind]))
+resid_y <- residuals(lm(GrowthData$Outcome~ .,data = GrowthData[,beta_y_ind]))
+
+summary(lm(resid_y~resid_x))
+```
+
+<br/>
+We observe that the estimated effect is negative and strongly significant. Let us resample the whole procedure. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+set.seed(123)
+nb <- 1000
+
+betas_int_boot4 <- rep(NA,nb)
+
+for(i in 1:nb){
+  
+  # resample and standardize
+  GrowthData_new <-  GrowthData[sample(nrow(GrowthData) , rep=TRUE),]
+  growth_std_new <- as.matrix(scale(GrowthData_new[,c(-1,-2)], center = TRUE, scale = TRUE))
+  scale_std_new <- attr(growth_std_new,"scaled:scale")
+  
+  # weights via ridge
+  growth_ridge_cv_x_new <- cv.glmnet(growth_std_new,GrowthData_new$gdpsh465,
+                                     alpha=0,family='gaussian', nfolds = 10,type.measure = 'mse')
+  
+  growth_ridge_cv_y_new <- cv.glmnet(growth_std_new,GrowthData_new$Outcome,
+                                     alpha=0,family='gaussian', nfolds = 10,type.measure = 'mse')
+  
+  beta_ridge_x_new <- growth_ridge_cv_x_new$glmnet.fit$beta[,growth_ridge_cv_x_new$index[1]]
+  beta_ridge_y_new <- growth_ridge_cv_y_new$glmnet.fit$beta[,growth_ridge_cv_y_new$index[1]]
+  
+  growth_rsc_x_new <- scale(growth_std_new,center = FALSE,scale = 1/abs(beta_ridge_x_new))
+  growth_rsc_y_new <- scale(growth_std_new,center = FALSE,scale = 1/abs(beta_ridge_y_new))
+  
+  
+  # adaptive LASSO
+  growth_lasso_cv_x_new <- cv.glmnet(growth_rsc_x_new,GrowthData_new$gdpsh465,
+                                     alpha=1,family='gaussian',nfolds = 10,type.measure = 'mse', standardize = FALSE)
+  growth_lasso_cv_y_new <- cv.glmnet(growth_rsc_y_new,GrowthData_new$Outcome,
+                                     alpha=1,family='gaussian',nfolds = 10,type.measure = 'mse', standardize = FALSE)
+  
+  
+  # OLS
+  beta_x_new  <- growth_lasso_cv_x_new$glmnet.fit$beta[,growth_lasso_cv_x_new$index[1]]
+  beta_y_new  <- growth_lasso_cv_y_new$glmnet.fit$beta[,growth_lasso_cv_y_new$index[1]]
+  beta_x_ind_new <- c(FALSE, TRUE,abs(beta_x_new)> 0)
+  beta_y_ind_new <- c(TRUE, FALSE,abs(beta_y_new)> 0)
+
+  resid_x_new <- residuals(lm(GrowthData$gdpsh465 ~ .,data = GrowthData_new[,beta_x_ind_new]))
+  resid_y_new <- residuals(lm(GrowthData$Outcome~ .,data = GrowthData_new[,beta_y_ind_new]))
+  
+  betas_int_boot4[i] <- coefficients(lm(resid_y_new~resid_x_new))[2]
+  
+}
+
+quantile(betas_int_boot4, c(0.025,0.975))
+```
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+densityPlot(betas_int_boot4, xlab = 'gdpsh465')
+```
+
+<br/>
+Even though the original regression was deemed significant, the bootstraped result is not. 
+
+Overall, we can conclude that after adjusting for other relevant variables (chosen by the adaptive LASSO), the effect of **gdpsh465** itself was not deemed significant.
+<br/>
+
+## Lymphoma dataset
+
+The last dataset we will have a look at is the *lymphoma* dataset [1,7]. It contains gene expression data for 7399 genes measured in 240 lymphoma patients, along with censored survival times for these patients.
+<br/>
+
+### Initial exploration
+
+First, let us load the dataset. 
+
+```{r, message=FALSE, warning=FALSE}
+lymphstatus <- read_delim('C:/Users/elini/Desktop/nine circles/lymphstatus.txt', delim = ' ', col_names = FALSE)
+lymphtim <- read_delim('C:/Users/elini/Desktop/nine circles/lymphtim.txt', delim = ' ', col_names = FALSE)
+lymphx <- read_delim('C:/Users/elini/Desktop/nine circles/lymphx.txt', col_names = FALSE)
+
+lymph <- cbind(lymphstatus,lymphtim)
+colnames(lymph) <- c('Status','Time')
+lymphx_std <- scale(lymphx, center = TRUE, scale = TRUE)
+```
+
+<br/>
+We are dealing with the survival analysis data. Consequently, we will use the methods from the Fifth Circle. Let us start with the Kaplan-Meier estimator of the survival function.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+library(survival)
+library(ggsurvfit)
+
+km_status <- survfit(Surv(Time,Status) ~ 1, data = lymph, conf.type ='log-log')
+
+summary(km_status)
+
+survfit2(Surv(Time,Status) ~ 1, data = lymph,conf.type ='log-log') %>% 
+  ggsurvfit() +
+  labs(
+    x = "Time (in years)",
+    y = "Overall survival probability"
+  ) + add_confidence_interval()
+```
+
+<br/>
+The median survival time in the study was about five years. The potential follow-up time of the study was about 9 years.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+# median survival time
+km_status
+# potential median follow-up time (i.e., how long follow-up time would be provided if the subjects did not fail)
+survfit(Surv(Time,1-Status) ~ 1, data = lymph)
+```
+
+<br/>
+We can also attempt to estimate the hazard function nonparametrically.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+library(muhaz)
+muhaz1 <- muhaz(lymph$Time, lymph$Status, max.time=20, bw.grid=1, bw.method="global", b.cor="none")
+muhaz2 <- muhaz(lymph$Time, lymph$Status, max.time=20, bw.grid=2, bw.method="global", b.cor="none")
+muhaz3 <- muhaz(lymph$Time, lymph$Status, max.time=20, bw.grid=5, bw.method="global", b.cor="none")
+muhaz4 <- muhaz(lymph$Time, lymph$Status, max.time=20, bw.grid=10, bw.method="global", b.cor="none")
+```
+
+```{r, message=FALSE, echo = FALSE, warning=FALSE}
+par(mfrow = c(2, 2))
+plot(muhaz1)
+plot(muhaz2)
+plot(muhaz3)
+plot(muhaz4)
+```
+
+```{r, message=FALSE, echo = FALSE, warning=FALSE}
+haz1 <- muhaz1$haz.est
+times1 <- muhaz1$est.grid
+surv1 <- exp(-cumsum(haz1[1:(length(haz1)-1)]*diff(times1)))
+
+haz2 <- muhaz2$haz.est
+times2 <- muhaz2$est.grid
+surv2 <- exp(-cumsum(haz2[1:(length(haz2)-1)]*diff(times2)))
+
+haz3 <- muhaz3$haz.est
+times3 <- muhaz3$est.grid
+surv3 <- exp(-cumsum(haz3[1:(length(haz3)-1)]*diff(times3)))
+
+haz4 <- muhaz4$haz.est
+times4 <- muhaz4$est.grid
+surv4 <- exp(-cumsum(haz4[1:(length(haz4)-1)]*diff(times4)))
+
+
+par(mfrow = c(1, 1))
+plot(km_status, conf.int=T, xlab="Time (in years)", xlim=c(0,20), ylab="Overall survival probability")
+lines(surv1 ~ times1[1:(length(times1) - 1)], col = 'red')
+lines(surv2 ~ times2[1:(length(times2) - 1)], col = 'blue')
+lines(surv3 ~ times3[1:(length(times3) - 1)], col = 'green')
+lines(surv4 ~ times4[1:(length(times4) - 1)], col = 'purple')
+```
+
+<br/>
+The overall hazard function appears quite complex. The smoother estimates do not correspond to the Kaplan-Meier estimator at all. 
+<br/>
+
+### LASSO and adaptive LASSO fit
+
+<br/>
+Let us consider the Cox proportional hazards model to estimate the effects of gene expression on the survival probability. Since $p \gg N$, we cannot even fit a Cox proportional hazards model without regularization. First, we will consider the ordinary LASSO. The estimator is given as the minimimum of the log-partial likelihood  $- \mathrm{argmin}_\beta \sum_{i \mid \delta_i = 1} \mathrm{log} \frac{e^{\beta^Tx_i}}{\sum_{j \in R_i} e^{\beta^Tx_j}} + \lambda ||\beta||_1$, where $i = 1, \ldots, N$, $\delta_i$ is the status indicator (0 denotes a censored observation) $R_i$ are all subject that did not fail at the time $y_i$.
+
+
+The *glmement* package allows us to fit the penalized Cox proportional hazards model (we will use deviance as the cross-validation metric).
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+lymph_lasso <- glmnet(lymphx,Surv(lymph$Time, lymph$Status),alpha=1,family='cox')
+
+set.seed(123)
+lymph_lasso_cv <- cv.glmnet(as.matrix(lymphx_std ),
+                            Surv(lymph$Time, lymph$Status),alpha=1,family='cox',type.measure= 'deviance', nfolds = 10)
+```
+
+```{r, message=FALSE, warning=FALSE, echo = FALSE}
+par(mfrow = c(1, 2))
+plot(lymph_lasso,xvar = 'lambda')
+plot(lymph_lasso,xvar = 'lambda', xlim = c(-2,-1.5),ylim = c(-1,1))
+```
+
+```{r, message=FALSE, warning=FALSE, echo = FALSE}
+par(mfrow = c(1, 1))
+plot(lymph_lasso_cv)
+```
+
+<br/>
+We observe that the mean CV is quite flat. The LASSO  ($\lambda$ min as the penalization parameter) picked the following predictors.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+lymph_lasso_cv$glmnet.fit$beta[,lymph_lasso_cv$index[1]][abs(lymph_lasso_cv$glmnet.fit$beta[,lymph_lasso_cv$index[1]]) > 0]
+
+# non-zero predictors
+lymph_lasso_cv
+```
+
+<br/>
+We can check how well the selected predictors separate the survival curves. Let us estimate the Kaplan-Meier estimator separately for patients with $x^T\beta >0$ and $x^T\beta < 0$.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+beta_lymph <- lymph_lasso_cv$glmnet.fit$beta[,lymph_lasso_cv$index[1]]
+
+survfit2(Surv(Time,Status) ~ as.matrix(lymphx_std) %*% beta_lymph > 0, data = lymph, conf.type ='log-log') %>% 
+  ggsurvfit() +
+  labs(
+    x = "Time",
+    y = "Overall survival probability"
+  ) + add_confidence_interval()
+```
+
+<br/>
+We observe that the survival functions differ substantially. Still, we have to keep in mind that we had over 7000 predictors and just 220 observations. Thus, some separation (or all of it) could be due to pure chance. This is a question that would have to be addresesed by a new study focused on the candidate genes we have identified.
+
+Let us move to the adaptive LASSO. We first fit the $l_2$-penalized Cox proportional hazards model (i.e., ridge) to obtain initial parameter values.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+set.seed(123)
+lymph_ridge_cv <- cv.glmnet(as.matrix(lymphx_std),
+                            Surv(lymph$Time, lymph$Status),alpha=0,family='cox',type.measure='deviance')
+```
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+plot(lymph_ridge_cv$glmnet.fit,xvar = 'lambda')
+```
+
+<br/>
+Again, we then scale the data and fit a LASSO.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+beta_ridge <-lymph_ridge_cv$glmnet.fit$beta[,lymph_ridge_cv$index[1]]
+lymphx_std_resc <- scale(lymphx_std, center = FALSE, scale = 1/abs(beta_ridge))
+
+
+set.seed(123)
+lymph_lasso_cv_adaptive <- cv.glmnet(as.matrix(lymphx_std_resc), standardize = FALSE,
+                            Surv(lymph$Time, lymph$Status),alpha=1,family='cox',type.measure='deviance', nfolds = 10)
+```
+
+<br/>
+We observe that the adaptive LASSO selected a few more predictors than the ordinary LASSO.
+<br/>
+
+```{r, message=FALSE, warning=FALSE}
+lymph_lasso_cv_adaptive
+
+lymph_lasso_cv_adaptive$glmnet.fit$beta[,lymph_lasso_cv_adaptive$index[1]][abs(lymph_lasso_cv_adaptive$glmnet.fit$beta[,lymph_lasso_cv_adaptive$index[1]]) > 0]
+```
+
+<br/>
+The separation in the data is very similar to the ordinary LASSO. 
+<br/>
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+beta_adaptive <- lymph_lasso_cv_adaptive$glmnet.fit$beta[,lymph_lasso_cv_adaptive$index[1]]
+
+survfit2(Surv(Time,Status) ~ as.matrix(lymphx_std_resc) %*% beta_adaptive > 0, data = lymph, conf.type ='log-log') %>% 
+  ggsurvfit() +
+  labs(
+    x = "Time",
+    y = "Overall survival probability"
+  ) + add_confidence_interval()
+```
+
+### Bootstrap
+
+Let us assess the variability of both the LASSO and the adaptive LASSO estimates via a nonparametric bootstrap. 
+<br/>
+  
+```{r, message=FALSE, warning=FALSE}
+library(doParallel)
+registerDoParallel(4)
+
+set.seed(123)
+nb <- 1000
+
+betas_boot1 <- matrix(NA,nb,7399)
+betas_boot2 <- matrix(NA,nb,7399)
+
+colnames(betas_boot1) <- colnames(lymphx_std)
+colnames(betas_boot2) <- colnames(lymphx_std)
+
+
+lymphx_std_all <- cbind(lymph,lymphx_std)
+
+for(i in 1:nb){
+  
+  lymphx_new <-  lymphx_std_all[sample(nrow(lymphx_std_all) , rep=TRUE),]
+  
+  lymph_lasso_cv_new <- cv.glmnet(as.matrix(lymphx_new[,c(-1,-2)]),
+                            Surv(lymphx_new$Time,
+                                 lymphx_new$Status),alpha=1,family='cox',type.measure= 'deviance', nfolds = 10,
+                            parallel=TRUE)
+  
+  lymph_ridge_cv_new <- cv.glmnet(as.matrix(lymphx_new[,c(-1,-2)]),
+                            Surv(lymphx_new$Time,
+                                 lymphx_new$Status),alpha=0,family='cox',type.measure= 'deviance', nfolds = 10,
+                            parallel=TRUE)
+  
+  
+  beta_ridge_new <-lymph_ridge_cv_new$glmnet.fit$beta[,lymph_ridge_cv_new$index[1]]
+  lymphx_new_resc <- scale(lymphx_new[,c(-1,-2)], center = FALSE, scale = 1/abs(beta_ridge_new))
+  
+  lymph_lasso_cv2_new <- cv.glmnet(lymphx_new_resc, standardize = FALSE,
+                            Surv(lymphx_new$Time,
+                                 lymphx_new$Status),alpha=1,family='cox',type.measure= 'deviance', nfolds = 10,
+                            parallel=TRUE)
+  
+  
+  
+  lymph_lasso_cv2_new <- cv.glmnet(lymphx_new_resc, standardize = FALSE,
+                            Surv(lymphx_new$Time,
+                                 lymphx_new$Status),alpha=1,family='cox',type.measure= 'deviance', nfolds = 10,
+                            parallel=TRUE)
+
+  betas_boot1[i,] <- lymph_lasso_cv_new$glmnet.fit$beta[,lymph_lasso_cv_new$index[1]]
+  betas_boot2[i,] <- lymph_lasso_cv2_new$glmnet.fit$beta[,lymph_lasso_cv2_new$index[1]]*abs(beta_ridge_new)
+}
+```
+
+<br/>
+Let us check which genes were picked somewhat often.
+<br/>
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+# at least half of the time
+which(apply(betas_boot1,2,function(x)abs(median(x)))>0)
+which(apply(betas_boot2,2,function(x)abs(median(x)))>0)
+
+# at least two-thirds of the time
+which(apply(betas_boot1,2,function(x)abs(quantile(x,1/3)))>0)
+which(apply(betas_boot2,2,function(x)abs(quantile(x,1/3)))>0)
+```
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+par(mfrow = c(1, 2))
+plot(apply(betas_boot1>0,2,sum), ylab = '# non-zero coefficients', main = 'LASSO')
+plot(apply(betas_boot2>0,2,sum), ylab = '# non-zero coefficients', main = 'Adaptive LASSO')
+```
+
+<br/>
+We observe that the variables picked by the LASSO and the adaptive LASSO are pretty similar. 
+<br/>
+
+### Inference
+
+We can also perform the fixed-lambda inference for the penalized Cox model. For the ordinary LASSO, no effect seems significant in the reduced model.
+<br/> 
+
+```{r, message=FALSE, warning=FALSE}
+lambda <- lymph_lasso_cv$lambda.min
+beta <- lymph_lasso_cv$glmnet.fit$beta[,lymph_lasso_cv$index[1]]
+
+
+# fixedLassoInf uses a different scaling of lambda than glmnet
+ fixedLassoInf(as.matrix(lymphx),y = lymph$Time,status = lymph$Status,
+                                   beta,lambda*dim(lymphx)[1],family = 'cox', alpha = 0.05)
+```
+
+<br/>
+In the model picked by the adaptive LASSO, some variables are.
+<br/> 
+
+```{r, message=FALSE, warning=FALSE}
+lambda <- lymph_lasso_cv_adaptive$lambda.1se
+beta <- lymph_lasso_cv_adaptive$glmnet.fit$beta[,lymph_lasso_cv_adaptive$index[1]]
+
+
+# fixedLassoInf uses a different scaling of lambda than glmnet
+ fixedLassoInf(as.matrix(lymphx_std_resc),y = lymph$Time,status = lymph$Status,
+                                   beta,lambda*dim(lymphx)[1],family = 'cox', alpha = 0.05)
+```
+
+<br/> 
+Let us check if the bootstrap also picked some of these significant effects.
+<br/> 
+
+```{r, message=FALSE, warning=FALSE}
+ci_lymph <- apply(betas_boot2[1:nb,],2,function(x)(quantile(x,c(0.05,0.975))))
+
+
+ind <- rep(FALSE,7399)
+for (i in 1:7399){
+if((ci_lymph[1,i] > 0 & ci_lymph[2,i] >= 0) | (ci_lymph[1,i] < 0 & ci_lymph[2,i] <= 0)){ind[i] = TRUE}
+}
+
+ci_lymph[, ind]
+```
+
+<br/> 
+We observe that the effect of some variables is at least consistently non-positive. However, no variable was selected consistently enough such that its confidence intervals are not bound away from zero. So we cannot really say that the effect of some gene is clearly significant. 
+<br/> 
+
+## Conclusion
+
+We concluded not just the last cycle but the whole series on statistical modeling. We went through quite a lot, and it is time to take a break and see some forests.
+
+
+## References
+  
+[1] HASTIE, Trevor; TIBSHIRANI, Robert; WAINWRIGHT, Martin. Statistical learning with sparsity. Monographs on statistics and applied probability, 2015, 143.143: 8.
+
+[2] Tibshirani, Ryan J. The lasso problem and uniqueness. (2013): 1456-1490.
+
+[3] EFRON, Bradley, et al. Least angle regression. 2004.
+
+[4] ZOU, Hui. The adaptive lasso and its oracle properties. *Journal of the American statistical association*, 2006, 101.476: 1418-1429. 
+
+[5] ZHAO, Peng; YU, Bin. On model selection consistency of Lasso. *The Journal of Machine Learning Research*, 2006, 7: 2541-2563.
+
+[6] LEEB, Hannes; PÖTSCHER, Benedikt M. Model selection and inference: Facts and fiction. *Econometric Theory*, 2005, 21.1: 21-59.
+
+[7] PARK, Trevor; CASELLA, George. The bayesian lasso. *Journal of the american statistical association*, 2008, 103.482: 681-686.
+
+[8] WÜTHRICH, Kaspar; ZHU, Ying. Omitted variable bias of Lasso-based inference methods: A finite sample analysis. *Review of Economics and Statistics*, 2023, 105.4: 982-997.
+
+[9] ZHAO, Sen; WITTEN, Daniela; SHOJAIE, Ali. In defense of the indefensible: A very naive approach to high-dimensional inference. *Statistical science: a review journal of the Institute of Mathematical Statistics*, 2021, 36.4: 562.
+
+[10] LOCKHART, Richard, et al. A significance test for the lasso. *Annals of statistics*, 2014, 42.2: 413.
+
+[11] TIBSHIRANI, Ryan J., et al. Exact post-selection inference for sequential regression procedures. *Journal of the American Statistical Association*, 2016, 111.514: 600-620.
+
+[12] BERK, Richard, et al. Valid post-selection inference. *The Annals of Statistics*, 2013, 802-837.
+
+[13] ZOU, Hui. The adaptive lasso and its oracle properties. *Journal of the American statistical association*, 2006, 101.476: 1418-1429.
+
+[14] BARRO, Robert Joseph; LEE, Jong-Wha. Data set for a panel of 138 countries. 1994.
+
+[15] BELLONI, Alexandre; CHERNOZHUKOV, Victor; HANSEN, Christian. Inference on treatment effects after selection among high-dimensional controls. *Review of Economic Studies*, 2014, 81.2: 608-650.
+
+[16] WÜTHRICH, Kaspar; ZHU, Ying. Omitted variable bias of Lasso-based inference methods: A finite sample analysis. *Review of Economics and Statistics*, 2023, 105.4: 982-997.
+
+[17] WOOLDRIDGE, Jeffrey M. Introductory econometrics: a modern approach. South-Western cengage learning, 2016.
+
+[18] ALIZADEH, Ash A., et al. Distinct types of diffuse large B-cell lymphoma identified by gene expression profiling. *Nature*, 2000, 403.6769: 503-511.
