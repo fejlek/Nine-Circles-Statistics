@@ -57,7 +57,7 @@ $p$. The LASSO estimator for the linear regression is the ordinary least
 squares (OLS) estimator with $l_1$-regularization, i.e.,
 $\hat\beta_\mathrm{LASSO} = \mathrm{argmin}_\beta ||X\beta - Y||^2 + \lambda ||\beta||_1$
 for some $\lambda > 0$, where $||\beta||_1 = \sum_i |\beta_i|$. 
-This minimization is equivalent to the constrained problem minimize $||X\beta - Y||^2$ subject to
+This minimization is equivalent to the constrained problem minimize: $||X\beta - Y||^2$ subject to
 $||\beta||_1 \leq t$, where $t$ depends on the value of $\lambda$.
 
 
