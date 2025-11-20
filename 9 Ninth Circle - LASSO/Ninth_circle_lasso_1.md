@@ -2267,7 +2267,7 @@ regularization. First, we will consider the ordinary LASSO. The
 estimator is given as the minimimum of the log-partial likelihood
 $-\sum_{i \mid \delta_i = 1} \mathrm{log} \frac{e^{\beta^Tx_i}}{\sum_{j \in R_i} e^{\beta^Tx_j}} + \lambda \Vert\beta\Vert_1$,
 where $i = 1, \ldots, N$, $\delta_i$ is the status indicator (0 denotes
-a censored observation) $R_i$ are all subject that did not fail at the
+a censored observation) and $R_i$ are all subjects that did not fail at the
 time $y_i$.
 
 The *glmement* package allows us to fit the penalized Cox proportional
