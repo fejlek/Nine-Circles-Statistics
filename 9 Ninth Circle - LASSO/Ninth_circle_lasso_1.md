@@ -57,7 +57,7 @@ $p$. The LASSO estimator for the linear regression is the ordinary least
 squares (OLS) estimator with $l_1$-regularization, i.e.,
 $\hat\beta_\mathrm{LASSO} = \mathrm{argmin}_\beta \Vert X\beta - Y \Vert^2 + \lambda \Vert\beta\Vert_1$
 for some $\lambda > 0$, where $\Vert\beta\Vert_1 = \sum_i |\beta_i|$. 
-This minimization is equivalent to the constrained problem minimize: $\VertX\beta - Y\Vert^2$ subject to
+This minimization is equivalent to the constrained problem minimize: $\Vert X\beta - Y\Vert^2$ subject to
 $\Vert\beta\Vert_1 \leq t$, where $t$ depends on the value of $\lambda$.
 
 
@@ -293,13 +293,13 @@ asymptotic properties of LASSO estimates for a bit.
 
 Provided that $X$ is not singular, the LASSO is consistent when
 $\frac{\lambda_N}{N} \rightarrow 0$ and is $\sqrt{N}$-consistent when
-$\lambda(N) \leq \mathrm{conts}\cdot\sqrt{N}$. Variable selection by the
-LASSO is inconsistent for $\lambda(N) \leq \mathrm{conts}\cdot\sqrt{N}$
+$\lambda_N \leq \mathrm{conts}\cdot\sqrt{N}$. Variable selection by the
+LASSO is inconsistent for $\lambda_N \leq \mathrm{conts}\cdot\sqrt{N}$
 \[4\]. This means that LASSO cannot be both $\sqrt{N}$-consistent and
 attain consistent variable selection; however, it can attain consistent
-variable selection and be consistent (sub-$\sqrt{N}$) provided that the
+variable selection and be consistent (sub $\sqrt{N}$) provided that the
 columns of the model matrix are not too correlated \[5\]. Similar
-asymptotic properties can be for $p \gg N$ provided that the problem is
+asymptotic properties can stated be for $p \gg N$ provided that the problem is
 sufficiently sparse and the eigenvalues of $X$ are bounded from zero
 (consistency) and columns are not too correlated (consistent selection)
 \[1\].
@@ -313,7 +313,7 @@ and how much the columns of $X$ are correlated. In other words, the
 convergence is not uniform (not even locally) \[6\]. In addition,
 finite-sample distributions of the parameters are usually far away from
 the asymptotic distributions; see \[6\] for some simple examples. This
-means that estimates are often significantly biased, and the selected
+means that finite-sample estimates are often significantly biased, and the selected
 predictors do not correspond to the actual model.
 
 Overall, even though the LASSO has some nice asymptotic properties, in
@@ -331,7 +331,7 @@ beta
 $\beta \mid \lambda,\sigma  \sim \Pi_j \frac{\lambda}{2\sigma} e^{-\lambda|\beta_j|/\sigma}$
 (the so-called Laplacian prior). Then the negative log posterior density
 for $\beta \mid y,\sigma,\lambda$ is
-$\frac{1}{2\sigma^2}\Verty-X\beta\Vert_2^2 + \frac{\lambda}{\sigma}\Vert\beta\Vert_1$,
+$\frac{1}{2\sigma^2}\Vert y-X\beta\Vert_2^2 + \frac{\lambda}{\sigma}\Vert\beta\Vert_1$,
 i.e., it is the penalized log-likelihood used to obtain LASSO estimates
 \[1\]. Using this correspondence, one can fit a Bayesian LASSO model,
 which yields a similar coefficient path to LASSO for a given $\lambda$;
@@ -601,17 +601,17 @@ abline(0,0)
 ### Post-Selection Inference
 
 Since the LASSO, due to the penalization, often produces substantially
-biased estimates (due to shrinkage coefficients), one could consider
+biased estimates (due to shrinkage of coefficients), one could consider
 using LASSO merely to select the predictors in the model and then refit
 the model using the usual non-penalized regression methods (so-called
-*Post-LASSO estimator*). However, there are several issues with this
+*post-LASSO estimator*). However, there are several issues with this
 procedure.
 
 The default confidence intervals and P-values from the non-penalized
 regression can be overly optimistic because they ignore the prior
 selection procedure. The LASSO selection could also miss some important
 covariates, leading to omitted-variable bias in the final model \[7\].
-Although using asymptotical properties of the LASSO estimates mentioned
+Although, using asymptotic properties of the LASSO estimates mentioned
 in our brief review, one could obtain a valid inference under “ideal”
 circumstances; see \[9\] for a more detailed investigation of the
 “naive” post-selection inference.
@@ -633,7 +633,7 @@ for finding the LASSO solution \[2\] (and it also provides a nice
 insight into what LASSO estimates look like).
 
 The LAR is quite similar to the standard forward stepwise selection. The
-predictors are gradually entered into the model based on their
+predictors gradually enter into the model based on their
 correlation with the remaining residuals (starting with the most
 correlated). However, rather than performing the full OLS as in forward
 stepwise selection, the coefficients are gradually shifted toward the
@@ -664,7 +664,7 @@ conditional hypothesis whether the coefficients of all other predictors
 not yet in the model are zero (*complete null hypothesis*), adjusting
 for the variables that are in the model \[1\].
 
-Let $\lambda_1 > \lambda_2 > \cdots$ denotes the values of $\lambda$s
+Let $\lambda_1 > \lambda_2 > \cdots$ denotes the values of $\lambda\mathrm{s}$
 for which new predictors were added. The test statistic for the $k$-th
 predictor that was added to the model is
 $T_k = \frac{1}{\sigma^2}(y^TX\hat\beta(\lambda_{k+1}) - y^TX\hat\beta_{A_{k-1}}(\lambda_{k+1}))$,
@@ -740,7 +740,7 @@ sum(cov_test_int[,2] < 0.05)
     ## [1] 4
 
 <br/> For comparison, let us perform the forward selection based on the
-p-values. We will use the *olsrr* package
+P-values. We will use the *olsrr* package
 (<https://cran.r-project.org/web/packages/olsrr/index.html>) to perform
 the forward selection. <br/>
 
@@ -1043,7 +1043,7 @@ selection procedure might have selected; i.e., it does not depend on the
 selection procedure.
 
 Namely, it considers the confidence intervals
-$\hat\beta_{j,M} \pm K\hat\sigma(X_M^TX_M)^{-1}$, where $\hat\beta_M$ is
+$\hat\beta_{j,M} \pm K\hat\sigma\sqrt{(X_M^TX_M)^{-1}}$, where $\hat\beta_M$ is
 the OLS estimate in the selected model, $X_M$ is the model matrix of the
 selected model, and $K$ is a constant estimated by the PoSI method. This
 constant is selected such that
@@ -1094,10 +1094,10 @@ cbind(infer[,c(1,2,3,5,6)],ci_PoSI[2:dim(ci_PoSI)[1],])
 <br/> We observe that the PoSI confidence intervals are much more
 conservative. The main disadvantage of this approach is computational
 complexity. The model without interactions contains 11 variables, i.e.,
-there are $2^11 - 1 = 2047$ possible reduced models. If we consider the
+there are $2^{11} - 1 = 2047$ possible reduced models. If we consider the
 model with interactions, this number increases to
 $2^{55}-1 \approx 3,6 \cdot 10^{16}$. Hence, we can consider merely
-models with a limited number of selected variables.
+models with a limited number of dropped variables.
 
 For example, if we consider models with 53-55 parameters, we need to
 investigate 1541 models. If we increase this range to 52-55, the number
@@ -1222,7 +1222,7 @@ consistent selection, achieving the so-called *oracle property* \[13\].
 
 The modification concerns penalization. The penalization in the adaptive
 LASSO is
-$\hat\beta_\mathrm{aLASSO} = \mathrm{argmin}_\beta \VertX\beta - Y\Vert^2 + \lambda \sum_i w_i|\beta_i|$
+$\hat\beta_\mathrm{aLASSO} = \mathrm{argmin}_\beta \Vert X\beta - Y\Vert^2 + \lambda \sum_i w_i|\beta_i|$
 for some $\lambda > 0$, where $w_i$ are weights. The weights are chosen
 as $w_i = 1/|\tilde\lambda_i|^\gamma$, where $\tilde\lambda$ is some
 initial $\sqrt{N}$-consistent estimator and $\gamma >0$ is a free
@@ -1707,8 +1707,8 @@ fixedLassoInf(growth_rsc,GrowthData$Outcome,beta,lambda*90,family = 'gaussian', 
 <br/> We observe that the effect of **gdpsh465** is borderline
 significant and negative. However, the P-value depends on the particular
 selected value of $\lambda$. For example, if we use the (lower) median
-value obtained from CVs ($\lambda \approx 2,9\cdot10^-6$) instead of the
-mean ($\lambda \approx 6,2\cdot10^-6$), the effect is not significant.
+value obtained from CVs ($\lambda \approx 2,9\cdot10^{-6}$) instead of the
+mean ($\lambda \approx 6,2\cdot10^{-6}$), the effect is not significant.
 <br/>
 
 ``` r
@@ -1825,7 +1825,7 @@ effect of **gdpsh465** on the response. <br/>
 
 ### Double-Selection LASSO
 
-<br/> The double-selection LASSO is a popular inference method proposed
+The double-selection LASSO is a popular inference method proposed
 in \[15\]. Let us assume a model $Y = \alpha Z + X\beta$, where $Z$ is
 the effect of interest and $X$ are other control variables and goals.
 The double-selection LASSO proceeds as follows. <br/>
@@ -2112,12 +2112,16 @@ bootstraped result is not.
 
 Overall, we can conclude that after adjusting for other relevant
 variables (chosen by the adaptive LASSO), the effect of **gdpsh465**
-itself was not deemed significant. <br/>
+itself was not deemed significant. Our findings are actually consistent
+with the empirical studies. There is evidence that convergence
+occurs among economies that are similar  (conditional 
+convergence), but global (unconditional) convergence remains "elusive" \[18\].
+<br/>
 
 ## Lymphoma dataset
 
 The last dataset we will have a look at is the *lymphoma* dataset
-\[1,7\]. It contains gene expression data for 7399 genes measured in 240
+\[1,19\]. It contains gene expression data for 7399 genes measured in 240
 lymphoma patients, along with censored survival times for these
 patients. <br/>
 
@@ -2749,6 +2753,9 @@ Statistics*, 2023, 105.4: 982-997.
 \[17\] WOOLDRIDGE, Jeffrey M. Introductory econometrics: a modern
 approach. South-Western cengage learning, 2016.
 
-\[18\] ALIZADEH, Ash A., et al. Distinct types of diffuse large B-cell
+\[18\] FERRARA, Massimiliano. Solow-Swan Model and Growth Dynamics: moving forward. 
+*Decisions in Economics and Finance*, 2025, 1-17.
+
+\[19\] ALIZADEH, Ash A., et al. Distinct types of diffuse large B-cell
 lymphoma identified by gene expression profiling. *Nature*, 2000,
 403.6769: 503-511.
