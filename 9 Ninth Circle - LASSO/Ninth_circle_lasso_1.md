@@ -2265,7 +2265,7 @@ effects of gene expression on the survival probability. Since $p \gg N$,
 we cannot even fit a Cox proportional hazards model without
 regularization. First, we will consider the ordinary LASSO. The
 estimator is given as the minimimum of the log-partial likelihood
-$- \mathrm{argmin}_\beta \sum_{i \mid \delta_i = 1} \mathrm{log} \frac{e^{\beta^Tx_i}}{\sum_{j \in R_i} e^{\beta^Tx_j}} + \lambda \Vert\beta\Vert_1$,
+$-\sum_{i \mid \delta_i = 1} \mathrm{log} \frac{e^{\beta^Tx_i}}{\sum_{j \in R_i} e^{\beta^Tx_j}} + \lambda \Vert\beta\Vert_1$,
 where $i = 1, \ldots, N$, $\delta_i$ is the status indicator (0 denotes
 a censored observation) $R_i$ are all subject that did not fail at the
 time $y_i$.
