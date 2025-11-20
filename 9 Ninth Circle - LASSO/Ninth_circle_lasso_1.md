@@ -55,10 +55,10 @@ assume a linear regression model $Y = X\beta + \varepsilon$. Let us
 denote the number of observations as $N$ and the number of covariates as
 $p$. The LASSO estimator for the linear regression is the ordinary least
 squares (OLS) estimator with $l_1$-regularization, i.e.,
-$\hat\beta_\mathrm{LASSO} = \mathrm{argmin}_\beta \Vert X\beta - Y \Vert^2 + \lambda ||\beta||_1$
-for some $\lambda > 0$, where $||\beta||_1 = \sum_i |\beta_i|$. 
-This minimization is equivalent to the constrained problem minimize: $||X\beta - Y||^2$ subject to
-$||\beta||_1 \leq t$, where $t$ depends on the value of $\lambda$.
+$\hat\beta_\mathrm{LASSO} = \mathrm{argmin}_\beta \Vert X\beta - Y \Vert^2 + \lambda \Vert\beta\Vert_1$
+for some $\lambda > 0$, where $\Vert\beta\Vert_1 = \sum_i |\beta_i|$. 
+This minimization is equivalent to the constrained problem minimize: $\VertX\beta - Y\Vert^2$ subject to
+$\Vert\beta\Vert_1 \leq t$, where $t$ depends on the value of $\lambda$.
 
 
 The $l_1$-regularization has some nice properties that motivate its use.
@@ -156,7 +156,7 @@ model_matrix_diab <- as.matrix(diabetes_std[,1:10])
 i.e., the Gaussian model) using the *glmnet* package
 (<https://cran.r-project.org/web/packages/glmnet/index.html>). The
 parameter $\alpha$ corresponds to the general *elastic net* \[1\]
-penalty $\lambda((1-\alpha)||\beta||_2^2 + \alpha ||\beta||_1)$, i.e.,
+penalty $\lambda((1-\alpha)\Vert\beta\Vert_2^2 + \alpha \Vert\beta\Vert_1)$, i.e.,
 we get LASSO for $\alpha = 1$ and the so-called *ridge regression* for
 $\alpha = 0$ <br/>
 
@@ -180,8 +180,8 @@ the penalization parameter $\lambda$ increases. We observe that, for
 sufficiently large penalty, all predictors are dropped from the model.
 Since the minimization of the negative log-likelihood with an $l_1$
 penalty is equivalent to the minimization of the negative log-likelihood
-with a constraint $||\beta||_1 \leq k$, we can use a plot in terms of
-varying bound on $||\beta||_1$ instead. <br/>
+with a constraint $\Vert\beta\Vert_1 \leq k$, we can use a plot in terms of
+varying bound on $\Vert\beta\Vert_1$ instead. <br/>
 
 ``` r
 plot(diabetes_lasso,xvar = 'norm', label = TRUE)
@@ -331,7 +331,7 @@ beta
 $\beta \mid \lambda,\sigma  \sim \Pi_j \frac{\lambda}{2\sigma} e^{-\lambda|\beta_j|/\sigma}$
 (the so-called Laplacian prior). Then the negative log posterior density
 for $\beta \mid y,\sigma,\lambda$ is
-$\frac{1}{2\sigma^2}||y-X\beta||_2^2 + \frac{\lambda}{\sigma}||\beta||_1$,
+$\frac{1}{2\sigma^2}\Verty-X\beta\Vert_2^2 + \frac{\lambda}{\sigma}\Vert\beta\Vert_1$,
 i.e., it is the penalized log-likelihood used to obtain LASSO estimates
 \[1\]. Using this correspondence, one can fit a Bayesian LASSO model,
 which yields a similar coefficient path to LASSO for a given $\lambda$;
@@ -1222,7 +1222,7 @@ consistent selection, achieving the so-called *oracle property* \[13\].
 
 The modification concerns penalization. The penalization in the adaptive
 LASSO is
-$\hat\beta_\mathrm{aLASSO} = \mathrm{argmin}_\beta ||X\beta - Y||^2 + \lambda \sum_i w_i|\beta_i|$
+$\hat\beta_\mathrm{aLASSO} = \mathrm{argmin}_\beta \VertX\beta - Y\Vert^2 + \lambda \sum_i w_i|\beta_i|$
 for some $\lambda > 0$, where $w_i$ are weights. The weights are chosen
 as $w_i = 1/|\tilde\lambda_i|^\gamma$, where $\tilde\lambda$ is some
 initial $\sqrt{N}$-consistent estimator and $\gamma >0$ is a free
@@ -2261,7 +2261,7 @@ effects of gene expression on the survival probability. Since $p \gg N$,
 we cannot even fit a Cox proportional hazards model without
 regularization. First, we will consider the ordinary LASSO. The
 estimator is given as the minimimum of the log-partial likelihood
-$- \mathrm{argmin}_\beta \sum_{i \mid \delta_i = 1} \mathrm{log} \frac{e^{\beta^Tx_i}}{\sum_{j \in R_i} e^{\beta^Tx_j}} + \lambda ||\beta||_1$,
+$- \mathrm{argmin}_\beta \sum_{i \mid \delta_i = 1} \mathrm{log} \frac{e^{\beta^Tx_i}}{\sum_{j \in R_i} e^{\beta^Tx_j}} + \lambda \Vert\beta\Vert_1$,
 where $i = 1, \ldots, N$, $\delta_i$ is the status indicator (0 denotes
 a censored observation) $R_i$ are all subject that did not fail at the
 time $y_i$.
