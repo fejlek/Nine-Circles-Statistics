@@ -1349,7 +1349,7 @@ The overall hazard function appears quite complex. The smoother estimates do not
 ### LASSO and adaptive LASSO fit
 
 <br/>
-Let us consider the Cox proportional hazards model to estimate the effects of gene expression on the survival probability. Since $p \gg N$, we cannot even fit a Cox proportional hazards model without regularization. First, we will consider the ordinary LASSO. The estimator is given as the minimimum of the log-partial likelihood  $\sum_{i \mid \delta_i = 1} \mathrm{log} \frac{e^{\beta^Tx_i}}{\sum_{j \in R_i} e^{\beta^Tx_j}} + \lambda \Vert\beta\Vert_1$, where $i = 1, \ldots, N$, $\delta_i$ is the status indicator (0 denotes a censored observation) $R_i$ are all subject that did not fail at the time $y_i$.
+Let us consider the Cox proportional hazards model to estimate the effects of gene expression on the survival probability. Since $p \gg N$, we cannot even fit a Cox proportional hazards model without regularization. First, we will consider the ordinary LASSO. The estimator is given as the minimimum of the log-partial likelihood  $\sum_{i \mid \delta_i = 1} \mathrm{log} \frac{e^{\beta^Tx_i}}{\sum_{j \in R_i} e^{\beta^Tx_j}} + \lambda \Vert\beta\Vert_1$, where $i = 1, \ldots, N$, $\delta_i$ is the status indicator (0 denotes a censored observation) and $R_i$ are all subjects that did not fail at the time $y_i$.
 
 
 The *glmement* package allows us to fit the penalized Cox proportional hazards model (we will use deviance as the cross-validation metric).
@@ -1586,8 +1586,9 @@ We observe that the effect of some variables is at least consistently non-positi
 
 ## Conclusion
 
-We concluded not just the last cycle but the whole series on statistical modeling. We went through quite a lot, and it is time to take a break and see some forests.
+Similarly to the generalized additive models explored in the Eighth Circle, LASSO provides additional flexibility to the traditional framework of generalized linear models, making these standard models much more applicable in practice. We illustrated that the selection via LASSO is not just a tool for making better predictions, but it can also be used for statistical inference via post-selection inference methods.
 
+We conclude here not just the last cycle but the whole series on statistical modeling. We went through quite a lot, and it is time to take a break and see some forests and nets.
 
 ## References
   

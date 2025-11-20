@@ -2686,13 +2686,20 @@ ci_lymph[, ind]
 consistently non-positive. However, no variable was selected
 consistently enough such that its confidence intervals are not bound
 away from zero. So we cannot really say that the effect of some gene is
-clearly significant. <br/>
+clearly statistically significant. <br/>
 
 ## Conclusion
 
-We concluded not just the last cycle but the whole series on statistical
+Similarly to the generalized additive models explored in the Eighth Circle,
+LASSO provides additional flexibility to the traditional framework of generalized 
+linear models making these standard models much more applicable in practice. 
+We illustrated that the selection via LASSO is not just a tool for making 
+better predictions, but it can also be used for statistical inference via
+post-selection inference methods.
+
+We conclude here not just the last cycle but the whole series on statistical
 modeling. We went through quite a lot, and it is time to take a break
-and see some forests.
+and see some forests and nets.
 
 ## References
 
