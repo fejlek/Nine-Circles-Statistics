@@ -57,10 +57,8 @@ $p$. The LASSO estimator for the linear regression is the ordinary least
 squares (OLS) estimator with $l_1$-regularization, i.e.,
 $\hat\beta_\mathrm{LASSO} = \mathrm{argmin}_\beta ||X\beta - Y||^2 + \lambda ||\beta||_1$
 for some $\lambda > 0$, where $||\beta||_1 = \sum_i |\beta_i|$. 
- 
 This minimization is equivalent to the constrained problem
-$\mathrm{argmin}_\beta ||X\beta - Y||^2$ subject to
-$||\beta||_1 \leq t$, where $t$ depends on the value of $\lambda$.
+
 
 The $l_1$-regularization has some nice properties that motivate its use.
 The resulting optimization is strictly convex when
@@ -69,8 +67,8 @@ solution that can be found via appropriate algorithms. However, even
 when $\mathrm{rank}(X) < p$ (most notably in the cases when $p > N$ in
 which OLS is not an appropriate estimator), the LASSO can still have
 unique solution under some conditions (so-called *general position*
-\[2\], e.g., provide that $X$ is drawn from a continuous probability
-distribution then it is in *general position* with almost surely). In
+\[2\], e.g., provided that $X$ is drawn from a continuous probability
+distribution then it is in *general position* almost surely). In
 addition, unlike $l_2$-regularization (the so-called ridge regression),
 the LASSO provides *sparse* solutions; many of the coefficients in the
 solution are usually zero. This means that the LASSO employs both
