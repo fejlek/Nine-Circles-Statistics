@@ -2008,13 +2008,13 @@ effect of a variable of interest, adjusted for other covariates; see
 <https://www.stata.com/manuals/lasso.pdf>.  
 <br/>
 
-- 1.  Run a LASSO $Z = X\beta$.
-- 2.  Run OLS $Z = \hat X \hat \beta$, where $\hat X$ includes all
+ 1.  Run a LASSO $Z = X\beta$.
+ 2.  Run OLS $Z = \hat X \hat \beta$, where $\hat X$ includes all
       variables selected by 1. and obtain residuals $d_Z$
-- 3.  Run a LASSO $Y = X\beta$ and perform OLS.
-- 4.  Run OLS $Y = \tilde X \tilde \beta$, where $\tilde X$ includes all
+ 3.  Run a LASSO $Y = X\beta$ and perform OLS.
+ 4.  Run OLS $Y = \tilde X \tilde \beta$, where $\tilde X$ includes all
       variables selected by 3. and obtain residuals $d_Y$
-- 5.  Run OLS $d_Y \sim d_Z$.
+ 5.  Run OLS $d_Y \sim d_Z$.
 
 <br/> Using the LASSO regression results from the previous section, we
 obtain the following OLS. <br/>
@@ -2458,6 +2458,14 @@ for(i in 1:nb){
 ```
 
 <br/> Let us check which genes were picked somewhat often. <br/>
+``` r
+# at least half of the time
+which(apply(betas_boot1,2,function(x)abs(median(x)))>0)
+which(apply(betas_boot2,2,function(x)abs(median(x)))>0)
+# at least two-thirds of the time
+which(apply(betas_boot1,2,function(x)abs(quantile(x,1/3)))>0)
+which(apply(betas_boot2,2,function(x)abs(quantile(x,1/3)))>0)
+```
 
     ## X1825 X5027 X6607 X6956 X7357 X7380 
     ##  1825  5027  6607  6956  7357  7380
