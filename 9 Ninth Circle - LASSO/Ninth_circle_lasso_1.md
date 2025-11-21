@@ -1829,9 +1829,9 @@ in \[15\]. Let us assume a model $Y = \alpha Z + X\beta$, where $Z$ is
 the effect of interest and $X$ are other control variables and goals.
 The double-selection LASSO proceeds as follows. <br/>
 
-- 1.  Run a LASSO $Z = X\beta$
-- 2.  Run a LASSO $Y = X\beta$
-- 3.  Run OLS $Y = \alpha Z + \hat X\hat\beta$, where $\hat X$ includes
+ 1.  Run a LASSO $Z = X\beta$
+ 2.  Run a LASSO $Y = X\beta$
+ 3.  Run OLS $Y = \alpha Z + \hat X\hat\beta$, where $\hat X$ includes
       all variables selected by 1. and 2.
 
 <br/> The advantage of double-selection is that it considers both
