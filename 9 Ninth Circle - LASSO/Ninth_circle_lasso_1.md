@@ -65,9 +65,8 @@ The $l_1$-regularization has some nice properties that motivate its use.
 The resulting optimization is strictly convex when
 $\mathrm{rank}(X) = p$, and thus the optimization problem has a unique
 solution that can be found via appropriate algorithms. However, even
-when $\mathrm{rank}(X) < p$ (most notably in the cases when $p > N$ in
-which OLS is not an appropriate estimator), the LASSO can still have
-unique solution under some conditions (so-called *general position*
+when $\mathrm{rank}(X) < p$ (most notably in the cases when $p > N$), 
+the LASSO can still have unique solution under some conditions (so-called *general position*
 \[2\], e.g., provided that $X$ is drawn from a continuous probability
 distribution then it is in *general position* almost surely). In
 addition, unlike $l_2$-regularization (the so-called ridge regression),
@@ -236,8 +235,8 @@ plot(diabetes_lasso_cv)
 
 <br/> We observe that the curve is relatively flat, indicating that the
 full fit is reasonable (the number of predictors is safely within our
-rule-of-thumb guidelines). To illustrate better a typical *bias-variance
-trade-off*, let us consider the model with all interactions. <br/>
+rule-of-thumb guidelines). To illustrate a more pronounced minimum, 
+let us consider the model with all interactions. <br/>
 
 ``` r
 model_matrix_diab_int <- scale(model.matrix(lm(Y~.^2,data = diabetes_std))[,2:56], center = TRUE, scale = TRUE)
@@ -2692,7 +2691,7 @@ clearly statistically significant. <br/>
 
 Similarly to the generalized additive models explored in the Eighth Circle,
 LASSO provides additional flexibility to the traditional framework of generalized 
-linear models making these standard models much more applicable in practice. 
+linear models, making these standard models much more applicable in practice. 
 We illustrated that the selection via LASSO is not just a tool for making 
 better predictions, but it can also be used for statistical inference via
 post-selection inference methods.
