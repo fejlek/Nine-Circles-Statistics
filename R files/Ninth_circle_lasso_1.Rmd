@@ -123,7 +123,7 @@ plot(diabetes_lasso_cv)
 ```
 
 <br/>
-We observe that the curve is relatively flat, indicating that the full fit is reasonable (the number of predictors is safely within our rule-of-thumb guidelines). To illustrate better a typical *bias-variance trade-off*, let us consider the model with all interactions.
+We observe that the curve is relatively flat, indicating that the full fit is reasonable (the number of predictors is safely within our rule-of-thumb guidelines). To illustrate a more pronounced minimum, let us consider the model with all interactions.
 <br/>
 
 ```{r, message=FALSE, warning=FALSE}
