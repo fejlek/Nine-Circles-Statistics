@@ -51,14 +51,17 @@ number of predictors far exceeds the number of observations. <br/>
 ## Introduction to LASSO
 
 Let us start with a brief introduction of the LASSO \[1\]. First, let us
-assume a linear regression model $Y = X\beta + \varepsilon$. Let us
+assume a linear regression model $Y = X\beta + \beta_0 + \varepsilon$. Let us
 denote the number of observations as $N$ and the number of covariates as
 $p$. The LASSO estimator for the linear regression is the ordinary least
-squares (OLS) estimator with $l_1$-regularization, i.e.,
-$\hat\beta_\mathrm{LASSO} = \mathrm{argmin}_\beta \Vert X\beta - Y \Vert^2 + \lambda \Vert\beta\Vert_1$
+squares (OLS) estimator with $l_1$-regularization, namely,
+$\hat\beta_\mathrm{LASSO} = \mathrm{argmin}_{\beta,\beta_0} \Vert X\beta + \beta_0 Y \Vert^2 + \lambda \Vert\beta\Vert_1$
 for some $\lambda > 0$, where $\Vert\beta\Vert_1 = \sum_i |\beta_i|$. 
-This minimization is equivalent to the constrained problem minimize: $\Vert X\beta - Y\Vert^2$ subject to
+This minimization is equivalent to the constrained problem minimize: $\Vert X\beta + \beta_0 - Y\Vert^2$ subject to
 $\Vert\beta\Vert_1 \leq t$, where $t$ depends on the value of $\lambda$.
+We should note that we leave out the intercept $\beta_0$ from the model 
+from now on, which, in linear regression (and LASSO), is equivalent to 
+assuming that the observed outcomes $y_i$ are centered. 
 
 
 The $l_1$-regularization has some nice properties that motivate its use.
