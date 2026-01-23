@@ -31,5 +31,5 @@ All solutions are programmed in R and provided as R markdown documents and githu
 6. Extreme value analysis (block maxima (GEV), threshold excess (GP), and Poisson point process models; methods for non-stationary time series: time-varying parameters and the mean & variance trend approach)
 7. Quantile regression (log-linear model; GLM models for skewed response: gamma, inverse Gaussian, and Tweedie)
 8. Generalized additive models
-9. LASSO (Bayesian LASSO; adaptive LASSO; double-selection LASSO; ridge regressiom; post-selection inference)
+9. LASSO (Bayesian LASSO; adaptive LASSO; double-selection LASSO; ridge regression; post-selection inference)
 
