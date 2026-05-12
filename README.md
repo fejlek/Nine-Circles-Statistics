@@ -21,7 +21,7 @@ In the solutions provided here, I will (or at least try to) follow these steps t
 
 All solutions are programmed in R and provided as R markdown documents and github markdown documents.
 
-## Finished Circles (main & additional topics)
+## Table of Contents (main & additional topics)
 
 1. Linear regression (heteroskedasticity and correlated observations; heteroskedasticity/cluster robust standard errors; random effects models; introduction to various bootstrap methods and cross-validation)
 2. Logistic regression (dealing with missing data; multiple imputation; discrimination measures and calibration for binary data; decision curve analysis)
