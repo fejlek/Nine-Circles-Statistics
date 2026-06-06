@@ -31,8 +31,8 @@ predictions & discussion. <br/>
 Let us start with the description of our dataset. Our data are taken
 from
 <https://www.kaggle.com/datasets/lashagoch/life-expectancy-who-updated>.
-The daata contains life expectancy, health, immunization, and economic
-and demographic information about 179 countries from 2000 to 2015
+The data contains life expectancy, health, immunization, and economic
+and demographic information about 179 countries from 2000 to 2015.
 
 - **Country**
 - **Region**
@@ -74,10 +74,10 @@ consumption; BMI; HIV incidence; mortality rates; and thinness was
 collected from the World Health Organization’s public datasets.
 Information about Schooling was collected from Our World in Data, which
 is a project of the University of Oxford. The data had some missing
-values, which were imputed using either the closest three-year average
-or the Region average. Unfortunately, these missing values are not
-denoted; thus, we will not be able to test other imputation methods nor
-incorporate the imputation process into our inference.
+values, which were imputed using either the three-year average closest
+in time or the Region average. Unfortunately, these missing values are
+not denoted; thus, we will not be able to test other imputation methods
+nor incorporate the imputation process into our inference.
 
 We start by loading the data and displaying the first few rows to verify
 it was loaded correctly.
@@ -139,12 +139,12 @@ any(duplicated(cbind(life_expectancy$Country,life_expectancy$Year)))
     ## [1] FALSE
 
 Now, let us have a closer look at the predictors. Predictors
-**Economy_status_Developed** and **Economy_status_Developing** should be
-considered as one factor variable (every country is either developed or
+Economy_status_Developed and Economy_status_Developing should be treated
+as a single factor variable (every country is either developed or
 developing). Let us check that and create one factor variable. <br/>
 
 ``` r
-## Economy_status_Developed and Economy_status_Developing should add up to a vector of ones
+## Economy_status_Developed, and Economy_status_Developing should add up to a vector of ones
 which(life_expectancy$Economy_status_Developed+life_expectancy$Economy_status_Developing != 1)
 ```
 
@@ -288,10 +288,9 @@ grid.arrange(plot1, plot2, plot3, ncol=3)
 <img src="First_circle_linear_regression_1_files/figure-GFM/unnamed-chunk-22-1.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_1_files/figure-GFM/unnamed-chunk-22-2.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_1_files/figure-GFM/unnamed-chunk-22-3.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_1_files/figure-GFM/unnamed-chunk-22-4.png" style="display: block; margin: auto;" />
 
 None of the numerical predictors seems nearly constant, so we will
-consider all of them for modeling now. We will just perform a logarithm
-transformation of **Population_mln** and **GDP_per_capita** to reduce
-their extreme spread (we do not expect that the effects on life
-expectancy of these predictors will have such a spread). <br/>
+consider all of them for modeling now. We will just apply a logarithmic
+transformation to *Population_mln* and *GDP_per_capita* to reduce their
+extreme spread. <br/>
 
 ``` r
 Population_log <- log(life_expectancy$Population_mln + 1)
@@ -304,14 +303,13 @@ life_expectancy <- life_expectancy %>% add_column(GDP_log)
 
 ## Redundancy Analysis
 
-As we will discuss further in Part 2, our model of life expectancy will
-contain as the main predictors of interest all predictors except
-**Country**, **Year**, and **Adult_mortality**. Our dataset consists of
-a relatively small number of predictors. However, the effective size of
-our dataset is also much smaller than it would appear at first glance,
-as we discuss in Part Two. Hence, it is worthwhile to check whether some
-predictors contain redundant information. We first plot a correlation
-heatmap. <br/>
+As we will discuss further in Part 2, our model will include all
+predictors except **Country**, **Year**, and **Adult_mortality**. Our
+dataset consists of a relatively small number of predictors. However,
+the effective size of our dataset is also much smaller than it would
+appear at first glance, as we discuss in Part Two. Hence, it is
+worthwhile to check whether some predictors contain redundant
+information. We first plot a correlation heatmap. <br/>
 
 ``` r
 library(pheatmap)
@@ -360,9 +358,8 @@ summary(lm(Infant_deaths~Under_five_deaths,data = life_expectancy))$r.squared
 
     ## [1] 0.9715086
 
-The reason for this is the fact that **Under_five_deaths** also include
-**Infant_deaths** and **Infant_deaths** are a large proportion of
-**Under_five_deaths**. <br/>
+The reason is that Under_five_deaths also includes Infant_deaths, and
+Infant_deaths make up a large proportion of Under_five_deaths. <br/>
 
 ``` r
 hist(life_expectancy$Infant_deaths,xlab = 'Infant deaths',main = NULL)
@@ -421,9 +418,9 @@ vif(model)
 
 We see that, with this simple fix, the major collinearity issue
 disappeared. The second pair of collinear predictors that could be
-combined is **Polio** and **Diphtheria**, However, they are much closer
-to the rule of thumb cutoff: VIF = 10. Hence, we chose to keep both in
-the model. <br/>
+combined is Polio and Diphtheria; however, they are much closer to the
+rule-of-thumb cutoff: VIF = 10. Hence, we chose to keep both in the
+model. <br/>
 
 ``` r
 summary(lm(Diphtheria~Polio,data = life_expectancy))$r.squared
@@ -433,10 +430,10 @@ summary(lm(Diphtheria~Polio,data = life_expectancy))$r.squared
 
 VIF considers only regression models in which all predictors enter
 linearly. We can consider a more sophisticated redundancy analysis using
-the function *redun*, which uses more flexible regression splines for
-predicting each variable from all others. We can see from the results
-that no more predictors seem excessively redundant (we chose a 0.95
-R-squared cutoff). <br/>
+the function redun, which employs more flexible regression splines to
+predict each variable from all others. We can see from the results that
+no more predictors seem excessively redundant (we chose a 0.95 R-squared
+cutoff). <br/>
 
 ``` r
 library(Hmisc)
@@ -450,7 +447,7 @@ redun(~.- Life_expectancy - Under_five_deaths - Year - Country  -  Adult_mortali
     ##     Measles + BMI + Polio + Diphtheria + Incidents_HIV + Thinness_ten_nineteen_years + 
     ##     Thinness_five_nine_years + Schooling + Economy_status + Population_log + 
     ##     GDP_log + Under_five_deaths_dif
-    ## <environment: 0x00000135a4c54b28>
+    ## <environment: 0x000001d613dbfa48>
     ## 
     ## n: 2864  p: 16   nk: 4 
     ## 
