@@ -6,16 +6,19 @@ Jiří Fejlek
 2025-05-17
 <br/>
 
-<br/> In this project, we will demonstrate application of using linear
-regression and some of its extensions (we will eventually move to models
-for panel data and the final model will be a mixed effects model). Our
-objective will be to build a model for life expectancy using health,
+<br/> In this project, we will demonstrate the application of linear
+regression and some of its extensions (we will eventually move to
+panel-data models, and the final model will be a mixed-effects model).
+Our objective will be to build a model for life expectancy using health,
 immunization, and economic and demographic data about 179 countries. We
-will explore whether the obtained model would be useful for predictions
-about life expectancy. We also wish to identify predictors that seem to
-have the greatest effect on life expectancy. We will split this
-presentation into three parts: data preparation & exploration, creating
-a model , and model predictions & discussion. <br/>
+will explore whether the model obtained would be useful for predicting
+life expectancy. We also wish to identify predictors that seem to have
+the greatest effect on life expectancy.
+
+Since this is our first project, we will go through all the steps in
+greater detail. To make the presentation clearer, we will split it into
+three parts: data preparation & exploration, model creation, and model
+predictions & discussion. <br/>
 
 ## Table of Contents
 
@@ -25,11 +28,11 @@ a model , and model predictions & discussion. <br/>
 
 ## Life Expectancy (WHO) dataset
 
-<br/> Let us start with the description of our data set. Our data are
+<br/> Let us start with the description of our dataset. Our data are
 taken from
 <https://www.kaggle.com/datasets/lashagoch/life-expectancy-who-updated>.
-Data contains life expectancy, health, immunization, and economic and
-demographic information about 179 countries from 2000 to 2015 <br/>
+The daata contains life expectancy, health, immunization, and economic
+and demographic information about 179 countries from 2000 to 2015 <br/>
 
 - **Country**
 - **Region**
@@ -64,19 +67,20 @@ demographic information about 179 countries from 2000 to 2015 <br/>
   Trade Organization)
 - **Life_expectancy** - Average life expectancy
 
-<br/> As stated on the Kaggle page, information about Population, GDP,
-and Life Expectancy were taken from World Bank Data. Information about
-vaccinations for Measles, Hepatitis B, Polio, and Diphtheria, alcohol
-consumption, BMI, HIV incidents, mortality rates, and thinness were
-collected from World Health Organization public datasets. Information
-about Schooling was collected from the Our World in Data which is a
-project of the University of Oxford. The data had some missing values
-and were imputed with either closest three-year average or average of
-the Region. Unfortunately, these missing values are not denoted, thus,
-we will not be able to test other imputation methods.
+<br/> As stated on the Kaggle page, information on population, GDP, and
+life expectancy was sourced from the World Bank Data. Information on
+vaccinations for measles, hepatitis B, polio, and diphtheria; alcohol
+consumption; BMI; HIV incidence; mortality rates; and thinness was
+collected from the World Health Organization’s public datasets.
+Information about Schooling was collected from Our World in Data, which
+is a project of the University of Oxford. The data had some missing
+values, which were imputed using either the closest three-year average
+or the Region average. Unfortunately, these missing values are not
+denoted; thus, we will not be able to test other imputation methods nor
+incorporate the imputation process into our inference.
 
-We start with loading in the data, and displaying the first few rows to
-check that it loaded correctly. <br/>
+We start by loading the data and displaying the first few rows to verify
+it was loaded correctly. <br/>
 
 ``` r
 library(readr)
@@ -105,9 +109,9 @@ head(life_expectancy)
 
 ## Initial Data Exploration
 
-<br/> We start with a brief data exploration. We will mostly look for
-serious problems with the data such as missing values, nonsensical
-values, etc. Let us first look at the size of the dataset. <br/>
+<br/> We start with a brief data exploration. We will primarily look for
+serious problems in the data, such as missing or nonsensical values. Let
+us first look at the size of the dataset. <br/>
 
 ``` r
 dim(life_expectancy)
@@ -117,7 +121,7 @@ dim(life_expectancy)
 
 <br/> We have 2864 observations, one response we wish to model/predict
 (**Life_expectancy**), and 20 possible predictors. Let us check whether
-there are indeed 2864 full observations.
+there are indeed 2864 full observations. <br/>
 
 ``` r
 any(is.na(life_expectancy))
@@ -125,8 +129,8 @@ any(is.na(life_expectancy))
 
     ## [1] FALSE
 
-<br/> No data entry is missing, and every country has a unique record
-for each year, i.e., there are no duplicate observations. <br/>
+<br/> No data entries are missing, and each country has a unique record
+for each year; i.e., there are no duplicate observations. <br/>
 
 ``` r
 any(duplicated(cbind(life_expectancy$Country,life_expectancy$Year)))
@@ -137,8 +141,7 @@ any(duplicated(cbind(life_expectancy$Country,life_expectancy$Year)))
 <br/> Now, let us have a closer look at the predictors. Predictors
 **Economy_status_Developed** and **Economy_status_Developing** should be
 considered as one factor variable (every country is either developed or
-developing). Let us check that fact and make the appropriate changes.
-<br/>
+developing). Let us check that and create one factor variable. <br/>
 
 ``` r
 ## Economy_status_Developed and Economy_status_Developing should add up to a vector of ones
@@ -160,8 +163,8 @@ life_expectancy$Economy_status_Developing <- NULL
 life_expectancy$Region <- factor(life_expectancy$Region)
 ```
 
-<br/> The rest of the predictors are correctly specified as numerical.
-Let us check that their values make some sense. <br/>
+<br/> The remaining predictors are correctly specified as numerical.
+<br/>
 
 - **Infant_deaths**
 
@@ -265,10 +268,10 @@ summary(life_expectancy$Infant_deaths)
 
 <br/> None of the minimal or maximal values seems nonsensical. To
 conclude this initial exploration of the data, we plot histograms of all
-predictors to check whether all predictors are varied enough (i.e., we
-check whether some predictors should be omitted due to being
-non-informative for modelling/prediction purposes). Histograms also help
-us assess the overall distribution of the predictors. <br/>
+predictors to assess whether they vary enough (i.e., whether some should
+be omitted because they are non-informative for modeling/prediction).
+Histograms also help us assess the overall distribution of the
+predictors. <br/>
 
 ``` r
 library(ggplot2)
@@ -286,10 +289,10 @@ grid.arrange(plot1, plot2, plot3, ncol=3)
 <img src="First_circle_linear_regression_1_files/figure-GFM/unnamed-chunk-22-1.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_1_files/figure-GFM/unnamed-chunk-22-2.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_1_files/figure-GFM/unnamed-chunk-22-3.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_1_files/figure-GFM/unnamed-chunk-22-4.png" style="display: block; margin: auto;" />
 
 <br/> None of the numerical predictors seems nearly constant, so we will
-consider all of them for modelling now. I will just do a logarithm
+consider all of them for modeling now. We will just perform a logarithm
 transformation of **Population_mln** and **GDP_per_capita** to reduce
-their large spread of values (we do not expect that the effects of these
-predictors will have such a proportional spread). <br/>
+their extreme spread (we do not expect that the effects on life
+expectancy of these predictors will have such a spread). <br/>
 
 ``` r
 Population_log <- log(life_expectancy$Population_mln + 1)
@@ -306,10 +309,10 @@ life_expectancy <- life_expectancy %>% add_column(GDP_log)
 will contain as the main predictors of interest all predictors except
 **Country**, **Year**, and **Adult_mortality**. Our dataset consists of
 a relatively small number of predictors. However, the effective size of
-our dataset is also much smaller than which would appear at the first
-glance, as we discuss in Part Two. Hence, it is worthwhile to check
-whether some predictors contain redundant information. We first plot a
-correlation heatmap. <br/>
+our dataset is also much smaller than it would appear at first glance,
+as we discuss in Part Two. Hence, it is worthwhile to check whether some
+predictors contain redundant information. We first plot a correlation
+heatmap. <br/>
 
 ``` r
 library(pheatmap)
@@ -318,11 +321,11 @@ pheatmap(cor(life_expectancy[,c(4,5,7:13,16,17,18,21,22)]),display_numbers = TRU
 
 <img src="First_circle_linear_regression_1_files/figure-GFM/unnamed-chunk-25-1.png" width="200%" style="display: block; margin: auto;" />
 
-<br/> As can be seen from the heatmap, some predictors are significantly
-correlated. Let us test whether such predictors can indeed be modelled
+<br/> As shown in the heatmap, some predictors are significantly
+correlated. Let us test whether such predictors can indeed be modeled
 via the remaining predictors. We use a variance inflation factor (VIF)
-that considers the linear regression of every predictor against all
-other predictors. <br/>
+that performs linear regression of each predictor on all other
+predictors. <br/>
 
 ``` r
 library(car)
@@ -381,11 +384,11 @@ hist(life_expectancy$Under_five_deaths-life_expectancy$Infant_deaths,xlab = 'Und
 
 ![](First_circle_linear_regression_1_files/figure-GFM/unnamed-chunk-28-3.png)<!-- -->
 
-<br/> When faced with a group of collinear predictors, it is recommended
-to summarize the predictors (e.g., using the principal component
-analysis) instead of arbitrarily choosing one. In our case, it makes
-sense to simply split **Infant_deaths** and **Under_five_deaths** that
-are not **Infant_deaths**. <br/>
+<br/> When faced with a set of collinear predictors, it is recommended
+to summarize them (e.g., using principal component analysis) rather than
+arbitrarily choosing one. In our case, it makes sense to simply split
+**Infant_deaths** and **Under_five_deaths** that are not
+**Infant_deaths**. <br/>
 
 ``` r
 udf_diff <- life_expectancy$Under_five_deaths - life_expectancy$Infant_deaths
@@ -418,11 +421,11 @@ vif(model)
     ##       Under_five_deaths_dif 
     ##                    7.104666
 
-<br/> We see that by this simple fix the major collinearity issue
+<br/> We see that, with this simple fix, the major collinearity issue
 disappeared. The second pair of collinear predictors that could be
 combined is **Polio** and **Diphtheria**, However, they are much closer
-to the rule of thumb cutoff: VIF = 10. Hence, I chose to keep both for
-modelling. <br/>
+to the rule of thumb cutoff: VIF = 10. Hence, we chose to keep both in
+the model. <br/>
 
 ``` r
 summary(lm(Diphtheria~Polio,data = life_expectancy))$r.squared
@@ -434,7 +437,7 @@ summary(lm(Diphtheria~Polio,data = life_expectancy))$r.squared
 linearly. We can consider a more sophisticated redundancy analysis using
 the function *redun*, which uses more flexible regression splines for
 predicting each variable from all others. We can see from the results
-that no more predictors seem excessively redundant (I chose a 0.95
+that no more predictors seem excessively redundant (we chose a 0.95
 R-squared cutoff). <br/>
 
 ``` r
@@ -449,7 +452,7 @@ redun(~.- Life_expectancy - Under_five_deaths - Year - Country  -  Adult_mortali
     ##     Measles + BMI + Polio + Diphtheria + Incidents_HIV + Thinness_ten_nineteen_years + 
     ##     Thinness_five_nine_years + Schooling + Economy_status + Population_log + 
     ##     GDP_log + Under_five_deaths_dif
-    ## <environment: 0x000001cedfd52d20>
+    ## <environment: 0x0000024ce9d216c8>
     ## 
     ## n: 2864  p: 16   nk: 4 
     ## 
@@ -480,6 +483,6 @@ redun(~.- Life_expectancy - Under_five_deaths - Year - Country  -  Adult_mortali
     ## 
     ## No redundant variables
 
-<br/> The redundancy analysis concludes Part One of our demonstration.
-In the next part, we will focus on creating a life expectancy model.
-<br/>
+<br/> We have completed all initial data exploration; therefore, we will
+conclude Part One of our demonstration. In the next part, we will focus
+on creating a life expectancy model. <br/>
