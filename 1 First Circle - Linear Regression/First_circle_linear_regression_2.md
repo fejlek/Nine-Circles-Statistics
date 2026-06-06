@@ -12,21 +12,30 @@ immunization, and economic and demographic information about 179
 countries from 2000 to 2015.
 
 In this demonstration, we will start with a simple linear regression
-model, but we will eventually move to models for panel data in the
-latter half of this text. Thus, we will give a brief introduction to
-random and fixed effects models for panel data and even to a
-lesser-known *correlated random effects* models. <br/>
+model and later move on to panel data models. Thus, we will give a brief
+introduction to random- and fixed-effects models for panel data, as well
+as to a lesser-known *correlated random-effects* model. <br/>
 
-## Specification of predictors
+## Table of Contents
 
-<br/> Let us start the modelling with our choice of the predictors. We
-will not consider **Adult_mortality** as our predictor, because
-**Adult_mortality** is tightly connected to **Life_expectancy**, but
-does not give much additional insight into why life expectancy is lower,
-what the difference is between these countries, other than that people
-tend to die before reaching senior age. To illustrate this connection,
-we can see that a simple linear regression **Adult_mortality** on
-**Life_expectancy** <br/>
+- [Specification of Predictors](#specification-of-predictors)
+- [Simple Linear Model (and Accounting for
+  Heteroskedasticity)](#simple-linear-model-and-accounting-for-heteroskedasticity)
+- [Accounting for Autocorrelation](#accounting-for-autocorrelation)
+- [Pooled, Fixed-Effects, and Random-Effects Panel Data
+  Models](#pooled-fixed-effects-and-random-effects-panel-data-models)
+- [Correlated Random-Effects Model](#correlated-random-effects-model)
+- [References](#references)
+
+## Specification of Predictors
+
+Let us start the modeling with our choice of the predictors. We will not
+consider **Adult_mortality** as our predictor because it is closely
+related to **Life_expectancy** and does not provide much additional
+insight into why life expectancy is lower or what the differences
+between these countries are, other than that people tend to die before
+reaching senior age. To illustrate this connection, we can use a simple
+linear regression of **Adult_mortality** on **Life_expectancy**. <br/>
 
 ``` r
 summary(lm(formula = Life_expectancy ~ Adult_mortality, data = life_expectancy))
@@ -51,33 +60,31 @@ summary(lm(formula = Life_expectancy ~ Adult_mortality, data = life_expectancy))
     ## Multiple R-squared:  0.8937, Adjusted R-squared:  0.8937 
     ## F-statistic: 2.406e+04 on 1 and 2862 DF,  p-value: < 2.2e-16
 
-<br/> already explains almost 90% of the variability in the data.
+already explains almost 90% of the variability in the data.
 
 Initially, we will also not consider **Country** and **Year** as our
 predictors in our model. We are not developing a model for a
-*particular* country in a *particular* time. Although, as we will see
-later, it is actually quite important to acknowledge that our data are
-panel data (i.e., data for some individuals evolving in time).
+*particular* country at a *particular* time. But as we will see later,
+it is actually quite important to acknowledge that our data are panel
+data (i.e., data for some individuals that evolve over time).
 
 Such data for a given individual, in our case, for a given country, are
 usually significantly correlated. Consequently, it is quite incorrect to
 consider a model that sees these data as 2864 *independent*
 observations, since it would lead to overly optimistic estimates of
 effects (e.g, too narrow confidence intervals). In addition, including
-**Country** and **Year** in our model in some way allows us to reduce
-the omitted variable bias of our estimates (thus, panel data allows us
-to hopefully get more accurate estimates of the predictors’ effects), as
-we see later.
+**Country** and **Year** in our model, in some way, helps reduce omitted
+variable bias in our estimates (thus, panel data allows us to obtain
+more accurate estimates of the predictors’ effects), as we see later.
 
-Still, we will proceed to use a simple linear regression model as our
-starting point (mostly for illustrative purposes and to upheld the title
-of this project), and make the necessary corrections in the model later.
-Based on the data exploration in Part One, we will use the logarithm
-transformation of predictors **Population_mln** and **GDP_per_capita**,
-and use the predictor **Inf5_m**, that combines the predictors
-**Infant_deaths** and **Under_five_deaths**.
+Still, we will proceed with a simple linear regression model as our
+starting point and make the necessary corrections later. Based on the
+data exploration in Part One, we will apply a logarithmic transformation
+to the predictors **Population_mln** and **GDP_per_capita**, and use the
+predictor **Inf5_m**, which combines the predictors **Infant_deaths**
+and **Under_five_deaths**.
 
-Overall, we get the following predictors <br/>
+Overall, we get the following predictors.
 
 - **Infant_deaths**
 - **Under_five_deaths** - **Infant_deaths**
@@ -95,29 +102,27 @@ Overall, we get the following predictors <br/>
 - **Thinness_5-9**
 - **Schooling**
 - **Economy** - Factor variable with levels **Developed** and
-  **Developing** <br/>
+  **Developing**
 
 We will consider a simple model where all predictors enter linearly. We
 will not consider any interaction or nonlinear terms in the model. We do
-not have any prior knowledge of which specific interaction/nonlinear
-terms should be included in the model, nor we have posed a specific
-hypothesis about interactions/nonlinearity. Our dataset is not large
-enough to reasonably include even just all simple linear interaction
-terms, or for that matter, two cubic spline knots for each numerical
-variable to model nonlinear terms. We should remember that this dataset
-consists of panel data of effective sample size of as low as 179
-(depending on how strongly the observations for each country are
-correlated, and these correlations will be strong since such country
-characteristics do not change in time that much). The rule of thumb for
-a number of predictors in such a case is between ~ 179/10 = 18 and
-~179/20 = 9, which nicely corresponds to our total number of predictors
-of interest. Thus, to obtain reasonable estimates of interactions and
-nonlinearities, we would have to guess which interactions (and/or
-nonlinear terms) to include from the data itself, which is not an
-advisable approach.
+not have any prior knowledge of which specific interactions/nonlinear
+terms should be included in the model, nor have we posed a specific
+hypothesis about interactions/nonlinearity.
 
-Before we start the modelling, we will do some variable renaming to
-shorten the predictor names. <br/>
+Our dataset is not large enough to reasonably include even all simple
+linear interaction terms, let alone cubic spline knots to model
+nonlinear terms for numerical variables. We should remember that this
+dataset consists of panel data with an effective sample size as low as
+179 (depending on how strongly observations for each country are
+correlated, and these correlations will be strong since such country
+characteristics do not change much over time). The rule of thumb for the
+number of predictors in such a case is between ~179/10 = 18 and ~179/20
+= 9 (Harrell et al. 2001), which nicely corresponds to our total number
+of predictors of interest.
+
+Before we start modeling, we will rename some variables to shorten the
+predictor names in the code. <br/>
 
 ``` r
 library(tibble)
@@ -127,10 +132,10 @@ library(dplyr)
 life_expectancy <- life_expectancy %>% rename(Thin_10_19 = Thinness_ten_nineteen_years) %>% rename(Thin_5_9 = Thinness_five_nine_years) %>% rename(Alcohol = Alcohol_consumption) %>% rename(HIV = Incidents_HIV) %>% rename(Economy = Economy_status ) %>% rename(Adult_m = Adult_mortality ) %>% rename(Pop_log = Population_log) %>% rename(I_deaths = Infant_deaths) %>% rename(U5_deaths = Under_five_deaths_dif)
 ```
 
-## Simple linear model (and accounting for heteroskedasticity)
+## Simple Linear Model (and Accounting for Heteroskedasticity)
 
-<br/> As we discussed earlier, we first fit a simple linear model
-ignoring the panel nature of our data. <br/>
+As we discussed earlier, we first fit a simple linear model ignoring the
+panel nature of our data. <br/>
 
 ``` r
 ## Simple linear model
@@ -182,23 +187,22 @@ summary(linear_model)
     ## Multiple R-squared:  0.9458, Adjusted R-squared:  0.9453 
     ## F-statistic:  2154 on 23 and 2840 DF,  p-value: < 2.2e-16
 
-<br/> Many predictors seem highly significant (though again, this
-significance is inflated since we did not consider the correlation
-between the observations for the same country). Let us check the
+Many predictors appear highly significant (though, again, this
+significance is inflated because we did not account for correlations
+among observations from the same country). Let us check the
 distributional assumptions of linear regression by plotting the
-residuals of the fit. We will check a histogram and QQ-plot of residuals
-and plots of residuals vs. fitted values and residuals vs. predictors.
+residuals of the fit. We will check a histogram and QQ plot of
+residuals, and plots of residuals vs. fitted values and vs. predictors.
 <br/>
 
 <img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-5-1.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-5-2.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-5-3.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-5-4.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-5-5.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-5-6.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-5-7.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-5-8.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-5-9.png" style="display: block; margin: auto;" />
 
-<br/> We notice that residuals have an almost normal distribution
-(although the distribution has slightly heavier tails than the normal
-distribution). We also observe noticeable heteroscedasticity in
-residuals of developed vs. developing countries. Thus, it is advisable
-to recompute the standard errors to account for heteroskedasticity. One
-method is to use heteroskedasticity-consistent standard errors
-(Eicker–Huber–White standard errors) <br/>
+We notice that the residuals approximately follow a normal distribution.
+We also observe noticeable heteroscedasticity in residuals of developed
+vs. developing countries. Thus, it is advisable to recompute the
+standard errors to account for heteroskedasticity. One method is to use
+heteroskedasticity-consistent standard errors (Eicker–Huber–White
+standard errors) (Cameron and Trivedi 2005). <br/>
 
 ``` r
 library(lmtest)
@@ -237,18 +241,14 @@ coeftest(linear_model, vcov = vcovHC(linear_model, type = c("HC0")))
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
-<br/> We can obtain similar heteroskedasticity-consistent estimates
-using a simple nonparametric bootstrap that resamples with repetitions
-the whole dataset, a so-called pairs bootstrap (*A. C. Cameron and P. K.
-Trivedi. Microeconometrics: methods and applications. Cambridge
-university press, 2005.*).
+We can obtain similar heteroskedasticity-consistent estimates using a
+simple nonparametric bootstrap that resamples the entire dataset with
+replacement, a so-called pairs bootstrap (Cameron and Trivedi 2005).
 
-We should note here that we will compute a simple percentile-based
-confidence intervals, which works well when the distribution is
-symmetrical and centered on the observed statistic, i.e, unbiased (*T.
-C. Hesterberg. What teachers should know about the bootstrap: Resampling
-in the undergraduate statistics curriculum. The american statistician
-69.4 (2015): 371-386.*). <br/>
+We should note here that we will compute simple percentile-based
+confidence intervals, which work well when the distribution is
+symmetrical and centered on the observed statistic, i.e, unbiased
+(Hesterberg 2015). <br/>
 
 ``` r
 set.seed(123) # for reproducibility
@@ -323,20 +323,20 @@ t(apply(coefmat,2,function(x) quantile(x,c(0.025,0.5,0.975))))
     ## I_deaths         -0.1782379585 -0.165717831 -0.153347580
     ## U5_deaths        -0.1016852179 -0.084468975 -0.067601917
 
-<br/> We see that the statistical significance/confidence intervals did
-not change much compared to the ones provided by the standard non-robust
-estimates. Lastly, we can check for influential observations (and
-potential outliers). A common metric to detect overly influential
-observations is the Cook’s distance. <br/>
+We see that the statistical significance/confidence intervals did not
+change much compared to those from the standard non-robust estimates.
+Lastly, we can check for influential observations (and potential
+outliers). A common metric to detect overly influential observations is
+Cook’s distance (Seber and Lee 2003). <br/>
 
 <img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-8-1.png" style="display: block; margin: auto;" />
 
-A simple rule of thumb is that an observation could be overtly
-influential if its Cook’s distance is greater than one. That is
-definitely not the case for our model. Still, some observations have a
-significantly greater Cook’s distance than others. Let us compare the
-regression of coefficients with observations deleted based on the Cook’s
-distance.
+A simple rule of thumb is that an observation could be overly
+influential if its Cook’s distance exceeds 1. That is definitely not the
+case for our model. Still, some observations have a significantly
+greater Cook’s distance than others. Let us compare the regression
+coefficients with those obtained after deleting observations based on
+Cook’s distance. <br/>
 
 ``` r
 linear_model_red1 <- lm(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + I_deaths + U5_deaths, data = life_expectancy[cooks.distance(linear_model) < 0.02,])
@@ -376,26 +376,27 @@ round(coeff_delete,4)
     ## I_deaths         -0.1655 -0.1647 -0.1629  -0.1682
     ## U5_deaths        -0.0840 -0.0895 -0.0928  -0.0906
 
-<br/> We see that no values of the parameters dramatically changed, and
-all values stayed within the confidence intervals provided by the
-bootstrap. <br/>
+We see that no parameter values changed dramatically, and all values
+remained within the confidence intervals provided by the bootstrap.
+<br/>
 
-## Accounting for autocorrelation
+## Accounting for Autocorrelation
 
-<br/> All of the aforementioned approaches, including
+All of the aforementioned approaches, including
 heteroskedasticity-consistent standard errors and pairs bootstrap,
-assume that the error terms are independent. However, our data set
-consists of longitudinal data for 179 countries, and hence, these
+assume that the error terms are independent. However, our dataset
+consists of longitudinal data for 179 countries; hence, these
 observations might be significantly correlated. We can check our
 suspicion by plotting the residuals of our model for a given country
 against **Year**. <br/>
 
 <img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-10-1.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-10-2.png" style="display: block; margin: auto;" />
 
-<br/> These residuals are clearly strongly correlated. Hence, instead of
+These residuals are clearly strongly correlated. Hence, instead of
 heteroskedasticity-consistent standard errors, we should use
-cluster-robust standard errors. Our clusters consist of observations
-from the same country, which we expect to be correlated. <br/>
+cluster-robust standard errors (Cameron and Trivedi 2005). Our clusters
+consist of observations from the same country, which we expect to be
+correlated . <br/>
 
 ``` r
 library(clubSandwich)
@@ -430,25 +431,25 @@ coef_test(linear_model, vcov = "CR2", cluster = life_expectancy$Country)
     ##          I_deaths -0.16552 0.02164          0 -7.650       29.61      < 0.001  ***
     ##         U5_deaths -0.08403 0.02623          0 -3.204       12.75      0.00707   **
 
-<br/> We observe that the cluster-robust standard errors are
-significantly larger and that many effects are no longer significant.
-<br/>
+We observe that the cluster-robust standard errors are significantly
+larger and that many effects are no longer significant. <br/>
 
-## Pooled, fixed effects, and random effects panel data models
+## Pooled, Fixed-Effects, and Random-Effects Panel Data Models
 
-<br/> This linear model we constructed is in the context of panel data
-models called *pooled* because it stacks the data for all individuals
-and time instants together. This model is consistent provided there is
-no unobserved heterogeneity in the data that is *correlated* with the
-predictors in the model (i.e., there is no omitted variable bias). We
-can alleviate some of this potential bias by considering so-called
-*fixed effects*.
+This linear model we constructed is in the context of panel data models,
+called *pooled* (Cameron and Trivedi 2005), because it stacks the data
+for all individuals and time instants together. This model is consistent
+provided there is no unobserved heterogeneity in the data that is
+correlated with the model’s predictors (i.e., no omitted variable bias)
+(Cameron and Trivedi 2005).
 
-We first consider time fixed effects, i.e., effects corresponding to
-unobservables that change in time but are independent of individual
-countries. From a technical standpoint, we can simply include factor
-variables corresponding to the variable **Year** to the model. Again, we
-compute cluster-robust standard errors for the coefficients. <br/>
+We can alleviate some of this potential bias by considering so-called
+fixed effects (Cameron and Trivedi 2005). We first consider time fixed
+effects, i.e., effects corresponding to unobservables that change in
+time but are independent of individual countries. From an implementation
+standpoint, we create a fixed-effects model by simply including a factor
+variable corresponding to the **Year** variable. Again, we compute
+cluster-robust standard errors for the coefficients. <br/>
 
 ``` r
 linear_model_year <- lm(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + I_deaths + U5_deaths + factor(Year), data = life_expectancy)
@@ -497,8 +498,8 @@ coef_test(linear_model_year, vcov = "CR2", cluster = life_expectancy$Country)
     ##  factor(Year)2014  0.81838 0.24571          0  3.3307      176.75      0.00105   **
     ##  factor(Year)2015  0.85333 0.25046          0  3.4070      176.53      < 0.001  ***
 
-<br/> Time fixed effects appear to be significant. We can test it
-formally by a robust Wald test
+Time fixed effects appear to be significant. We can test it formally by
+a robust Wald test
 (<https://cran.r-project.org/web/packages/clubSandwich/vignettes/panel-data-CRVE.html>).
 <br/>
 
@@ -509,14 +510,14 @@ Wald_test(linear_model_year, constraints = constrain_zero(c("factor(Year)2001","
     ##  test Fstat df_num df_denom  p_val sig
     ##   HTZ   3.9     15      164 <0.001 ***
 
-<br/> The estimates of main effects for the pooled model and the time
-fixed effects model are quite similar. However, we observe that the
-pooled model seems to slightly overestimate the life expectancy for
-earlier years and underestimate the life expectancy for the latter
-years. In the plot, blue: predicted mean life expectancy for linear
-model per year and red: predicted mean life expectancy for time fixed
-effect model per year (i.e, observed mean **Life_expectancy** per year
-due to how linear regression fits the data). <br/>
+The estimates of the main effects for the pooled model and the time
+fixed-effects model are quite similar. However, we observe that the
+pooled model slightly overestimates life expectancy in earlier years and
+underestimates it in later years. In the plot, blue: predicted mean life
+expectancy for the linear model per year and red: predicted mean life
+expectancy for the time fixed-effects model per year (i.e, observed mean
+**Life_expectancy** per year due to how linear regression fits the
+data). <br/>
 
 ``` r
 par(mfrow = c(1, 1))
@@ -532,52 +533,49 @@ lines(years, pred_lin_mean, type = "l", col = "blue")
 
 <img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-14-1.png" style="display: block; margin: auto;" />
 
-<br/> Thus, including the time-fixed effects in the model seems
-advisable.
+Thus, including the time-fixed effects in the model seems advisable.
 
 The second type of effects that could be considered in the model are
 effects corresponding to individual countries. These effects model
 unobservables that are individual for each country but constant in time.
 Again, from a technical standpoint, individual fixed effects can be
-simply modeled as factor variables corresponding to the variable
-**Country**.
+modeled simply as factor variables corresponding to the Country
+variable.
 
-There is also a third major model used for panel data, a *random
-effects* model. Random effects model individual effects as normal random
-variables with some constant mean and variance (in our case, a constant
-for each country and year). In other words, they are random intercepts
-that shift the regression hyperplane a bit up or down for each
-individual country. Now, the key assumption of the random effects model
-is that these individual effects are *not* correlated with other
-covariates, i.e., the random effects model does not help with accounting
-for unobserved heterogeneity that is correlated with the predictors in
-the model. Still, the random effects model is worth talking about due to
-its efficiency.
+There is also a third major model for panel data: the random effects
+model (Cameron and Trivedi 2005). The random effects model treats
+individual effects as normal random variables with a constant mean and
+variance (in our case, a constant for each country and year). In other
+words, they are random intercepts that shift the regression hyperplane
+slightly up or down for each country. Now, the key assumption of the
+random effects model is that these individual effects are uncorrelated
+with other covariates; i.e., it does not account for unobserved
+heterogeneity correlated with the model’s predictors. Still, the
+random-effects model is worth discussing for its efficiency.
 
 The pooled model is an ordinary linear regression model; thus, to be
-efficient, the errors need to be independent, which is almost never the
-case for panel data. The random effects model, by introducing random
-effects, inherently creates a correlation structure between the
-observations for the same individual (in our case, for the same
-country). This structure is equicorrelated, i.e., the correlation of the
-composite error (random effect + error) between two distinct
-observations for the same individual is constant. This may not be as
-realistic for a long time series (we expect the correlation between
-observations to reduce over time). However, it is still more realistic
-than the assumption of the pooled model that this correlation is always
-zero. So overall, the random effects model should provide more accurate
-estimates than the pooled model provided that the exogeneity assumption
-(individual effects are uncorrelated with the rest of the predictors)
-holds (see, e.g., *J. M. Wooldridge. Econometric analysis of cross
-section and panel data* or *A. C. Cameron and P. K. Trivedi.
-Microeconometrics: methods and applications. Cambridge university press,
-2005.*) for a much more detailed explanation about pooled, fixed
-effects, and random effects models). <br/>
+efficient (have the smallest possible variance), the errors need to be
+independent, which is almost never the case for panel data. The random
+effects model inherently introduces a correlation structure among
+observations for the same individual (in our case, the same country).
+This structure is equicorrelated, i.e., the correlation between the
+composite error (random effect + error) for two distinct observations of
+the same individual is constant. This may not be as realistic for a long
+time series (we expect the correlation between observations to reduce
+over time). However, it is still more realistic than the pooled model’s
+assumption that this correlation is always zero. Overall, the
+random-effects model should yield more accurate estimates than the
+pooled model, provided that the exogeneity assumption (individual
+effects are uncorrelated with other predictors) holds (Cameron and
+Trivedi 2005; Wooldridge 2010).
+
+Let us fit both country-wise random-effects and fixed-effects models
+(with time fixed effects) using the *plm* package. <br/>
 
 ``` r
 library(plm)
 
-# individual fixed effects + time fixed effects 
+# country fixed effects + time fixed effects 
 fixed_effect_model_plm <- plm(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + I_deaths + U5_deaths + factor(Year), data = life_expectancy,index = c("Country", "Year"),  model = 'within', effect = 'individual')
 summary(fixed_effect_model_plm)
 ```
@@ -638,7 +636,7 @@ summary(fixed_effect_model_plm)
     ## F-statistic: 651.66 on 29 and 2656 DF, p-value: < 2.22e-16
 
 ``` r
-# individual random effects + time fixed effects
+# country random effects + time fixed effects
 random_effect_model_plm <- plm(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + I_deaths + U5_deaths + factor(Year), data = life_expectancy,index = c("Country", "Year"),  model = 'random', effect = 'individual')
 summary(random_effect_model_plm)
 ```
@@ -715,14 +713,16 @@ summary(random_effect_model_plm)
     ## Adj. R-Squared: 0.87841
     ## Chisq: 20722.3 on 38 DF, p-value: < 2.22e-16
 
-<br/> An important point to notice is that by transitioning to the fixed
-effects model, predictors that stay constant in time (**Region** and
-**Economy status**) are no longer estimable since they become part of
-the respective individual fixed effects. However, the fixed effects
-model is consistent even when the individual effects are correlated with
-other predictors, whereas the random effects model is not. A standard
-test that is traditionally used to test the consistency of the random
-effects model is the Hausman test. <br/>
+An important point to note is that by transitioning to the fixed effects
+model, predictors that remain constant over time (**Region** and
+**Economy status**) are no longer estimable because they are absorbed
+into the respective individual fixed effects. The trade-off is that the
+fixed-effects model is consistent even when individual effects are
+correlated with other predictors, whereas the random-effects model is
+not.
+
+A standard test for assessing the consistency of the random-effects
+model is the Hausman test (Cameron and Trivedi 2005). <br/>
 
 ``` r
 phtest(fixed_effect_model_plm,random_effect_model_plm)
@@ -735,14 +735,11 @@ phtest(fixed_effect_model_plm,random_effect_model_plm)
     ## chisq = 524.84, df = 29, p-value < 2.2e-16
     ## alternative hypothesis: one model is inconsistent
 
-<br/> The Hausman test has the disadvantage that it assumes standard
-errors (which we know is a bit problematic for panel data). Thus, we can
+The Hausman test has the disadvantage that it assumes standard errors
+(which we know is a bit problematic for panel data). Thus, we can
 instead perform the following robust Wald test. The main idea is to add
 the cluster means of the time-varying predictors to the random effects
-model (*J. Antonakis, N. Bastardoz, and M. Rönkkö. “On ignoring the
-random effects assumption in multilevel models: Review, critique, and
-recommendations.” Organizational Research Methods 24.2 (2021):
-443-483.*). <br/>
+model (Antonakis, Bastardoz, and Rönkkö 2021). <br/>
 
 ``` r
 life_expectancy_cent <- within(life_expectancy, {
@@ -856,9 +853,9 @@ summary(corr_random_effect_model_plm)
     ## Adj. R-Squared: 0.8855
     ## Chisq: 22193.1 on 52 DF, p-value: < 2.22e-16
 
-<br/> If there is no significant endogeneity in the model, the estimates
-of parameters corresponding to cluster means should be zero. We can test
-this using a robust Wald test, <br/>
+If there is no significant endogeneity in the model, the parameter
+estimates for cluster means should be zero. We can test this using a
+robust Wald test. <br/>
 
 ``` r
 Wald_test(corr_random_effect_model_plm, constraints = constrain_zero(c("Alcohol_cent","Hepatitis_B_cent","Measles_cent","BMI_cent","Polio_cent","Diphtheria_cent","HIV_cent","GDP_log_cent","Pop_log_cent","Thin_10_19_cent","Thin_5_9_cent","Schooling_cent","I_deaths_cent","U5_deaths_cent")), vcov = "CR2", cluster = life_expectancy$Country)
@@ -867,41 +864,35 @@ Wald_test(corr_random_effect_model_plm, constraints = constrain_zero(c("Alcohol_
     ##  test Fstat df_num df_denom  p_val sig
     ##   HTZ  3.79     14     31.7 <0.001 ***
 
-<br/> We reject the hypothesis; thus, the random effects model is not
-consistent and should not be used.
+We reject the hypothesis; thus, the random-effects model is inconsistent
+and should not be used.
 
-The model we used to test the consistency of the random effects model is
-of particular interest. It is a so-called *correlated random effects*
-model (CRE). The CRE model is an extension of the random effects model
-that attempts to model the unobserved endogeneity via the cluster mean
-predictors. A nice property of the CRE model is that estimates of the
-time-varying predictors in the CRE model are identical to the fixed
-effects estimates. Hence, the CRE model provides an alternative to the
-fixed effects model that keeps the time-invariant predictors in the
+## Correlated Random-Effects Model
+
+The model we used to test the consistency of the random-effects model is
+of particular interest. It is a so-called *correlated random-effects*
+model (CRE) (Wooldridge 2019). The CRE model is an extension of the
+random effects model that attempts to account for unobserved endogeneity
+via cluster-mean predictors. A nice property of the CRE model is that
+its estimates of the time-varying predictors are identical to the
+fixed-effects estimates. Hence, the CRE model provides an alternative to
+the fixed-effects model that keeps time-invariant predictors in the
 model.
 
-The CRE models are quite old (*Y. Mundlak. On the pooling of time series
-and cross section data. Econometrica: journal of the Econometric Society
-(1978): 69-85.*). However, it seems they got nowhere near as popular as
-fixed effects and random effects models. Although there seem to be
-recent papers (e.g., *D. McNeish, and K. Kelley. Fixed effects models
-versus mixed effects models for clustered data: Reviewing the
-approaches, disentangling the differences, and making recommendations.
-Psychological Methods 24.1 (2019): 20*, *J. M. Wooldridge. Correlated
-random effects models with unbalanced panels. Journal of Econometrics
-211.1 (2019): 137-150*, *J. Antonakis, N. Bastardoz, and M. Rönkkö. “On
-ignoring the random effects assumption in multilevel models: Review,
-critique, and recommendations.” Organizational Research Methods 24.2
-(2021): 443-483.* ) that encourage usage of CRE models instead of random
-effects models (that are often significantly biased in practice) and
-fixed effects models (that make time-invariant predictors inestimable).
+The CRE models are quite old (Mundlak 1978). However, it seems they were
+nowhere near as popular as fixed-effects and random-effects models.
+Although there seem to be recent papers (e.g., (Wooldridge 2019; McNeish
+and Kelley 2019; Antonakis, Bastardoz, and Rönkkö 2021) that encourage
+the use of CRE models instead of random effects models (which are often
+significantly biased in practice) and fixed effects models (which make
+time-invariant predictors inestimable).
 
-<br/> Let us do some model diagnostics. We first check the residuals.
-<br/>
+Let us run some diagnostics on our CRE model. We first check the
+residuals. <br/>
 
 <img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-19-1.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-19-2.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-19-3.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-19-4.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-19-5.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-19-6.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-19-7.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-19-8.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-19-9.png" style="display: block; margin: auto;" />
 
-<br/> We should also check the random effects. <br/>
+We should also check the random effects. <br/>
 
 ``` r
 # Random effects
@@ -918,26 +909,25 @@ qqline(ranef(corr_random_effect_model_plm))
 
 <img src="First_circle_linear_regression_2_files/figure-GFM/unnamed-chunk-20-2.png" style="display: block; margin: auto;" />
 
-<br/> We see that random effects are approximately normally distributed
-as assumed. Residuals are symmetric, although the tails are a bit
-heavier than a normal distribution would have. We suspect that there
-might be some heteroscedasticity (developing vs. developed countries).
-We also might have some overly influential observations/outliers.
+We see that random effects are approximately normally distributed as
+assumed. Residuals are symmetric, although the tails are a bit heavier
+than a normal distribution would have. We suspect there may be
+heteroscedasticity (between developing and developed countries). We also
+might have some overly influential observations/outliers.
 
-Unfortunately, *plm* package does not have support for computing
-influence diagnostics. Hence, we will refit our correlated random
-effects model using a package *lme4* that can be used to fit general
-linear mixed-effects models. We should mention here, that while both
-*plm* and *lme4* will fit the same model, their methods are different:
-*plm* uses generalized least squares approaches (following an
-“econometrics’ tradition”) whereas *lme4* uses restricted maximum
-likelihood estimation (REML). Thus, these two functions may not always
-produce the same results, see
+Unfortunately, the *plm* package does not have support for computing
+influence diagnostics. Hence, we will refit our correlated
+random-effects model using the *lme4* package, which can be used to fit
+general linear mixed-effects models. We should mention here that while
+both *plm* and *lme4* will fit the same model, their methods are
+different: *plm* uses generalized least squares approaches (following an
+“econometric tradition”) whereas *lme4* uses restricted
+maximum-likelihood estimation (REML). Thus, these two functions may not
+always produce the same results; see
 <https://cran.r-project.org/web/packages/plm/vignettes/A_plmPackage.html>
 for a bit more details. However, our model is fairly simple and our data
-“nice” enough, and thus, we observe that optimization of restricted
-maximum likelihood converged to the same solution as the one provided by
-*plm*. <br/>
+“nice” enough, so we observe that the restricted maximum-likelihood
+optimization converged to the same solution as *plm*. <br/>
 
 ``` r
 library(lme4)
@@ -1004,12 +994,12 @@ cbind(sum_lmer$coefficients,sum_plm$coefficients)
     ## factor(Year)2014  3.1030577106 0.160221088  19.36734887  3.1030577104 0.160221088  19.36734886  1.455622e-83
     ## factor(Year)2015  3.2898618792 0.167374630  19.65567826  3.2898618790 0.167374630  19.65567825  5.169339e-86
 
-<br/> We then use *lme4* in combination with *HLMdiag* to determine the
+We then use *lme4* in combination with *HLMdiag* to determine the
 influence of individual observations. Since we are dealing with panel
-data, we will consider diagnostics based on deleting whole clusters
-given by **Country.** We will again use the Cook’s distance and refit
-the model based on several Cook’s distance cut-offs based on the Cook’s
-distance plot. <br/>
+data, we will consider diagnostics based on deleting entire clusters at
+the **Country** level. We will again use Cook’s distance and refit the
+model based on several Cook’s distance cutoffs, as indicated by the
+Cook’s distance plot. <br/>
 
 ``` r
 library(HLMdiag)
@@ -1066,24 +1056,23 @@ round(coeff_delete,4)[1:24,]
     ## I_deaths         -0.1052 -0.0851 -0.0895 -0.0655 -0.0861
     ## U5_deaths        -0.0507 -0.0835 -0.0812 -0.1052 -0.0902
 
-<br/> We see that our estimates did not change that much (the
-coefficients for predictors that appear somewhat significant did not
-change signs), thus, there is no reason to delete some observations from
-the data.
+We see that our estimates did not change much (the coefficients for
+predictors that appeared somewhat significant did not change sign);
+thus, there is no reason to delete any observations from the data.
 
 The last thing that remains is computing confidence intervals for the
 effect estimates. We already discussed that random effects account for
-the correlation of observations within the same clusters, thus we could
-take the standard errors as is. However, with random effect models,
-things are a bit murky, because it is in general non-trivial to
-determine correct degrees of freedom, see
-<https://bbolker.github.io/mixedmodels-misc/glmmFAQ.html#why-doesnt-lme4-display-denominator-degrees-of-freedomp-values-what-other-options-do-i-have>
-that discusses several alternatives to use. Let us explore them.
+the correlation among observations within the same clusters; thus, we
+could take the standard errors as is. However, with random-effects
+models, things are a bit murky because it is generally non-trivial to
+determine the correct degrees of freedom; see
+<https://bbolker.github.io/mixedmodels-misc/glmmFAQ.html#why-doesnt-lme4-display-denominator-degrees-of-freedomp-values-what-other-options-do-i-have>,
+which discusses several alternatives to use. Let us explore them.
 
 Let us start with the standard confidence intervals (i.e, standard error
 multiplied by *qnorm(0.975)*, thus ignoring degrees of freedom). The
-p-values that *plm* provide are based on this approximation. We will use
-*confint* on *lmer_model*, because it provides more options. <br/>
+p-values that *plm* provides are based on this approximation. We will
+use *confint* on *lmer_model*, because it provides more options. <br/>
 
 ``` r
 confint(lmer_model,method ='Wald')[3:25,]
@@ -1114,8 +1103,7 @@ confint(lmer_model,method ='Wald')[3:25,]
     ## Schooling        -0.108432580  0.066639212
     ## I_deaths         -0.116828087 -0.093593054
 
-<br/> Another alternative is profile likelihood confidence intervals.
-<br/>
+Another alternative is profile likelihood confidence intervals. <br/>
 
 ``` r
 confint(lmer_model,method ='profile')[3:25,]
@@ -1146,10 +1134,10 @@ confint(lmer_model,method ='profile')[3:25,]
     ## Schooling        -0.107989718  0.066196350
     ## I_deaths         -0.116769312 -0.093651829
 
-<br/> Another another method is based on *parametric* bootstrap, i.e.,
+Another another method is based on *parametric* bootstrap, i.e.,
 bootstrap based on simulating new responses for our data from the
-estimated model (see Part Three for an implementation of the parametric
-bootstrap from scratch). <br/>
+estimated model (see Part Three of this project for an implementation of
+the parametric bootstrap from scratch). <br/>
 
 ``` r
 confint(lmer_model,method ='boot')[3:25,]
@@ -1180,10 +1168,10 @@ confint(lmer_model,method ='boot')[3:25,]
     ## Schooling        -0.114449471  0.068211546
     ## I_deaths         -0.117051362 -0.093693638
 
-<br/> Another another another alternative is t-test statistics with a
-degrees of freedom (DOF) correction. We will use function *coef_test*
-that computes cluster-robust standard errors (CR2) and Satterthwaite DOF
-correction (we used this approach for several tests before) <br/>
+Another another another alternative is t-test statistics with a degrees
+of freedom (DOF) correction. We will use the function *coef_test*, which
+computes cluster-robust standard errors (CR2) and the Satterthwaite DOF
+correction.
 
 ``` r
 coef_stats <- coef_test(corr_random_effect_model_plm, vcov = "CR2", cluster = life_expectancy$Country)[1:24,]
@@ -1218,14 +1206,12 @@ conf_int
     ## I_deaths         -0.153832977 -0.056588163
     ## U5_deaths        -0.126710507  0.025301441
 
-<br/> Lastly, we consider a nonparametric bootstrap. We cannot use a
-simple pairs bootstrap, since this bootstrap would destroy the panel
-data structure. Instead, we have to use the fact that we assume that
-observations for each individual country are independent from each
-other, and thus, bootstrap over these whole time series(*A. C. Cameron
-and P. K. Trivedi. Microeconometrics: methods and applications.
-Cambridge university press, 2005.*). We obtain a so-called *pairs
-cluster bootstrap*. <br/>
+Lastly, we consider a nonparametric bootstrap. We cannot use a simple
+pairs bootstrap, since it would destroy the panel data structure.
+Instead, we use the assumption that observations for each individual
+country are independent, and thus bootstrap over the entire time series.
+We obtain a so-called pairs cluster bootstrap (Cameron and Trivedi
+2005). <br/>
 
 ``` r
 set.seed(123) # for reproducibility
@@ -1245,7 +1231,7 @@ for (j in 2:length(Countries_list)){
 
 model_new <-  plm(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + I_deaths + U5_deaths  + Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + I_deaths_cent + U5_deaths_cent + factor(Year), data = life_expectancy_new,index = c("Country", "Year"),  model = 'random', effect = 'individual')
 
-## Some region coefficients might be inestimable due to resample  
+## Some region coefficients might be inestimable due to resampling  
 coefmat[i,colnames(t(as.data.frame(model_new$coefficients)))] <- t(as.data.frame(model_new$coefficients))
 
 }
@@ -1283,29 +1269,109 @@ boot_ci[1:24,]
     ## I_deaths         -0.144442295 -0.1009846107 -0.046095607
     ## U5_deaths        -0.142250502 -0.0549189969 -0.002001119
 
-<br/> We see that the nonparametric bootstrap mostly corresponds to the
-confidence intervals based on the robust standard errors with the DOF
+We notice that the nonparametric bootstrap largely aligns with the
+confidence intervals based on robust standard errors with the DOF
 correction. The parametric bootstrap and the other two methods provided
 slightly narrower confidence intervals. However, the first three methods
-rely on the fact that our model correctly specified (mainly residual
-errors are i.i.d. normally distributed). Meanwhile, the nonparametric
-bootstrap and cluster robust errors are robust to the heteroskedasticity
-and within cluster correlation. Hence, we prefer the results of the
-nonparametric bootstrap / robust standard errors (especially since the
-QQ-plot of the residuals showed noticeable deviation from normality and
-residuals vs. predictors indicated heteroskedasticity).
+rely on the assumption that our model is correctly specified. Meanwhile,
+the nonparametric bootstrap and cluster-robust standard errors are
+robust to the heteroskedasticity and within-cluster correlation. Hence,
+we prefer the results of the nonparametric bootstrap / robust standard
+errors (especially since the QQ-plot of the residuals showed noticeable
+deviation from normality and residuals vs. predictors indicated
+heteroskedasticity).
 
-We should note here that there are other more sophisticated bootstrap
-techniques that perform even more reliably than robust standard errors/
-pairs cluster bootstrap, especially in cases when the usual asymptotic
-assumptions do not hold (a low number of clusters, unbalanced clusters),
-see *A. C. Cameron and D. L. Miller. A practitioner’s guide to
-cluster-robust inference. Journal of human resources 50.2 (2015):
-317-372* for more details. But our data is “nice” in that regard, thus
-we can end our computation here.
+We should note here that there are other, more sophisticated bootstrap
+techniques that perform even more reliably than robust standard errors
+or the pairs-cluster bootstrap, especially when the usual asymptotic
+assumptions do not hold (e.g., a low number of clusters or unbalanced
+clusters); see (Colin Cameron and Miller 2015). But our data is “nice”
+in that regard; thus we can end our computation here.
 
 With the final model obtained and the evaluation of the confidence
 intervals complete, we end Part Two. In the last part of this project,
-we will discuss our resulting model. We will look at its predictive
-performance, and we will discuss the predictors that appeared the most
-important for life expectancy prediction in the model. <br/>
+we will discuss our resulting model. We will examine its predictive
+performance and discuss the predictors that appeared most important for
+life expectancy prediction in the model.
+
+# References
+
+<div id="refs" class="references csl-bib-body hanging-indent"
+entry-spacing="0">
+
+<div id="ref-antonakis2021ignoring" class="csl-entry">
+
+Antonakis, John, Nicolas Bastardoz, and Mikko Rönkkö. 2021. “On Ignoring
+the Random Effects Assumption in Multilevel Models: Review, Critique,
+and Recommendations.” *Organizational Research Methods* 24 (2): 443–83.
+
+</div>
+
+<div id="ref-cameron2005microeconometrics" class="csl-entry">
+
+Cameron, A Colin, and Pravin K Trivedi. 2005. *Microeconometrics:
+Methods and Applications*. Cambridge university press.
+
+</div>
+
+<div id="ref-colin2015practitioner" class="csl-entry">
+
+Colin Cameron, A, and Douglas L Miller. 2015. “A Practitioner’s Guide to
+Cluster-Robust Inference.” *Journal of Human Resources* 50 (2): 317–72.
+
+</div>
+
+<div id="ref-harrell2001regression" class="csl-entry">
+
+Harrell, Frank E et al. 2001. *Regression Modeling Strategies: With
+Applications to Linear Models, Logistic Regression, and Survival
+Analysis*. Vol. 608. Springer.
+
+</div>
+
+<div id="ref-hesterberg2015teachers" class="csl-entry">
+
+Hesterberg, Tim C. 2015. “What Teachers Should Know about the Bootstrap:
+Resampling in the Undergraduate Statistics Curriculum.” *The American
+Statistician* 69 (4): 371–86.
+
+</div>
+
+<div id="ref-mcneish2019fixed" class="csl-entry">
+
+McNeish, Daniel, and Ken Kelley. 2019. “Fixed Effects Models Versus
+Mixed Effects Models for Clustered Data: Reviewing the Approaches,
+Disentangling the Differences, and Making Recommendations.”
+*Psychological Methods* 24 (1): 20.
+
+</div>
+
+<div id="ref-mundlak1978pooling" class="csl-entry">
+
+Mundlak, Yair. 1978. “On the Pooling of Time Series and Cross Section
+Data.” *Econometrica: Journal of the Econometric Society*, 69–85.
+
+</div>
+
+<div id="ref-seber2003linear" class="csl-entry">
+
+Seber, George AF, and Alan J Lee. 2003. *Linear Regression Analysis*.
+John Wiley & Sons.
+
+</div>
+
+<div id="ref-wooldridge2010econometric" class="csl-entry">
+
+Wooldridge, Jeffrey M. 2010. *Econometric Analysis of Cross Section and
+Panel Data*. MIT press.
+
+</div>
+
+<div id="ref-wooldridge2019correlated" class="csl-entry">
+
+———. 2019. “Correlated Random Effects Models with Unbalanced Panels.”
+*Journal of Econometrics* 211 (1): 137–50.
+
+</div>
+
+</div>

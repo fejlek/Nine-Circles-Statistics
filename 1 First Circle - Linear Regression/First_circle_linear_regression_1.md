@@ -322,7 +322,7 @@ pheatmap(cor(life_expectancy[,c(4,5,7:13,16,17,18,21,22)]),display_numbers = TRU
 As shown in the heatmap, some predictors are significantly correlated.
 Let us test whether such predictors can indeed be modeled via the
 remaining predictors. We use a variance inflation factor (VIF) (Harrell
-et al. 2001) that performs linear regression of each predictor on all
+et al. 2001) that evaluates linear regression of each predictor on all
 other predictors. <br/>
 
 ``` r
