@@ -483,9 +483,10 @@ redun(~.- Life_expectancy - Under_five_deaths - Year - Country  -  Adult_mortali
 
 We have completed all initial data exploration; therefore, we will
 conclude Part One of our demonstration. In the next part, we will focus
-on creating a life expectancy model \[[1](#1)\]. <br/>
+on creating a life expectancy model [1][1]. <br/>
 
 ## References
 
-<a id="1">\[1\]</a> VASWANI, Ashish, et al. Attention is all you need.
+[1]: VASWANI, Ashish, et al. Attention is all you need.
 *Advances in neural information processing systems*, 2017, 30.
+
