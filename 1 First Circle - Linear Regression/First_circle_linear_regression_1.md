@@ -28,11 +28,11 @@ predictions & discussion. <br/>
 
 ## Life Expectancy (WHO) dataset
 
-<br/> Let us start with the description of our dataset. Our data are
-taken from
+Let us start with the description of our dataset. Our data are taken
+from
 <https://www.kaggle.com/datasets/lashagoch/life-expectancy-who-updated>.
 The daata contains life expectancy, health, immunization, and economic
-and demographic information about 179 countries from 2000 to 2015 <br/>
+and demographic information about 179 countries from 2000 to 2015
 
 - **Country**
 - **Region**
@@ -67,8 +67,8 @@ and demographic information about 179 countries from 2000 to 2015 <br/>
   Trade Organization)
 - **Life_expectancy** - Average life expectancy
 
-<br/> As stated on the Kaggle page, information on population, GDP, and
-life expectancy was sourced from the World Bank Data. Information on
+As stated on the Kaggle page, information on population, GDP, and life
+expectancy was sourced from the World Bank Data. Information on
 vaccinations for measles, hepatitis B, polio, and diphtheria; alcohol
 consumption; BMI; HIV incidence; mortality rates; and thinness was
 collected from the World Health Organization’s public datasets.
@@ -80,7 +80,7 @@ denoted; thus, we will not be able to test other imputation methods nor
 incorporate the imputation process into our inference.
 
 We start by loading the data and displaying the first few rows to verify
-it was loaded correctly. <br/>
+it was loaded correctly.
 
 ``` r
 library(readr)
@@ -109,7 +109,7 @@ head(life_expectancy)
 
 ## Initial Data Exploration
 
-<br/> We start with a brief data exploration. We will primarily look for
+We start with a brief data exploration. We will primarily look for
 serious problems in the data, such as missing or nonsensical values. Let
 us first look at the size of the dataset. <br/>
 
@@ -119,7 +119,7 @@ dim(life_expectancy)
 
     ## [1] 2864   21
 
-<br/> We have 2864 observations, one response we wish to model/predict
+We have 2864 observations, one response we wish to model/predict
 (**Life_expectancy**), and 20 possible predictors. Let us check whether
 there are indeed 2864 full observations. <br/>
 
@@ -129,8 +129,8 @@ any(is.na(life_expectancy))
 
     ## [1] FALSE
 
-<br/> No data entries are missing, and each country has a unique record
-for each year; i.e., there are no duplicate observations. <br/>
+No data entries are missing, and each country has a unique record for
+each year; i.e., there are no duplicate observations. <br/>
 
 ``` r
 any(duplicated(cbind(life_expectancy$Country,life_expectancy$Year)))
@@ -138,7 +138,7 @@ any(duplicated(cbind(life_expectancy$Country,life_expectancy$Year)))
 
     ## [1] FALSE
 
-<br/> Now, let us have a closer look at the predictors. Predictors
+Now, let us have a closer look at the predictors. Predictors
 **Economy_status_Developed** and **Economy_status_Developing** should be
 considered as one factor variable (every country is either developed or
 developing). Let us check that and create one factor variable. <br/>
@@ -163,8 +163,7 @@ life_expectancy$Economy_status_Developing <- NULL
 life_expectancy$Region <- factor(life_expectancy$Region)
 ```
 
-<br/> The remaining predictors are correctly specified as numerical.
-<br/>
+The remaining predictors are correctly specified as numerical. <br/>
 
 - **Infant_deaths**
 
@@ -266,8 +265,8 @@ summary(life_expectancy$Infant_deaths)
     ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
     ##   1.100   5.100   7.800   7.632  10.300  14.100
 
-<br/> None of the minimal or maximal values seems nonsensical. To
-conclude this initial exploration of the data, we plot histograms of all
+None of the minimal or maximal values seems nonsensical. To conclude
+this initial exploration of the data, we plot histograms of all
 predictors to assess whether they vary enough (i.e., whether some should
 be omitted because they are non-informative for modeling/prediction).
 Histograms also help us assess the overall distribution of the
@@ -288,7 +287,7 @@ grid.arrange(plot1, plot2, plot3, ncol=3)
 <br/>
 <img src="First_circle_linear_regression_1_files/figure-GFM/unnamed-chunk-22-1.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_1_files/figure-GFM/unnamed-chunk-22-2.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_1_files/figure-GFM/unnamed-chunk-22-3.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_1_files/figure-GFM/unnamed-chunk-22-4.png" style="display: block; margin: auto;" />
 
-<br/> None of the numerical predictors seems nearly constant, so we will
+None of the numerical predictors seems nearly constant, so we will
 consider all of them for modeling now. We will just perform a logarithm
 transformation of **Population_mln** and **GDP_per_capita** to reduce
 their extreme spread (we do not expect that the effects on life
@@ -305,8 +304,8 @@ life_expectancy <- life_expectancy %>% add_column(GDP_log)
 
 ## Redundancy Analysis
 
-<br/> As we will discuss further in Part 2, our model of life expectancy
-will contain as the main predictors of interest all predictors except
+As we will discuss further in Part 2, our model of life expectancy will
+contain as the main predictors of interest all predictors except
 **Country**, **Year**, and **Adult_mortality**. Our dataset consists of
 a relatively small number of predictors. However, the effective size of
 our dataset is also much smaller than it would appear at first glance,
@@ -321,11 +320,11 @@ pheatmap(cor(life_expectancy[,c(4,5,7:13,16,17,18,21,22)]),display_numbers = TRU
 
 <img src="First_circle_linear_regression_1_files/figure-GFM/unnamed-chunk-25-1.png" width="200%" style="display: block; margin: auto;" />
 
-<br/> As shown in the heatmap, some predictors are significantly
-correlated. Let us test whether such predictors can indeed be modeled
-via the remaining predictors. We use a variance inflation factor (VIF)
-that performs linear regression of each predictor on all other
-predictors. <br/>
+As shown in the heatmap, some predictors are significantly correlated.
+Let us test whether such predictors can indeed be modeled via the
+remaining predictors. We use a variance inflation factor (VIF) that
+performs linear regression of each predictor on all other predictors.
+<br/>
 
 ``` r
 library(car)
@@ -350,10 +349,9 @@ vif(model)
     ##                     GDP_log 
     ##                    4.257298
 
-<br/> Since **Infant_deaths** and **Under_five_deaths** are almost
-perfectly collinear, we indeed observe that these two predictors have
-extremely high VIF, because one predictor can accurately model the
-other. <br/>
+Since **Infant_deaths** and **Under_five_deaths** are almost perfectly
+collinear, we indeed observe that these two predictors have extremely
+high VIF, because one predictor can accurately model the other. <br/>
 
 ``` r
 ## Show R^2 statistics for linear regression Infant_deaths ~ Under_five_deaths
@@ -362,9 +360,9 @@ summary(lm(Infant_deaths~Under_five_deaths,data = life_expectancy))$r.squared
 
     ## [1] 0.9715086
 
-<br/> The reason for this is the fact that **Under_five_deaths** also
-include **Infant_deaths** and **Infant_deaths** are a large proportion
-of **Under_five_deaths**. <br/>
+The reason for this is the fact that **Under_five_deaths** also include
+**Infant_deaths** and **Infant_deaths** are a large proportion of
+**Under_five_deaths**. <br/>
 
 ``` r
 hist(life_expectancy$Infant_deaths,xlab = 'Infant deaths',main = NULL)
@@ -384,8 +382,8 @@ hist(life_expectancy$Under_five_deaths-life_expectancy$Infant_deaths,xlab = 'Und
 
 ![](First_circle_linear_regression_1_files/figure-GFM/unnamed-chunk-28-3.png)<!-- -->
 
-<br/> When faced with a set of collinear predictors, it is recommended
-to summarize them (e.g., using principal component analysis) rather than
+When faced with a set of collinear predictors, it is recommended to
+summarize them (e.g., using principal component analysis) rather than
 arbitrarily choosing one. In our case, it makes sense to simply split
 **Infant_deaths** and **Under_five_deaths** that are not
 **Infant_deaths**. <br/>
@@ -421,7 +419,7 @@ vif(model)
     ##       Under_five_deaths_dif 
     ##                    7.104666
 
-<br/> We see that, with this simple fix, the major collinearity issue
+We see that, with this simple fix, the major collinearity issue
 disappeared. The second pair of collinear predictors that could be
 combined is **Polio** and **Diphtheria**, However, they are much closer
 to the rule of thumb cutoff: VIF = 10. Hence, we chose to keep both in
@@ -433,7 +431,7 @@ summary(lm(Diphtheria~Polio,data = life_expectancy))$r.squared
 
     ## [1] 0.9085481
 
-<br/> VIF considers only regression models in which all predictors enter
+VIF considers only regression models in which all predictors enter
 linearly. We can consider a more sophisticated redundancy analysis using
 the function *redun*, which uses more flexible regression splines for
 predicting each variable from all others. We can see from the results
@@ -452,7 +450,7 @@ redun(~.- Life_expectancy - Under_five_deaths - Year - Country  -  Adult_mortali
     ##     Measles + BMI + Polio + Diphtheria + Incidents_HIV + Thinness_ten_nineteen_years + 
     ##     Thinness_five_nine_years + Schooling + Economy_status + Population_log + 
     ##     GDP_log + Under_five_deaths_dif
-    ## <environment: 0x0000024ce9d216c8>
+    ## <environment: 0x00000135a4c54b28>
     ## 
     ## n: 2864  p: 16   nk: 4 
     ## 
@@ -483,6 +481,6 @@ redun(~.- Life_expectancy - Under_five_deaths - Year - Country  -  Adult_mortali
     ## 
     ## No redundant variables
 
-<br/> We have completed all initial data exploration; therefore, we will
+We have completed all initial data exploration; therefore, we will
 conclude Part One of our demonstration. In the next part, we will focus
 on creating a life expectancy model. <br/>
