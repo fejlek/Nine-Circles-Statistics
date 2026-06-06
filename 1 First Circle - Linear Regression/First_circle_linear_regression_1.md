@@ -358,8 +358,8 @@ summary(lm(Infant_deaths~Under_five_deaths,data = life_expectancy))$r.squared
 
     ## [1] 0.9715086
 
-The reason is that Under_five_deaths also includes Infant_deaths, and
-Infant_deaths make up a large proportion of Under_five_deaths. <br/>
+The reason is that **Under_five_deaths** also includes **Infant_deaths**, and
+**Infant_deaths** make up a large proportion of **Under_five_deaths**. <br/>
 
 ``` r
 hist(life_expectancy$Infant_deaths,xlab = 'Infant deaths',main = NULL)
