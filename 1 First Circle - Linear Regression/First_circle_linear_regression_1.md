@@ -139,9 +139,9 @@ any(duplicated(cbind(life_expectancy$Country,life_expectancy$Year)))
     ## [1] FALSE
 
 Now, let us have a closer look at the predictors. Predictors
-**Economy_status_Developed** and **Economy_status_Developing** should be treated
-as a single factor variable (every country is either developed or
-developing). Let us check that and create one factor variable. <br/>
+**Economy_status_Developed** and **Economy_status_Developing** should be
+treated as a single factor variable (every country is either developed
+or developing). Let us check that and create one factor variable. <br/>
 
 ``` r
 ## Economy_status_Developed, and Economy_status_Developing should add up to a vector of ones
@@ -289,8 +289,8 @@ grid.arrange(plot1, plot2, plot3, ncol=3)
 
 None of the numerical predictors seems nearly constant, so we will
 consider all of them for modeling now. We will just apply a logarithmic
-transformation to **Population_mln** and **GDP_per_capita** to reduce their
-extreme spread. <br/>
+transformation to **Population_mln** and **GDP_per_capita** to reduce
+their extreme spread. <br/>
 
 ``` r
 Population_log <- log(life_expectancy$Population_mln + 1)
@@ -320,9 +320,9 @@ pheatmap(cor(life_expectancy[,c(4,5,7:13,16,17,18,21,22)]),display_numbers = TRU
 
 As shown in the heatmap, some predictors are significantly correlated.
 Let us test whether such predictors can indeed be modeled via the
-remaining predictors. We use a variance inflation factor (VIF) that
-performs linear regression of each predictor on all other predictors.
-<br/>
+remaining predictors. We use a variance inflation factor (VIF) (Harrell
+et al. 2001) that performs linear regression of each predictor on all
+other predictors. <br/>
 
 ``` r
 library(car)
@@ -358,8 +358,9 @@ summary(lm(Infant_deaths~Under_five_deaths,data = life_expectancy))$r.squared
 
     ## [1] 0.9715086
 
-The reason is that **Under_five_deaths** also includes **Infant_deaths**, and
-**Infant_deaths** make up a large proportion of **Under_five_deaths**. <br/>
+The reason is that **Under_five_deaths** also includes
+**Infant_deaths**, and **Infant_deaths** make up a large proportion of
+**Under_five_deaths**. <br/>
 
 ``` r
 hist(life_expectancy$Infant_deaths,xlab = 'Infant deaths',main = NULL)
@@ -430,10 +431,10 @@ summary(lm(Diphtheria~Polio,data = life_expectancy))$r.squared
 
 VIF considers only regression models in which all predictors enter
 linearly. We can consider a more sophisticated redundancy analysis using
-the function redun, which employs more flexible regression splines to
-predict each variable from all others. We can see from the results that
-no more predictors seem excessively redundant (we chose a 0.95 R-squared
-cutoff). <br/>
+the function redun from the package *Hmisc* (Harrell et al. 2001), which
+employs more flexible regression splines to predict each variable from
+all others. We can see from the results that no more predictors seem
+excessively redundant (we chose a 0.95 R-squared cutoff). <br/>
 
 ``` r
 library(Hmisc)
@@ -447,7 +448,7 @@ redun(~.- Life_expectancy - Under_five_deaths - Year - Country  -  Adult_mortali
     ##     Measles + BMI + Polio + Diphtheria + Incidents_HIV + Thinness_ten_nineteen_years + 
     ##     Thinness_five_nine_years + Schooling + Economy_status + Population_log + 
     ##     GDP_log + Under_five_deaths_dif
-    ## <environment: 0x000001d613dbfa48>
+    ## <environment: 0x000001c408dc1188>
     ## 
     ## n: 2864  p: 16   nk: 4 
     ## 
@@ -481,3 +482,18 @@ redun(~.- Life_expectancy - Under_five_deaths - Year - Country  -  Adult_mortali
 We have completed all initial data exploration; therefore, we will
 conclude Part One of our demonstration. In the next part, we will focus
 on creating a life expectancy model. <br/>
+
+## References
+
+<div id="refs" class="references csl-bib-body hanging-indent"
+entry-spacing="0">
+
+<div id="ref-harrell2001regression" class="csl-entry">
+
+Harrell, Frank E et al. 2001. *Regression Modeling Strategies: With
+Applications to Linear Models, Logistic Regression, and Survival
+Analysis*. Vol. 608. Springer.
+
+</div>
+
+</div>
