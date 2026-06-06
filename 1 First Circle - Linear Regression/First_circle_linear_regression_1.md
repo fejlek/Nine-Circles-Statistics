@@ -139,7 +139,7 @@ any(duplicated(cbind(life_expectancy$Country,life_expectancy$Year)))
     ## [1] FALSE
 
 Now, let us have a closer look at the predictors. Predictors
-Economy_status_Developed and Economy_status_Developing should be treated
+**Economy_status_Developed** and **Economy_status_Developing** should be treated
 as a single factor variable (every country is either developed or
 developing). Let us check that and create one factor variable. <br/>
 
@@ -289,7 +289,7 @@ grid.arrange(plot1, plot2, plot3, ncol=3)
 
 None of the numerical predictors seems nearly constant, so we will
 consider all of them for modeling now. We will just apply a logarithmic
-transformation to *Population_mln* and *GDP_per_capita* to reduce their
+transformation to **Population_mln** and **GDP_per_capita** to reduce their
 extreme spread. <br/>
 
 ``` r
