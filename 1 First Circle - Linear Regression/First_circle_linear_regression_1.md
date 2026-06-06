@@ -25,6 +25,7 @@ predictions & discussion. <br/>
 - [Life Expectancy (WHO) dataset](#life-expectancy-who-dataset)
 - [Initial Data Exploration](#initial-data-exploration)
 - [Redundancy Analysis](#redundancy-analysis)
+- [References](#references)
 
 ## Life Expectancy (WHO) dataset
 
