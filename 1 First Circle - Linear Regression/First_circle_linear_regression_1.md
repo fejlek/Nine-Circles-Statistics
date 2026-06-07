@@ -21,11 +21,12 @@ three parts: data preparation & exploration, model creation, and model
 predictions & discussion. <br/>
 
 ## Table of Contents
-
 - [Life Expectancy (WHO) dataset](#life-expectancy-who-dataset)
 - [Initial Data Exploration](#initial-data-exploration)
+  - [Histograms](#histograms)
 - [Redundancy Analysis](#redundancy-analysis)
 - [References](#references)
+
 
 ## Life Expectancy (WHO) dataset
 
@@ -266,12 +267,15 @@ summary(life_expectancy$Infant_deaths)
     ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
     ##   1.100   5.100   7.800   7.632  10.300  14.100
 
-None of the minimal or maximal values seems nonsensical. To conclude
-this initial exploration of the data, we plot histograms of all
-predictors to assess whether they vary enough (i.e., whether some should
-be omitted because they are non-informative for modeling/prediction).
-Histograms also help us assess the overall distribution of the
-predictors. <br/>
+None of the minimal or maximal values seems nonsensical.
+
+### Histograms
+
+To conclude this initial exploration of the data, we plot histograms of
+all predictors to assess whether they vary enough (i.e., whether some
+should be omitted because they are non-informative for
+modeling/prediction). Histograms also help us assess the overall
+distribution of the predictors. <br/>
 
 ``` r
 library(ggplot2)
@@ -449,7 +453,7 @@ redun(~.- Life_expectancy - Under_five_deaths - Year - Country  -  Adult_mortali
     ##     Measles + BMI + Polio + Diphtheria + Incidents_HIV + Thinness_ten_nineteen_years + 
     ##     Thinness_five_nine_years + Schooling + Economy_status + Population_log + 
     ##     GDP_log + Under_five_deaths_dif
-    ## <environment: 0x000001c408dc1188>
+    ## <environment: 0x0000020fdde14c10>
     ## 
     ## n: 2864  p: 16   nk: 4 
     ## 
