@@ -14,28 +14,28 @@ economic and demographic information for 179 countries from 2000 to
 predictors that seem to have the greatest effect on predictions. <br/>
 
 ## Table of Contents
-- [Evaluation of predictive
-  performance](#evaluation-of-predictive-performance)
-- [Predictions for individual countries (confidence
-  intervals)](#predictions-for-individual-countries-confidence-intervals)
-  - [Parametric and semi-parametric (residual)
-    bootstrap](#parametric-and-semi-parametric-residual-bootstrap)
-  - [Wild bootstrap](#wild-bootstrap)
-  - [Nonparametric (pairs) bootstrap](#nonparametric-pairs-bootstrap)
+- [Evaluation of Predictive
+  Performance](#evaluation-of-predictive-performance)
+- [Predictions for Individual Countries (Confidence
+  Intervals)](#predictions-for-individual-countries-confidence-intervals)
+  - [Parametric and Semi-Parametric (Residual)
+    Bootstrap](#parametric-and-semi-parametric-residual-bootstrap)
+  - [Wild Bootstrap](#wild-bootstrap)
+  - [Nonparametric (Pairs) Bootstrap](#nonparametric-pairs-bootstrap)
   - [Results](#results)
-- [Predictions for individual countries (prediction
-  intervals)](#predictions-for-individual-countries-prediction-intervals)
-  - [Parametric and semi-parametric (residual)
-    bootstrap](#parametric-and-semi-parametric-residual-bootstrap-1)
-  - [Dealing with heteroskedasticity](#dealing-with-heteroskedasticity)
+- [Predictions for Individual Countries (Prediction
+  Intervals)](#predictions-for-individual-countries-prediction-intervals)
+  - [Parametric and Semi-Parametric (Residual)
+    Bootstrap](#parametric-and-semi-parametric-residual-bootstrap-1)
+  - [Dealing with Heteroskedasticity](#dealing-with-heteroskedasticity)
   - [Results](#results-1)
-- [Effects of predictors in the life expectancy
-  model](#effects-of-predictors-in-the-life-expectancy-model)
+- [Effects of Predictors in the Life Expectancy
+  Model](#effects-of-predictors-in-the-life-expectancy-model)
 - [Conclusions](#conclusions)
 - [References](#references)
 
 
-## Evaluation of predictive performance
+## Evaluation of Predictive Performance
 
 Let us discuss the correlated random effects (CRE) model we constructed
 in Part Two in terms of its predictive performance. As a reminder, our
@@ -374,7 +374,7 @@ noticeable portion of the variance in life expectancy is captured by
 individual random effects, which could perhaps be explained by adding
 new predictors to the dataset. <br/>
 
-## Predictions for individual countries (confidence intervals)
+## Predictions for Individual Countries (Confidence Intervals)
 
 Let us now move to predictions for an individual country. We will assume
 the dataset without one country, e.g., France, and try to predict
@@ -382,7 +382,7 @@ France’s life expectancy from the rest of the data. We will first
 compute the confidence interval, i.e., an interval estimate for the mean
 prediction.
 
-### Parametric and semi-parametric (residual) bootstrap
+### Parametric and Semi-Parametric (Residual) Bootstrap
 
 The default method for mixed-effects models is parametric bootstrap
 (Faraway 2016). This bootstrap assumes that the model is correctly
@@ -463,7 +463,7 @@ pred_france_spb[i,] <-  predict(model_new,le_france, re.form=~0)
 }
 ```
 
-### Wild bootstrap
+### Wild Bootstrap
 
 The disadvantage of the residual bootstrap is that it is not robust to
 heteroskedasticity across clusters. Thus, we can consider another
@@ -496,7 +496,7 @@ pred_france_wb[i,] <- predict(model_new,le_france, re.form=~0)
 }
 ```
 
-### Nonparametric (pairs) bootstrap
+### Nonparametric (Pairs) Bootstrap
 
 The last bootstrap variant we will try is the pairs cluster bootstrap
 (Cameron and Trivedi 2005), which we have already used in this project
@@ -569,12 +569,12 @@ this particular case. Having demonstrated how to compute confidence
 intervals for a single observation, let us investigate *prediction*
 intervals. <br/>
 
-## Predictions for individual countries (prediction intervals)
+## Predictions for Individual Countries (Prediction Intervals)
 
 Prediction intervals are interval estimates for new observations (rather
 than their expected value).
 
-### Parametric and semi-parametric (residual) bootstrap
+### Parametric and Semi-Parametric (Residual) Bootstrap
 
 Provided that the model is correctly specified, the computation of the
 prediction interval is straightforward via the parametric bootstrap (we
@@ -633,7 +633,7 @@ pred_france_spb[i,] <- predict(model_new, le_france, re.form=~0) + rnorm(1,0,cou
 }
 ```
 
-### Dealing with heteroskedasticity
+### Dealing with Heteroskedasticity
 
 However, the residual cluster bootstrap does not help with
 heteroskedasticity. Provided that the variance of idiosyncratic errors
@@ -873,7 +873,7 @@ still a lot of unobserved heterogeneity captured by individual effects;
 thus, to obtain more accurate predictions, we could consider obtaining
 additional predictors in the model.
 
-## Effects of predictors in the life expectancy model
+## Effects of Predictors in the Life Expectancy Model
 
 Let us return to our original model with time fixed effects. <br/>
 
