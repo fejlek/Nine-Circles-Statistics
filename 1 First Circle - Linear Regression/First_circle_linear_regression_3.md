@@ -6,19 +6,40 @@ Jiří Fejlek
 2025-05-25
 <br/>
 
-<br/> In Part Three of this demonstration of using linear regression and
-some of its extensions, we seek to evaluate the **Life expectancy**
-model (we created in Part Two) based on the data containing health,
-immunization, and economic and demographic information about 179
-countries from 2000 to 2015. Namely, we will look at its predictive
-performance and we will also discuss the predictors that seem to have
-the greatest effect on predictions. <br/>
+<br/> In Part Three of this demonstration of linear regression and some of its
+extensions, we seek to evaluate the life expectancy model (which we
+created in Part Two) using data containing health, immunization, and
+economic and demographic information for 179 countries from 2000 to
+2015. Namely, we will examine its predictive performance and discuss the
+predictors that seem to have the greatest effect on predictions. <br/>
 
-## Evaluation of predictive performance (via cross-validation)
+## Table of Contents
+- [Evaluation of predictive
+  performance](#evaluation-of-predictive-performance)
+- [Predictions for individual countries (confidence
+  intervals)](#predictions-for-individual-countries-confidence-intervals)
+  - [Parametric and semi-parametric (residual)
+    bootstrap](#parametric-and-semi-parametric-residual-bootstrap)
+  - [Wild bootstrap](#wild-bootstrap)
+  - [Nonparametric (pairs) bootstrap](#nonparametric-pairs-bootstrap)
+  - [Results](#results)
+- [Predictions for individual countries (prediction
+  intervals)](#predictions-for-individual-countries-prediction-intervals)
+  - [Parametric and semi-parametric (residual)
+    bootstrap](#parametric-and-semi-parametric-residual-bootstrap-1)
+  - [Dealing with heteroskedasticity](#dealing-with-heteroskedasticity)
+  - [Results](#results-1)
+- [Effects of predictors in the life expectancy
+  model](#effects-of-predictors-in-the-life-expectancy-model)
+- [Conclusions](#conclusions)
+- [References](#references)
 
-<br/> Let us discuss the correlated random effects model (CRE) we
-constructed in Part Two in terms of predictive performance. As a
-reminder, our model is <br/>
+
+## Evaluation of predictive performance
+
+Let us discuss the correlated random effects (CRE) model we constructed
+in Part Two in terms of its predictive performance. As a reminder, our
+model is as follows. <br/>
 
 ``` r
 library(lme4)
@@ -32,7 +53,7 @@ life_expectancy_pred <- life_expectancy_cent[order(life_expectancy_cent$Country,
 ## Correlated random effects model
 cre_model <- lmer(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + I_deaths + U5_deaths  + Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + I_deaths_cent + U5_deaths_cent + factor(Year) + (1 | Country), life_expectancy_pred)
 
-summary(lmer_model)
+summary(cre_model)
 ```
 
     ## Linear mixed model fit by REML ['lmerMod']
@@ -43,7 +64,7 @@ summary(lmer_model)
     ##     Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent +  
     ##     Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent +  
     ##     I_deaths_cent + U5_deaths_cent + factor(Year) + (1 | Country)
-    ##    Data: life_expectancy_cent
+    ##    Data: life_expectancy_pred
     ## 
     ## REML criterion at convergence: 7537.4
     ## 
@@ -113,19 +134,19 @@ summary(lmer_model)
     ## factor(Year)2014  3.1030577  0.1602211  19.367
     ## factor(Year)2015  3.2898619  0.1673746  19.656
 
-<br/> We used *lmer* for the fit instead of *plm*, because we plan to
-compare models using a likelihood ratio test in a bit and *plm* does not
-compute likelihood function since it uses estimates based on generalized
-least squares.
+We used *lmer* for the fit instead of *plm*, because we plan to compare
+models using a likelihood ratio test in a bit, and *plm* does not
+compute the likelihood function since it uses estimates based on
+generalized least squares.
 
-Let us start with an obligatory actual vs. predicted plot. We should
+Let us start with an obligatory actual-versus-predicted plot. We should
 note that prediction for a known individual is computed (using function
-*predict*) as $X\hat{\beta} + \hat{\tau} + \hat{\mu}$, where $X$ are our
+predict) as $X\hat{\beta} + \hat{\tau} + \hat{\mu}$, where $X$ are our
 “main” predictors, $\hat{\beta}$ is the estimate of the coefficients for
-the “main” predictors, $\hat{\tau}$ are the estimates of the fixed time
-effects in the model, and $\hat{\mu}$ is the estimate of the individual
-random effect from the model (this estimate is known as *BLUP*, the best
-linear unbiased predictor). <br/>
+the predictors, $\hat{\tau}$ are the estimates of the fixed time effects
+in the model, and $\hat{\mu}$ is the estimate of the individual random
+effect from the model (this estimate is known as BLUP, the *best linear
+unbiased predictor*) (Faraway 2016). <br/>
 
 ``` r
 plot(life_expectancy_pred$Life_expectancy,predict(cre_model),xlab = 'Life expectancy',ylab = 'Predicted Life expectancy')
@@ -134,42 +155,37 @@ abline(0,1, col="red", lwd = 2)
 
 ![](First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-3-1.png)<!-- -->
 
-<br/> It seem that the model fits the data pretty well. Let us evaluate,
-how good this model would be for the predictions of life expectancy.
+It seems that the model fits the data pretty well. Let us evaluate how
+well this model would predict life expectancy.
 
 Unlike fixed effects models, we have some options. Remember that the
 fixed effects model uses a factor for each individual. Hence, we can
 only make a reasonable prediction for the individuals in the model. With
-random effects, we can actually make a prediction about new individuals
-since the random effects model directly models the distribution of
-individual effects (i.i.d. normally distributed with mean zero). Thus,
-for an unknown individual, the random effect effectively becomes just
-another error term.
-
+random effects, we can make predictions for new individuals, since the
+random effects model directly models the distribution of individual
+effects (i.i.d. normal with mean zero). Thus, for an unknown individual,
+the random effect effectively becomes just another error term.
 Concerning the effects for individual years, we use the fixed effects.
 Hence, we cannot make a prediction, for example, for the year 2016. To
 make such predictions, we have to change the model by either replacing
-fixed time effects with random time effects or, probably even better; we
-could try to model the dependency in time directly by including
-numerical predictor **Year** in some form (life expectancy seems to
-steadily increase in time and our fixed effects estimates corresponded
-to that, which is a far cry from estimates of individual effects). Let
-us try that (we will model **Year** using a restricted cubic spline).
-<br/>
+fixed time effects with random time effects or, probably even better,
+modeling the dependency in time directly by including the numerical
+predictor **Year** in some form. Let us try that (we will model **Year**
+using a restricted cubic spline (Harrell et al. 2001)). <br/>
 
 ``` r
 library(rms)
 cre_model_year <- lmer(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + I_deaths + U5_deaths  + Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + I_deaths_cent + U5_deaths_cent + rcs(Year,4) + (1 | Country), life_expectancy_pred)
 ```
 
-<br/> We can compare these two models using the likelihood ratio test.
-The function *anova* refits the model using maximum likelihood instead
-of using restricted maximum likelihood (REML) because restricted
-likelihood functions of distinct models are not comparable if they do
-not have the same *fixed effects*. We should mention here that the
-*fixed effects* in the context of general mixed models mean just terms
-in the model that are not random effects (i.e., they are terms that
-would form an ordinary regression model). <br/>
+We can compare these two models using the likelihood ratio test. The
+function *anova* refits the model using maximum likelihood rather than
+restricted maximum-likelihood estimation (REML) because restricted
+likelihoods across distinct models are not comparable unless they share
+the same fixed effects (Faraway 2016). We should mention here that the
+fixed effects in this context refer to terms in the model that are not
+random effects (i.e., they are terms that would appear in an ordinary
+regression model).
 
 ``` r
 anova(cre_model,cre_model_year)
@@ -183,15 +199,15 @@ anova(cre_model,cre_model_year)
     ## cre_model_year   43 7424.9 7681.2 -3669.5   7338.9                    
     ## cre_model        55 7445.9 7773.7 -3667.9   7335.9 3.039 12     0.9953
 
-<br/> As can be seen from the results, these two models indeed seem
-almost identical in terms of log-likelihood. Hence, we will use the
-model with **Year** modeled using a restricted cubic spline. This model
-allows us to predict life expectancy for unobserved years. Hence, let us
-evaluate its performance via a cross-validation. To respect the
-structure of the panel data and keep it balanced, I will consider
-cross-validation over the whole columns. Since we have the data for only
-16 years, I will perform merely a simple leave-one-out cross-validation
-with mean square error as a performance metric. <br/>
+As can be seen from the results, these two models appear almost
+identical in terms of log-likelihood. Hence, we will use the model with
+**Year** modeled using a restricted cubic spline. This model allows us
+to predict life expectancy for unobserved years. Hence, let us evaluate
+its performance via cross-validation. To preserve the panel data
+structure and maintain a balanced dataset, we will perform
+cross-validation across years. Since we have data for only 16 years, we
+will perform a simple leave-one-out cross-validation with mean squared
+error as the performance metric. <br/>
 
 ``` r
 years <- seq(2000,2015,1)
@@ -219,19 +235,19 @@ mean(MSE_pred)
 
     ## [1] 0.6639534
 
-<br/> We see that predictions are fairly accurate on average. The
-squared root of MSE (0.81) is just a bit higher than the estimated
-standard deviation of the residual error (0.76). Notice that the worst
-predictions are, as one would expect, outside the boundaries of the
-dataset (i.e., the prediction for the year 2000 using the data from
-2001-2015 and the prediction for the year 2015 using the data from
+We see that predictions are fairly accurate on average. The square root
+of MSE ($\sqrt{0.664} \approx 0.81$) is just a bit higher than the
+estimated standard deviation of the residual error ($0.76$). Notice that
+the worst predictions are, as one would expect, outside the boundaries
+of the dataset (i.e., the prediction for the year 2000 using the data
+from 2001-2015 and the prediction for the year 2015 using the data from
 2000-2014).
 
-This validation is slightly incorrect due to a *data leakage* that is
-often easy to miss. The centered predictors for the train set were
-computed for each country using the whole dataset, i.e. using the test
-set data. The correct cross-validation should be computed as follows.
-<br/>
+We should note that the cross-validation procedure we just performed is
+slightly incorrect due to a data leakage that is often easy to miss. The
+centered predictors for the train set were computed for each country
+using the entire dataset (i.e., we used the data from the test set). The
+actual correct cross-validation should be computed as follows. <br/>
 
 ``` r
 years <- seq(2000,2015,1)
@@ -276,17 +292,17 @@ mean(MSE_pred)
 
     ## [1] 0.6663262
 
-<br/> We observe that the results are only a tiny bit worse (this data
-leakage was not that severe).
+We observe that the results are only a tiny bit worse (this data leakage
+was not that severe).
 
-Let us try the predictions for a new individual. Thus, we will now
-perform a cross-validation on the countries, i.e., using the rows of the
-dataset. I will perform 100 repetitions of the 10-fold cross-validation.
-We should emphasize that for a new individual, the prediction of the
-individual random effect is simply zero. We should note that the data
-leakage due to centered predictors are not the problem in this case,
-because these are computed for each countries, i.e., the train set and
-the test set is in this setup correctly separated. <br/>
+Let us now evaluate the predictions for a new individual (i.e.,
+country). Thus, we will now perform cross-validation on the countries,
+i.e., using the dataset’s rows. We will perform 100 repetitions of the
+10-fold cross-validation. We should emphasize that for a new individual,
+the prediction of the individual random effect is simply zero. We should
+note that the data leakage due to centered predictors is not the problem
+in this case, because these are computed for each country; i.e., the
+train set and the test set are correctly separated in this setup. <br/>
 
 ``` r
 library(caret)
@@ -301,12 +317,12 @@ folds <- 10
 ## List of countries
 countries_list <- unique(life_expectancy$Country)
 
-## I add dummies for Region to data explicitly to make prediction work even when some levels of factor 
-## would be missing due to resampling
+## We add dummies for Region explicitly to the dataset to make prediction work even when some levels of factor 
+## are missing due to resampling
 
 le_cc <- life_expectancy_pred %>% add_column(as.data.frame(dummy(life_expectancy_pred$Region)))
 
-MSE_pred <- matrix(0,folds,rep)
+RMSE_pred <- matrix(0,folds,rep)
 
 set.seed(123) # for reproducibility
 
@@ -330,20 +346,20 @@ for(j in 1:rep){
                                  (1 | Country),train_set)
 
     ## Set random effect prediction zero via re.form=~0
-    MSE_pred[i,j] <- mean((test_set$Life_expectancy - predict(cre_model_year_new,test_set, re.form=~0))^2)
+    RMSE_pred[i,j] <- sqrt(mean((test_set$Life_expectancy - predict(cre_model_year_new,test_set, re.form=~0))^2))
     
   }
 }
 
-mean(MSE_pred)  
+mean(RMSE_pred)  
 ```
 
-    ## [1] 6.28858
+    ## [1] 2.470119
 
-<br/> We see that the mean square error is significantly higher than in
-the previous setup. Still, the squared root of MSE (2.5) again mostly
+We see that the mean square error is significantly higher than in the
+previous setup. Still, the squared root of MSE ($2.5$) again mostly
 corresponds to the estimates of deviance of individual random effects
-and residual error (2.2) <br/>
+and residual error ($2.2$) <br/>
 
 ``` r
 VarCorr(cre_model_year)
@@ -353,22 +369,25 @@ VarCorr(cre_model_year)
     ##  Country  (Intercept) 2.08065 
     ##  Residual             0.75544
 
-<br/> Overall, our predictors model life expectancy fairly well. Still,
-a noticeable portion of the variance in life expectancy is captured by
-individual random effects, which could be perhaps explained by new
-additional predictions. <br/>
+Overall, our predictors model life expectancy fairly well. Still, a
+noticeable portion of the variance in life expectancy is captured by
+individual random effects, which could perhaps be explained by adding
+new predictors to the dataset. <br/>
 
 ## Predictions for individual countries (confidence intervals)
 
-<br/> Let us now move to predictions for an individual country. We will
-assume the dataset without one country, e.g., France, and try to predict
+Let us now move to predictions for an individual country. We will assume
+the dataset without one country, e.g., France, and try to predict
 France’s life expectancy from the rest of the data. We will first
 compute the confidence interval, i.e., an interval estimate for the mean
 prediction.
 
-The default method for mixed effects models is a parametric bootstrap.
-This bootstrap assumes that the model is correctly specified, and thus,
-creates bootstrap samples directly from the model. <br/>
+### Parametric and semi-parametric (residual) bootstrap
+
+The default method for mixed-effects models is parametric bootstrap
+(Faraway 2016). This bootstrap assumes that the model is correctly
+specified, and thus creates bootstrap samples directly from the model.
+<br/>
 
 ``` r
 ## Design matrices and no France model
@@ -397,10 +416,10 @@ pred_france_pb[i,] <-  predict(model_new,le_france, re.form=~0)
 }
 ```
 
-<br/> The parametric bootstrap is sensitive to a misspecification of the
-model. Remember that we noticed from the diagnostic plots that residuals
-are not normally distributed, and there might be heteroskedasticity
-between the clusters. Let us focus on the nonnormality first. <br/>
+The parametric bootstrap is sensitive to model misspecification.
+Remember that we noticed from the diagnostic plots that the residuals
+are not normally distributed and that there might be heteroskedasticity
+across clusters. Let us focus on the nonnormality first. <br/>
 
 ``` r
 par(mfrow = c(1, 2))
@@ -413,13 +432,13 @@ qqline(unlist(ranef(model_nofrance)))
 
 <img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-11-1.png" style="display: block; margin: auto;" />
 
-<br/> We see that residuals do not have a normal distribution. Thus,
-instead of a parametric bootstrap, we can consider a semi-parametric
-bootstrap: a residual (cluster) bootstrap, which, instead of generating
-new individual (so-called idiosyncratic) errors from the assumed
-distribution, resamples observed residuals by clusters. Notice that this
-approach assumes that each cluster’s distributions of individual errors
-are identical. <br/>
+We see that residuals do not have a normal distribution. Thus, instead
+of a parametric bootstrap, we can consider a semi-parametric bootstrap:
+a residual (cluster) bootstrap (Cameron and Trivedi 2005), which, rather
+than generating new individual (so-called idiosyncratic) errors from the
+assumed distribution, resamples the observed residuals. Notice that this
+approach assumes that distributions of individual errors are identical
+for each cluster. <br/>
 
 ``` r
 ## Residual cluster bootstrap
@@ -444,18 +463,18 @@ pred_france_spb[i,] <-  predict(model_new,le_france, re.form=~0)
 }
 ```
 
-<br/> The disadvantage of parametric bootstrap is that this approach is
-not robust to hetereskodasticity between clusters. Thus, we can consider
-another semi-parametric bootstrap: *wild bootstrap*. Instead of
-resampling the residuals themselves, the wild bootstrap rescales
-residuals with a random variable *v* such that $\mathrm{E} v = 0$ and
-$\mathrm{Var} v = 1$. Often, these weights are chosen simply as *-1*
-with a probability *0.5* and *1* with a probability *0.5*, the so-called
-Rademacher weights. This is why the bootstrap is termed wild, because it
-is kind of *wild* that such a bootstrap provides asymptotically valid
-results, see, e.g., *A. A. Djogbenou, J. G. MacKinnon, and M. Ø.
-Nielsen. Asymptotic theory and wild bootstrap inference with clustered
-errors. Journal of Econometrics 212.2 (2019): 393-412*. <br/>
+### Wild bootstrap
+
+The disadvantage of the residual bootstrap is that it is not robust to
+heteroskedasticity across clusters. Thus, we can consider another
+semi-parametric bootstrap: *wild bootstrap*. Instead of resampling the
+residuals themselves, the wild bootstrap rescales residuals with a
+random variable v such that $\mathrm{E} v = 0$ and $\mathrm{Var} v = 1$.
+Often, these weights are chosen simply as $-1$ with probability $0.5$
+and $1$ with probability $0.5$, the so-called Rademacher weights. This
+is why the bootstrap is termed *wild*, because it is kind of wild that
+such a bootstrap provides asymptotically valid results (Djogbenou,
+MacKinnon, and Nielsen 2019). <br/>
 
 ``` r
 ## Wild cluster bootstrap
@@ -477,8 +496,11 @@ pred_france_wb[i,] <- predict(model_new,le_france, re.form=~0)
 }
 ```
 
-<br/> The last variant of bootstrap we will try is pairs cluster
-bootstrap that we already used few times in this project. <br/>
+### Nonparametric (pairs) bootstrap
+
+The last bootstrap variant we will try is the pairs cluster bootstrap
+(Cameron and Trivedi 2005), which we have already used in this project
+in Part Two. <br/>
 
 ``` r
 ## Pairs cluster bootstrap
@@ -503,12 +525,12 @@ pred_france_pcb[i,] <- predict(model_new, le_france, re.form=~0)
 }
 ```
 
-<br/> Let us check the results. For simplicity’s sake, we will compute a
-simple percentile-based confidence intervals (another popular more
-sophisticated option would be bias-corrected and accelerated (BCa)
-bootstrap that better handles skew and bias *B. Efron. Better bootstrap
-confidence intervals. Journal of the American statistical Association
-82.397 (1987): 171-185.*) <br/>
+### Results
+
+Let us compare the results. For simplicity’s sake, we will compute
+simple percentile-based confidence intervals (another popular,, more
+sophisticated option would be the bias-corrected and accelerated (BCa)
+bootstrap, which better handles skewness and bias (Efron 1987)). <br/>
 
 ``` r
 options(width = 1000)
@@ -519,40 +541,46 @@ wb <-  t(apply(pred_france_wb,2,function(x) quantile(x[!is.na(x)],c(0.025,0.975)
 pcb <- t(apply(pred_france_pcb,2,function(x) quantile(x[!is.na(x)],c(0.025,0.975))))
 
 ci_france <- cbind(pb,spb,wb,pcb)
-colnames(ci_france) <- c('2.5% (Par)','97.5% (Par)','2.5% (Semi-Par)','97.5% (Semi-Par)','2.5% (Wild)','97.5% (Wild)','2.5% (Pairs)','97.5% (Pairs)')
+colnames(ci_france) <- c('2.5% (Par)','97.5% (Par)','2.5% (Residual)','97.5% (Residual)','2.5% (Wild)','97.5% (Wild)','2.5% (Pairs)','97.5% (Pairs)')
+rownames(ci_france) <- years
 ci_france
 ```
 
-    ##       2.5% (Par) 97.5% (Par) 2.5% (Semi-Par) 97.5% (Semi-Par) 2.5% (Wild) 97.5% (Wild) 2.5% (Pairs) 97.5% (Pairs)
-    ##  [1,]   74.96131    79.95261        74.89121         79.87688    74.87707     80.20532     75.35319      79.60903
-    ##  [2,]   74.96817    79.99057        74.94441         79.90277    74.88762     80.20887     75.37770      79.64143
-    ##  [3,]   75.10434    80.13502        75.07571         80.04820    75.02876     80.37163     75.48796      79.76549
-    ##  [4,]   75.25188    80.29389        75.17741         80.20390    75.19862     80.49522     75.61519      79.91382
-    ##  [5,]   75.36012    80.41233        75.30636         80.32307    75.32084     80.58576     75.72071      80.01800
-    ##  [6,]   75.55850    80.62059        75.50314         80.53933    75.49192     80.76456     75.90881      80.22095
-    ##  [7,]   75.79673    80.87371        75.75336         80.74429    75.72713     81.01643     76.20469      80.46394
-    ##  [8,]   76.07965    81.13089        76.05162         81.00217    75.99328     81.26127     76.46990      80.74862
-    ##  [9,]   76.34848    81.39141        76.31684         81.27968    76.28955     81.54891     76.74882      81.01625
-    ## [10,]   76.62689    81.66365        76.56803         81.59916    76.53336     81.79977     77.05274      81.27159
-    ## [11,]   76.89246    81.95120        76.87825         81.86025    76.81260     82.04001     77.26913      81.53861
-    ## [12,]   77.14739    82.22572        77.08470         82.13277    77.09114     82.31048     77.55942      81.87417
-    ## [13,]   77.49180    82.58734        77.40807         82.45334    77.46407     82.62059     77.92333      82.27384
-    ## [14,]   77.72113    82.84062        77.68708         82.71368    77.71849     82.85035     78.19158      82.45193
-    ## [15,]   77.96990    83.11390        77.91528         82.93889    77.97424     83.08763     78.43622      82.78936
-    ## [16,]   78.24485    83.35971        78.17803         83.22360    78.23703     83.32616     78.64705      83.06904
+    ##      2.5% (Par) 97.5% (Par) 2.5% (Residual) 97.5% (Residual) 2.5% (Wild) 97.5% (Wild) 2.5% (Pairs) 97.5% (Pairs)
+    ## 2000   74.96131    79.95261        74.89121         79.87688    74.87707     80.20532     75.35319      79.60903
+    ## 2001   74.96817    79.99057        74.94441         79.90277    74.88762     80.20887     75.37770      79.64143
+    ## 2002   75.10434    80.13502        75.07571         80.04820    75.02876     80.37163     75.48796      79.76549
+    ## 2003   75.25188    80.29389        75.17741         80.20390    75.19862     80.49522     75.61519      79.91382
+    ## 2004   75.36012    80.41233        75.30636         80.32307    75.32084     80.58576     75.72071      80.01800
+    ## 2005   75.55850    80.62059        75.50314         80.53933    75.49192     80.76456     75.90881      80.22095
+    ## 2006   75.79673    80.87371        75.75336         80.74429    75.72713     81.01643     76.20469      80.46394
+    ## 2007   76.07965    81.13089        76.05162         81.00217    75.99328     81.26127     76.46990      80.74862
+    ## 2008   76.34848    81.39141        76.31684         81.27968    76.28955     81.54891     76.74882      81.01625
+    ## 2009   76.62689    81.66365        76.56803         81.59916    76.53336     81.79977     77.05274      81.27159
+    ## 2010   76.89246    81.95120        76.87825         81.86025    76.81260     82.04001     77.26913      81.53861
+    ## 2011   77.14739    82.22572        77.08470         82.13277    77.09114     82.31048     77.55942      81.87417
+    ## 2012   77.49180    82.58734        77.40807         82.45334    77.46407     82.62059     77.92333      82.27384
+    ## 2013   77.72113    82.84062        77.68708         82.71368    77.71849     82.85035     78.19158      82.45193
+    ## 2014   77.96990    83.11390        77.91528         82.93889    77.97424     83.08763     78.43622      82.78936
+    ## 2015   78.24485    83.35971        78.17803         83.22360    78.23703     83.32616     78.64705      83.06904
 
-<br/> We see that the results of all four bootstraps are fairly similar
-in this particular case. Having demonstrated the computation of
-confidence intervals for any single observation, let us investigate
-*prediction* intervals. <br/>
+We see that the results for all four bootstraps are fairly similar in
+this particular case. Having demonstrated how to compute confidence
+intervals for a single observation, let us investigate *prediction*
+intervals. <br/>
 
 ## Predictions for individual countries (prediction intervals)
 
-<br/> Prediction intervals are interval estimates for a new
-observations. Provided that the model is correctly specified, the
-computation of the prediction interval is straightforward via the
-parametric bootstrap (we simply add the individual random effect and the
-idiosyncratic error to the prediction). <br/>
+Prediction intervals are interval estimates for new observations (rather
+than their expected value).
+
+### Parametric and semi-parametric (residual) bootstrap
+
+Provided that the model is correctly specified, the computation of the
+prediction interval is straightforward via the parametric bootstrap (we
+simply add the individual random effect and the idiosyncratic error to
+the prediction).  
+<br/>
 
 ``` r
 ## Parametric bootstrap
@@ -574,9 +602,9 @@ pred_france_pb[i,] <- predict(model_new, le_france, re.form=~0) + rnorm(1,0,coun
 }
 ```
 
-<br/> Alternatively, we can also use residual cluster bootstrap to
-account for non-normal distribution and inter-cluster correlation of
-idiosyncratic errors. <br/>
+Alternatively, we can use a residual cluster bootstrap to account for
+non-normality and inter-cluster correlation in idiosyncratic errors.
+<br/>
 
 ``` r
 ## Residual cluster bootstrap
@@ -605,24 +633,27 @@ pred_france_spb[i,] <- predict(model_new, le_france, re.form=~0) + rnorm(1,0,cou
 }
 ```
 
-<br/> However, the residual cluster bootstrap does not help with
+### Dealing with heteroskedasticity
+
+However, the residual cluster bootstrap does not help with
 heteroskedasticity. Provided that the variance of idiosyncratic errors
 changes with the value of predictors, our prediction interval could be
 severely underestimated or overestimated (residual cluster bootstrap, in
 essence, pools these errors together, creating an “averaged” estimate of
 the idiosyncratic error). And to remedy that, we would need a
 heteroskedasticity model. This is unlike confidence intervals, which we
-could compute in a way that was robust to heteroskedasticity.
+could compute in a way that was *robust* to heteroskedasticity.
 
 For example, we can notice that there seems to be heteroskedasticity
 wrt. the **Economy** factor developing/developed. <br/>
 
 <img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-18-1.png" style="display: block; margin: auto;" />
 
-<br/> We can fit a new model that models this heteroskedasticity by
-assuming a different idiosyncratic error variance per stratum developed
-and developing. We need to use a different package, *nlme*, which allows
-us to fit a mixed effects model with variance structure functions (see
+We can fit a new model that accounts for this heteroskedasticity by
+assuming a different idiosyncratic error variance for developed and
+developing strata. We need to use a different package, *nlme*, which
+allows us to fit a mixed effects model with variance structure functions
+(see
 <https://stat.ethz.ch/R-manual/R-devel/library/nlme/html/varClasses.html>
 for the available options). <br/>
 
@@ -742,11 +773,11 @@ summary(model_economy)
     ## Number of Observations: 2848
     ## Number of Groups: 178
 
-<br/> We see that, indeed, the estimated standard deviation of
-idiosyncratic errors is lower for developed countries. Thus, we can use
-this model instead to construct the prediction interval for France. We
-will use a wild bootstrap to generate new datasets and a residual
-bootstrap to simulate new observations for France. <br/>
+We see that the estimated standard deviation of idiosyncratic errors is
+indeed lower in developed countries. Thus, we can use this model instead
+to construct the prediction interval for France. We will use a wild
+bootstrap to generate new datasets and a residual bootstrap to simulate
+new observations for France. <br/>
 
 ``` r
 economy_sd <- extract_varcomp(model_economy)$var_params
@@ -790,7 +821,9 @@ pred_france_ec[i,] <- X_france %*% fixef(model_new) + rnorm(1,0,country_sd_new) 
 }
 ```
 
-<br/> Let us compare the results. <br/>
+### Results
+
+Let us compare the results. <br/>
 
 ``` r
 options(width = 1000)
@@ -800,49 +833,49 @@ spb <- t(apply(pred_france_spb,2,function(x) quantile(x[!is.na(x)],c(0.025,0.975
 pecb <- t(apply(pred_france_ec,2,function(x) quantile(x[!is.na(x)],c(0.025,0.975))))
 
 pi_france <- cbind(pb,spb,pecb)
-colnames(pi_france) <- c('2.5% (Par)','97.5% (Par)','2.5% (Semi-Par)','97.5% (Semi-Par)','2.5% (Het. Eco)','97.5% (Het. Eco)')
+colnames(pi_france) <- c('2.5% (Par)','97.5% (Par)','2.5% (Residual)','97.5% (Residual)','2.5% (Het. Eco)','97.5% (Het. Eco)')
+rownames(pi_france) <- years
 pi_france
 ```
 
-    ##       2.5% (Par) 97.5% (Par) 2.5% (Semi-Par) 97.5% (Semi-Par) 2.5% (Het. Eco) 97.5% (Het. Eco)
-    ##  [1,]   72.40293    82.22017        72.50725         82.17980        72.03600         82.08407
-    ##  [2,]   72.56667    82.70503        72.33023         82.20903        72.13053         82.12589
-    ##  [3,]   72.59532    82.36305        72.67333         82.18353        72.24321         82.14180
-    ##  [4,]   72.63160    82.67893        72.76513         82.53613        72.38242         82.27355
-    ##  [5,]   72.60310    82.66077        72.95186         82.51990        72.62507         82.49229
-    ##  [6,]   72.72288    82.75497        72.79033         82.61260        72.87115         82.71614
-    ##  [7,]   73.06174    83.01461        73.35064         83.11307        73.15855         82.98351
-    ##  [8,]   73.26913    83.56650        73.56941         83.23171        73.47242         83.31632
-    ##  [9,]   73.86445    83.71593        73.84272         83.42450        73.90011         83.57517
-    ## [10,]   73.82115    84.10104        74.14955         83.79026        74.17154         83.82726
-    ## [11,]   74.05816    84.18073        74.09517         84.28646        74.42257         84.24625
-    ## [12,]   74.74285    84.41918        74.87387         84.56432        74.78860         84.44850
-    ## [13,]   74.85090    84.84944        75.02561         84.57254        74.98825         84.77712
-    ## [14,]   75.00187    85.11177        75.23524         85.27390        75.23172         85.03207
-    ## [15,]   75.29603    85.17326        75.48787         85.26256        75.44512         85.26189
-    ## [16,]   75.90935    85.70450        75.63266         85.67732        75.71685         85.46743
+    ##      2.5% (Par) 97.5% (Par) 2.5% (Residual) 97.5% (Residual) 2.5% (Het. Eco) 97.5% (Het. Eco)
+    ## 2000   72.40293    82.22017        72.50725         82.17980        72.03600         82.08407
+    ## 2001   72.56667    82.70503        72.33023         82.20903        72.13053         82.12589
+    ## 2002   72.59532    82.36305        72.67333         82.18353        72.24321         82.14180
+    ## 2003   72.63160    82.67893        72.76513         82.53613        72.38242         82.27355
+    ## 2004   72.60310    82.66077        72.95186         82.51990        72.62507         82.49229
+    ## 2005   72.72288    82.75497        72.79033         82.61260        72.87115         82.71614
+    ## 2006   73.06174    83.01461        73.35064         83.11307        73.15855         82.98351
+    ## 2007   73.26913    83.56650        73.56941         83.23171        73.47242         83.31632
+    ## 2008   73.86445    83.71593        73.84272         83.42450        73.90011         83.57517
+    ## 2009   73.82115    84.10104        74.14955         83.79026        74.17154         83.82726
+    ## 2010   74.05816    84.18073        74.09517         84.28646        74.42257         84.24625
+    ## 2011   74.74285    84.41918        74.87387         84.56432        74.78860         84.44850
+    ## 2012   74.85090    84.84944        75.02561         84.57254        74.98825         84.77712
+    ## 2013   75.00187    85.11177        75.23524         85.27390        75.23172         85.03207
+    ## 2014   75.29603    85.17326        75.48787         85.26256        75.44512         85.26189
+    ## 2015   75.90935    85.70450        75.63266         85.67732        75.71685         85.46743
 
-<br/> We see that the prediction intervals did not change that much.
-Still we cannot be really sure that the coverage of the prediction is
-valid since we did not account for the heteroskedasticity in a
-systematic manner. To do so, we would have to stray away from the
-ordinary regression even farther and use, e.g., *quantile regression*
-which seek to model quantiles of the response instead of just mean
-response.
+We see that the prediction intervals did not change that much. Still, we
+cannot be entirely sure that the prediction’s coverage is valid, since
+we did not account for heteroskedasticity systematically. To do so, we
+would have to stray even further from the ordinary regression and use,
+e.g., *quantile regression* (Koenker and Hallock 2001), which models
+quantiles of the response rather than just the mean.
 
-To summarize the results concerning the predictive performance of our
-model, we see that our predictors can predict life expectancy reasonably
-well on average (our estimate of RMSE for a new individual using the
+To summarize the results regarding the predictive performance of our
+model, we see that our predictors can reasonably well predict life
+expectancy on average (our estimate of RMSE for a new individual using
 10-fold cross-validation was 2.5). This corresponds to our estimate of
-the prediction interval for predicting France from the rest of the data:
-$\pm$ 5 years according to our computational experiments. Overall, there
-is still a lot of unobserved heterogeneity modeled by individual
-effects, and thus, to get more accurate predictions, we would have to
-consider additional predictors in the model. <br/>
+the prediction interval for France, based on the rest of the data: $\pm$
+5 years, according to our computational experiments. Overall, there is
+still a lot of unobserved heterogeneity captured by individual effects;
+thus, to obtain more accurate predictions, we could consider obtaining
+additional predictors in the model.
 
 ## Effects of predictors in the life expectancy model
 
-<br/> Let us return to our original model with fixed time effects. <br/>
+Let us return to our original model with time fixed effects. <br/>
 
 ``` r
 library(lme4)
@@ -852,11 +885,11 @@ life_expectancy <- life_expectancy_cent
 cre_model <- lmer(Life_expectancy ~ Economy + Region + Alcohol + Hepatitis_B + Measles + BMI + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + I_deaths + U5_deaths  + Alcohol_cent + Hepatitis_B_cent + Measles_cent + BMI_cent + Polio_cent + Diphtheria_cent + HIV_cent + GDP_log_cent + Pop_log_cent + Thin_10_19_cent + Thin_5_9_cent + Schooling_cent + I_deaths_cent + U5_deaths_cent + factor(Year) + (1 | Country), life_expectancy)
 ```
 
-<br/> We will determine which predictors appeared to be significant in
-the model based on cluster-robust standard errors (CR2) and
-Satterthwaite DOF correction. We will also recompute confidence
-intervals based on these errors. Let us also remind ourselves of the
-ranges of values for the continuous variables. <br/>
+We will determine which predictors appear significant in the model using
+cluster-robust standard errors (CR2) and the Satterthwaite DOF
+correction. We will also recompute confidence intervals based on these
+errors. Let us also remind ourselves of the ranges of values for the
+continuous variables. <br/>
 
 ``` r
 library(clubSandwich)
@@ -936,27 +969,27 @@ summary(life_expectancy[,c(4,6:11,14:18,21,22,23)])
     ##  3rd Qu.: 47.35   3rd Qu.:246.79   3rd Qu.: 7.777   3rd Qu.:96.00   3rd Qu.:93.00   3rd Qu.:26.40   3rd Qu.:97.0   3rd Qu.: 12557   3rd Qu.:  23.688   3rd Qu.: 7.200   3rd Qu.: 7.3   3rd Qu.:10.300   3rd Qu.: 17.60   3rd Qu.:3.20630   3rd Qu.: 9.438  
     ##  Max.   :138.10   Max.   :719.36   Max.   :17.870   Max.   :99.00   Max.   :99.00   Max.   :32.10   Max.   :99.0   Max.   :112418   Max.   :1379.860   Max.   :27.700   Max.   :28.6   Max.   :14.100   Max.   :127.90   Max.   :7.23046   Max.   :11.630
 
-<br/> First, we will compute the confidence intervals for the
-predictions, varying one predictor while keeping the other fixed (other
-fixed effects are chosen as Turkey 2015) using a simple parametric
-bootstrap (we assume that the individual random effects are fixed).
-<br/>
+First, we will compute confidence intervals for the predictions by
+varying one predictor while keeping the other fixed (the other fixed
+effects are set to Turkey 2015), using a simple parametric bootstrap
+(assuming the individual random effects are fixed). <br/>
 
 <img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-24-1.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-24-2.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-24-3.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-24-4.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-24-5.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-24-6.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-24-7.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-24-8.png" style="display: block; margin: auto;" />
 
-<br/> We see that many predictors seem to have little absolute effect:
+We see that many predictors seem to have little absolute effect:
 **Alcohol**, **Hepatitis_B**, **Measles**, **Polio**, **Diphtheria**,
-**Pop_log**, **Thin_10_19**, **Thin_5_9**, and **Schooling**. Let us
-have a closer look at the rest.
+**Pop_log**, **Thin_10_19**, **Thin_5_9**, and **Schooling**.
 
-Let us start with the time-invariant predictors that we were able to
-estimate thanks to the CRE model: **Economy** and **Region**-specific
-factors. As far as **Economy** is concerned, it is a highly significant
-predictor in the model. It seems that economically developed countries
-tend to have higher life expectancy than developing countries, even
-after adjusting for other covariates in the model. We can investigate
-this more formally post hoc using *lsmeans* (lsmeans computes estimated
-marginal means for a given factor, see
+Let us have a closer look at the rest.
+
+Let us start with the time-invariant predictors we were able to estimate
+using the CRE model: **Economy**- and **Region**-specific factors. As
+far as **Economy** is concerned, it is a highly significant predictor in
+the model. It seems that economically developed countries tend to have
+higher life expectancy than developing countries, even after adjusting
+for other covariates in the model. We can investigate this more formally
+post hoc using *lsmeans* (*lsmeans* computes estimated marginal means
+for a given factor; see
 <https://cran.r-project.org/web/packages/emmeans/vignettes/basics.html>
 for more details). <br/>
 
@@ -978,8 +1011,9 @@ for more details). <br/>
 
 <img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-25-1.png" style="display: block; margin: auto;" />
 
-<br/> Next, we focus on the **Region**-specific factors. We can test
-formally that this factor **Region** is significant in the model. <br/>
+Next, we focus on the **Region**-specific factors. We can formally test
+whether the **Region** factor is significant in the model as follows.
+<br/>
 
 ``` r
 Wald_test(cre_model, constraints = constrain_zero(c("RegionAsia","RegionCAm","RegionEU","RegionMidE","RegionNAm","RegionOce","RegionNotEU","RegionSAm")), vcov = "CR2", cluster = life_expectancy$Country)
@@ -988,8 +1022,8 @@ Wald_test(cre_model, constraints = constrain_zero(c("RegionAsia","RegionCAm","Re
     ##  test Fstat df_num df_denom  p_val sig
     ##   HTZ   2.6      8     32.6 0.0256   *
 
-<br/> However, the differences between the estimated marginal means for
-regions seem overall pretty close. <br/>
+The differences between the estimated marginal means across regions seem
+pretty small overall. <br/>
 
     ## $lsmeans
     ##  Region lsmean    SE  df lower.CL upper.CL
@@ -1052,9 +1086,6 @@ regions seem overall pretty close. <br/>
 
 <img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-27-1.png" style="display: block; margin: auto;" />
 
-<br/> So overall, the differences between regions after adjusting for
-other covariates are not that noticeable.
-
 Let us move to the time-varying predictors in our model. We start with
 **I_deaths** and **U5_deaths**, i.e., infant mortality/deaths of
 children under five years old per 1000 population. This effect appears
@@ -1065,33 +1096,33 @@ a LOESS fit of the data: span = 0.5, degree = 2) <br/>
 
 <img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-28-1.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-28-2.png" style="display: block; margin: auto;" />
 
-<br/> Another predictor worth mentioning is **GDP_log**. Now, this
-predictor is not significant (using a commonly used p-value cut-off
-0.05) in the model. The confidence interval for the estimated effect is
-a bit too large. However, its point estimate is positive, as one would
-expect; more economically developed countries tend to have higher life
+Another predictor worth mentioning is **GDP_log**. Now, this predictor
+is not significant in the model (using a commonly used p-value cutoff of
+$0.05$). The confidence interval for the estimated effect is a bit too
+large. However, its point estimate is positive, as one would expect;
+more economically developed countries tend to have higher life
 expectancy. <br/>
 
 <img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-29-1.png" style="display: block; margin: auto;" />
 
-<br/> Another highly significant predictor in the model is the number of
+Another highly significant predictor in the model is the number of
 **HIV** incidents. The importance of this effect is again to be
 expected. For example, the UNAIDS report *THE URGENCY OF NOW AIDS AT A
-CROSSROADS* shows that from successes in the treatment of HIV, life
-expectancy in Africa increased from 56 to 61 between 2010 and 2024.
-Again, if we visualize the data, the effect of **HIV** is also quite
-noticeable. <br/>
+CROSSROADS* (HIV/AIDS et al. 2024) shows that from successes in the
+treatment of HIV, life expectancy in Africa increased from 56 to 61
+between 2010 and 2024. Again, if we visualize the data, the effect of
+**HIV** is also quite noticeable.
 
 <img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-30-1.png" style="display: block; margin: auto;" />
 
-<br/> The last predictor we need to mention is the average **BMI** of
-the adult population. This one is a bit trickier to interpret. If we
-simply visualize the data, we could argue that **Life_expectancy**
-actually increases slightly with **BMI**. <br/>
+The last predictor we need to mention is the average **BMI** of the
+adult population. This one is a bit trickier to interpret. If we simply
+visualize the data, we could argue that **Life_expectancy** actually
+increases slightly with **BMI**. <br/>
 
 <img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-31-1.png" style="display: block; margin: auto;" />
 
-<br/> However, more economically developed countries tend to have higher
+However, more economically developed countries tend to have higher
 average **BMI**. Actually, if we plot **BMI** vs **Life_expectancy** for
 developed countries, this negative effect for large average **BMI** is
 hinted at (that low **BMI** and high **Life_expectancy** country is
@@ -1099,7 +1130,7 @@ Japan) <br/>
 
 <img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-32-1.png" style="display: block; margin: auto;" />
 
-<br/> We could suspect a nonlinear dependence in **BMI**, although
+We could suspect a nonlinear dependence in **BMI**, although
 interestingly enough, fitting a more complex nonlinear (via restricted
 cubic splines) does not change the downward trend much. <br/>
 
@@ -1120,38 +1151,89 @@ plot(obs$BMI,pred,xlab = 'BMI', ylab = 'Life expectancy (Turkey)')
 
 <img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-33-1.png" style="display: block; margin: auto;" />
 
-<br/> Having identified BMI as a negative factor in a life expectancy
-model is not without some basis. BMI is associated with an increased
-mortality rate. See, e.g., *H.L. Walls et al. Obesity and trends in life
-expectancy. Journal of Obesity 2012.1 (2012): 107989*, *K. Bhaskaran et
-al. “Association of BMI with overall and cause-specific mortality: a
-population-based cohort study of 3· 6 million adults in the UK.” The
-Lancet Diabetes & Endocrinology 6.12 (2018): 944-953*. Still, if the
-dependency in terms of the country-level life expectancy should follow
-individual trends, this dependence should be “hill-shaped,” i.e., life
-expectancy shows a decrease for very low and very high BMIs <br/>
+Identifying BMI as a negative factor in a life expectancy model is not
+without basis. BMI is associated with an increased mortality rate. See,
+e.g., (HIV/AIDS et al. 2024) and (HIV/AIDS et al. 2024). Still, if the
+dependence on country-level life expectancy should follow individual
+trends, this dependence should be “hill-shaped,” i.e., life expectancy
+decreases at very low and very high BMIs. <br/>
 
 ## Conclusions
 
-<br/> Overall, we kind of confirmed a statement about life expectancy on
-Wikipedia, which claims that *… great variations in life expectancy …
+Overall, we kind of confirmed a statement on Wikipedia about life
+expectancy, which claims tha *… great variations in life expectancy …
 (are) mostly caused by differences in public health, medical care, and
 diet*. With some hyperbole, our stand-ins for these causes are the three
 time-varying factors in our model: **HIV**, **infant/child mortality**,
 and **BMI**. However, we also observed a lot of additional heterogeneity
 in the data (see, e.g., our analysis of the predictive performance of
 our model) unexplained by these three predictors (some of it is captured
-by the **Economy** factor). Thus, if we were to investigate models of
-life expectancy further, we should explore including additional
-predictors in the model.
+by the **Economy** factor). Thus, if we were to investigate life
+expectancy models further, we should explore including additional
+predictors.
 
-This conclusion wraps up the The First Circle: Linear Regression. I
-strayed a bit from ordinary linear regression by including random
-effects, using a correlated random effects model instead of a fixed
-effects model. However, thanks to that road we took, we got the model
-that could partially model the individual effects and could be employed
-for predictions, so moving the analysis in this direction felt right.
-Lastly, I would like to mention that most of the methods showed here for
-mixed effects models (robust standard error estimates, various
-bootstraps) would be used in a similar fashion for ordinary linear
-regression models. <br/>
+This conclusion wraps up The First Circle: Linear Regression. We strayed
+a bit from ordinary linear regression by including random effects, using
+a correlated random effects model rather than a fixed effects model.
+However, thanks to the road we took, we obtained a model that could
+partially capture the individual effects , so moving the analysis in
+this direction felt right.
+
+# References
+
+<div id="refs" class="references csl-bib-body hanging-indent"
+entry-spacing="0">
+
+<div id="ref-cameron2005microeconometrics" class="csl-entry">
+
+Cameron, A Colin, and Pravin K Trivedi. 2005. *Microeconometrics:
+Methods and Applications*. Cambridge university press.
+
+</div>
+
+<div id="ref-djogbenou2019asymptotic" class="csl-entry">
+
+Djogbenou, Antoine A, James G MacKinnon, and Morten Ørregaard Nielsen.
+2019. “Asymptotic Theory and Wild Bootstrap Inference with Clustered
+Errors.” *Journal of Econometrics* 212 (2): 393–412.
+
+</div>
+
+<div id="ref-efron1987better" class="csl-entry">
+
+Efron, Bradley. 1987. “Better Bootstrap Confidence Intervals.” *Journal
+of the American Statistical Association* 82 (397): 171–85.
+
+</div>
+
+<div id="ref-faraway2016extending" class="csl-entry">
+
+Faraway, Julian J. 2016. *Extending the Linear Model with r: Generalized
+Linear, Mixed Effects and Nonparametric Regression Models*. Chapman;
+Hall/CRC.
+
+</div>
+
+<div id="ref-harrell2001regression" class="csl-entry">
+
+Harrell, Frank E et al. 2001. *Regression Modeling Strategies: With
+Applications to Linear Models, Logistic Regression, and Survival
+Analysis*. Vol. 608. Springer.
+
+</div>
+
+<div id="ref-joint2024urgency" class="csl-entry">
+
+HIV/AIDS, Joint United Nations Programme on et al. 2024. “The Urgency of
+Now: AIDS at a Crossroads.” *Geneva: UNAIDS*, 312.
+
+</div>
+
+<div id="ref-koenker2001quantile" class="csl-entry">
+
+Koenker, Roger, and Kevin F Hallock. 2001. “Quantile Regression.”
+*Journal of Economic Perspectives* 15 (4): 143–56.
+
+</div>
+
+</div>
