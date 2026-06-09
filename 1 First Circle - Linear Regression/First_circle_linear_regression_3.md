@@ -34,7 +34,6 @@ predictors that seem to have the greatest effect on predictions. <br/>
 - [Conclusions](#conclusions)
 - [References](#references)
 
-
 ## Evaluation of Predictive Performance
 
 Let us discuss the correlated random effects (CRE) model we constructed
@@ -1153,7 +1152,7 @@ plot(obs$BMI,pred,xlab = 'BMI', ylab = 'Life expectancy (Turkey)')
 
 Identifying BMI as a negative factor in a life expectancy model is not
 without basis. BMI is associated with an increased mortality rate. See,
-e.g., (HIV/AIDS et al. 2024) and (HIV/AIDS et al. 2024). Still, if the
+e.g., (Walls et al. 2012) and (Bhaskaran et al. 2018). Still, if the
 dependence on country-level life expectancy should follow individual
 trends, this dependence should be “hill-shaped,” i.e., life expectancy
 decreases at very low and very high BMIs. <br/>
@@ -1183,6 +1182,15 @@ this direction felt right.
 
 <div id="refs" class="references csl-bib-body hanging-indent"
 entry-spacing="0">
+
+<div id="ref-bhaskaran2018association" class="csl-entry">
+
+Bhaskaran, Krishnan, Isabel dos-Santos-Silva, David A Leon, Ian J
+Douglas, and Liam Smeeth. 2018. “Association of BMI with Overall and
+Cause-Specific Mortality: A Population-Based Cohort Study of 3 6 Million
+Adults in the UK.” *The Lancet Diabetes & Endocrinology* 6 (12): 944–53.
+
+</div>
 
 <div id="ref-cameron2005microeconometrics" class="csl-entry">
 
@@ -1233,6 +1241,14 @@ Now: AIDS at a Crossroads.” *Geneva: UNAIDS*, 312.
 
 Koenker, Roger, and Kevin F Hallock. 2001. “Quantile Regression.”
 *Journal of Economic Perspectives* 15 (4): 143–56.
+
+</div>
+
+<div id="ref-walls2012obesity" class="csl-entry">
+
+Walls, Helen L, Kathryn Backholer, Joseph Proietto, and John J McNeil.
+2012. “Obesity and Trends in Life Expectancy.” *Journal of Obesity* 2012
+(1): 107989.
 
 </div>
 
