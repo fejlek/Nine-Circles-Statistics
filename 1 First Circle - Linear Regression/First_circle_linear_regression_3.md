@@ -898,7 +898,8 @@ model for causal inference about the effect of $X$ here is simply $Y \sim X$.
 This trivial example also shows us that to get a valid causal inference,
 we also need a *causal model* such as a directed acyclic graph (DAG)
 (Cunningham 2021). For example, the causal model for our dataset could
-look like this (<https://www.dagitty.net>)
+look like this (we used the tool from <https://www.dagitty.net> to construct 
+the figure).
 
 <img src="First_circle_linear_regression_3_files/figure-GFM/dagitty HIV.png" style="display: block; margin: auto;" />
 
@@ -915,7 +916,7 @@ random effects are uncorrelated with other covariates).
 
 The tool *dagitty* also evaluated this model and determined that it is correctly
 adjusted to estimate the effect of **HIV** incidence (notice that we have to
-exclude **Child Deaths** and **Infant Deaths** from the model, since **HIV** has 
+exclude **I_deaths** and **U5_deaths** from the model, since **HIV** has 
 causal influence on these covariates).
 
 Anyway, causal inference is a topic worth its own series. For now, let
@@ -1024,7 +1025,9 @@ effects are set to Turkey 2015), using a simple parametric bootstrap
 
 We see that many predictors seem to have little absolute effect on
 predictions (keeping in mind all the caveats mentioned at the beginning
-of this section): **Alcohol**, **Hepatitis_B**, **Measles**, **Polio**,
+of this section, e.g., the effect of diseases that mostly effect children 
+is underestimated due to the presence of **I_deaths** and **U5_deaths**): 
+**Alcohol**, **Hepatitis_B**, **Measles**, **Polio**,
 **Diphtheria**, **Pop_log**, **Thin_10_19**, **Thin_5_9**, and
 **Schooling**.
 
