@@ -1024,12 +1024,12 @@ effects are set to Turkey 2015), using a simple parametric bootstrap
 <img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-24-1.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-24-2.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-24-3.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-24-4.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-24-5.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-24-6.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-24-7.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-24-8.png" style="display: block; margin: auto;" />
 
 We see that many predictors seem to have little absolute effect on
-predictions (keeping in mind all the caveats mentioned at the beginning
-of this section, e.g., the effect of diseases that mostly effect children 
-is underestimated due to the presence of **I_deaths** and **U5_deaths**): 
-**Alcohol**, **Hepatitis_B**, **Measles**, **Polio**,
+predictions: **Alcohol**, **Hepatitis_B**, **Measles**, **Polio**,
 **Diphtheria**, **Pop_log**, **Thin_10_19**, **Thin_5_9**, and
-**Schooling**.
+**Schooling** (we are keeping in mind all the caveats mentioned at the beginning
+of this section, e.g., the effect of diseases that mostly effect children 
+could be underestimated due to the presence of **I_deaths** and **U5_deaths**
+in the model).
 
 Let us have a closer look at the rest.
 
