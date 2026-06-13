@@ -13,7 +13,7 @@ Our objective will be to build a model for life expectancy using health,
 immunization, and economic and demographic data about 179 countries. We
 will explore whether the model obtained would be useful for predicting
 life expectancy. We also wish to identify predictors that seem to have
-the greatest effect on life expectancy.
+the greatest effect on life expectancy predictions.
 
 Since this is our first project, we will go through all the steps in
 greater detail. To make the presentation clearer, we will split it into
