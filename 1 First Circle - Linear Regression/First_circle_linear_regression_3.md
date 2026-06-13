@@ -902,17 +902,21 @@ look like this (<https://www.dagitty.net>)
 
 <img src="First_circle_linear_regression_3_files/figure-GFM/dagitty HIV.png" style="display: block; margin: auto;" />
 
-The blue node denotes the outcome variable. The green node denotes
-exposure (the effect we want to estimate), white nodes are control
+The blue node with **I** denotes the outcome variable. Other blue nodes 
+are variables excluded from the model. The green node denotes
+exposure (the effect we want to estimate); white nodes are control
 variables, and arrows denote causal relationships. Now, this model is
 definitely a simplification; many relationships are actually
 bidirectional (which can be modeled using lagged variables), and we
 assume that all unobservables are incorporated in the fixed effect
 **Year** and random effect **Country** (notice that there are no
 relationships between it and other covariates, since we assume that
-random effects are uncorrelated with other covariates). In addition,
-*dagitty* evaluated this model and determined that it is correctly
-adjusted to estimate the effect of **HIV** incidence.
+random effects are uncorrelated with other covariates). 
+
+The tool *dagitty* also evaluated this model and determined that it is correctly
+adjusted to estimate the effect of **HIV** incidence (notice that we have to
+exclude **Child Deaths** and **Infant Deaths** from the model, since **HIV** has 
+causal influence on these covariates).
 
 Anyway, causal inference is a topic worth its own series. For now, let
 us just keep in mind that the effect sizes observed in the predictive
