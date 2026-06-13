@@ -874,7 +874,50 @@ additional predictors in the model.
 
 ## Effects of Predictors in the Life Expectancy Model
 
-Let us return to our original model with time fixed effects. <br/>
+As the last step of our project, we will assess the effect of our
+predictors on the response in our model. Now, we need to keep an
+important fact in mind. In this project, we created this model primarily
+for prediction; we included all the variables in the model so that the
+total parameter count was reasonable with respect to the effective
+sample size. Indeed, we have obtained a model that generalizes
+reasonably well.
+
+But the estimation of effects on the response is not a predictive
+problem; it is a causal inference problem, and, crucially, models that
+are good at predicting the response might not be good at causal
+inference, and vice versa. To provide a simple example, let us assume
+that the simple linear model $Y = X + Z + \varepsilon$, where
+$\varepsilon \sim N(0, \sigma^2)$, is the actual generating process.
+Hence, to accurately predict $Y$, we want to use the model
+$Y \sim X + Z$. But let us assume that $Z$ causally influences $Y$ and
+$X$ causally influences both $Z$ and $Y$. Thus, the model $Y \sim X + Z$
+is incorrect for estimating the effect of $X$ on $Y$, because some of
+the effect of $X$ will be incorporated in the effect of $Z$! The correct
+model for causal inference about the effect of $X$ here is simply $Y~X$.
+
+This simple example also shows us that to get a valid causal inference,
+we also need a *causal model* such as a directed acyclic graph (DAG)
+(Cunningham 2021). For example, the causal model for our dataset could
+look like this (<https://www.dagitty.net>)
+
+<img src="First_circle_linear_regression_3_files/figure-GFM/dagitty HIV.png" style="display: block; margin: auto;" />
+
+The blue node denotes the outcome variable. The green node denotes
+exposure (the effect we want to estimate), white nodes are control
+variables, and arrows denote causal relationships. Now, this model is
+definitely a simplification; many relationships are actually
+bidirectional (which can be modeled using lagged variables), and we
+assume that all unobservables are incorporated in the fixed effect
+**Year** and random effect **Country** (notice that there are no
+relationships between it and other covariates, since we assume that
+random effects are uncorrelated with other covariates). In addition,
+*dagitty* evaluated this model and determined that it is correctly
+adjusted to estimate the effect of **HIV** incidence.
+
+Anyway, causal inference is a topic worth its own series. For now, let
+us just keep in mind that the effect sizes observed in the predictive
+models do not necessarily correspond to the actual causal effects. Let
+us return to our original model with time fixed effects. <br/>
 
 ``` r
 library(lme4)
@@ -975,9 +1018,11 @@ effects are set to Turkey 2015), using a simple parametric bootstrap
 
 <img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-24-1.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-24-2.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-24-3.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-24-4.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-24-5.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-24-6.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-24-7.png" style="display: block; margin: auto;" /><img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-24-8.png" style="display: block; margin: auto;" />
 
-We see that many predictors seem to have little absolute effect:
-**Alcohol**, **Hepatitis_B**, **Measles**, **Polio**, **Diphtheria**,
-**Pop_log**, **Thin_10_19**, **Thin_5_9**, and **Schooling**.
+We see that many predictors seem to have little absolute effect on
+predictions (keeping in mind all the caveats mentioned at the beginning
+of this section): **Alcohol**, **Hepatitis_B**, **Measles**, **Polio**,
+**Diphtheria**, **Pop_log**, **Thin_10_19**, **Thin_5_9**, and
+**Schooling**.
 
 Let us have a closer look at the rest.
 
@@ -1100,7 +1145,9 @@ is not significant in the model (using a commonly used p-value cutoff of
 $0.05$). The confidence interval for the estimated effect is a bit too
 large. However, its point estimate is positive, as one would expect;
 more economically developed countries tend to have higher life
-expectancy. <br/>
+expectancy. We also have to keep in mind that the effect of **GDP** is
+incorporated into other effects in the model (the factor **Economy** is
+a clear example). <br/>
 
 <img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-29-1.png" style="display: block; margin: auto;" />
 
@@ -1129,27 +1176,6 @@ Japan) <br/>
 
 <img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-32-1.png" style="display: block; margin: auto;" />
 
-We could suspect a nonlinear dependence in **BMI**, although
-interestingly enough, fitting a more complex nonlinear (via restricted
-cubic splines) does not change the downward trend much. <br/>
-
-``` r
-# I fit just a fixed effects model for simplicity's sake
-library(rms)
-fixed_effect_model_nonlin <- lm(Life_expectancy ~ Alcohol + Hepatitis_B + Measles + rcs(BMI,4) + Polio + Diphtheria + HIV + GDP_log + Pop_log + Thin_10_19 + Thin_5_9 + Schooling + I_deaths + U5_deaths        + factor(Country) + factor(Year), data = life_expectancy)
-
-# Plot the predicted life expectancy vs. BMI for the first observation
-BMI_seq <- seq(min(life_expectancy$BMI),max(life_expectancy$BMI),1)
-obs <- life_expectancy[1,]
-obs <- obs[rep(1, length(BMI_seq)), ]
-obs$BMI  <- BMI_seq
-
-pred <- predict(fixed_effect_model_nonlin ,obs,type = 'response')
-plot(obs$BMI,pred,xlab = 'BMI', ylab = 'Life expectancy (Turkey)')
-```
-
-<img src="First_circle_linear_regression_3_files/figure-GFM/unnamed-chunk-33-1.png" style="display: block; margin: auto;" />
-
 Identifying BMI as a negative factor in a life expectancy model is not
 without basis. BMI is associated with an increased mortality rate. See,
 e.g., (Walls et al. 2012) and (Bhaskaran et al. 2018). Still, if the
@@ -1159,17 +1185,16 @@ decreases at very low and very high BMIs. <br/>
 
 ## Conclusions
 
-Overall, we kind of confirmed a statement on Wikipedia about life
-expectancy, which claims tha *… great variations in life expectancy …
+Overall, we kind of observed a statement on Wikipedia about life
+expectancy, which claims that *… great variations in life expectancy …
 (are) mostly caused by differences in public health, medical care, and
 diet*. With some hyperbole, our stand-ins for these causes are the three
 time-varying factors in our model: **HIV**, **infant/child mortality**,
 and **BMI**. However, we also observed a lot of additional heterogeneity
 in the data (see, e.g., our analysis of the predictive performance of
-our model) unexplained by these three predictors (some of it is captured
-by the **Economy** factor). Thus, if we were to investigate life
-expectancy models further, we should explore including additional
-predictors.
+our model) that is unexplained by our predictors. Thus, if we were to
+investigate life expectancy models further, we should explore the
+inclusion additional predictors.
 
 This conclusion wraps up The First Circle: Linear Regression. We strayed
 a bit from ordinary linear regression by including random effects, using
@@ -1196,6 +1221,13 @@ Adults in the UK.” *The Lancet Diabetes & Endocrinology* 6 (12): 944–53.
 
 Cameron, A Colin, and Pravin K Trivedi. 2005. *Microeconometrics:
 Methods and Applications*. Cambridge university press.
+
+</div>
+
+<div id="ref-cunningham2021causal" class="csl-entry">
+
+Cunningham, Scott. 2021. *Causal Inference: The Mixtape*. Yale
+university press.
 
 </div>
 
