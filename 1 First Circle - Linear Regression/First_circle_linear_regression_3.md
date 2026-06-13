@@ -885,7 +885,7 @@ But the estimation of effects on the response is not a predictive
 problem; it is a causal inference problem, and, crucially, models that
 are good at predicting the response might not be good at causal
 inference, and vice versa. To provide a simple example, let us assume
-that the simple linear model $Y = X + Z + \varepsilon$, where
+that the linear model $Y = X + Z + \varepsilon$, where
 $\varepsilon \sim N(0, \sigma^2)$, is the actual generating process.
 Hence, to accurately predict $Y$, we want to use the model
 $Y \sim X + Z$. But let us assume that $Z$ causally influences $Y$ and
