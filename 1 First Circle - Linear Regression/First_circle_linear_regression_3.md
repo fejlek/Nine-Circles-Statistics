@@ -877,10 +877,9 @@ additional predictors in the model.
 As the last step of our project, we will assess the effect of our
 predictors on the response in our model. Now, we need to keep an
 important fact in mind. In this project, we created this model primarily
-for prediction; we included all the variables in the model so that the
-total parameter count was reasonable with respect to the effective
-sample size. Indeed, we have obtained a model that generalizes
-reasonably well.
+for prediction; we included all the variables in the model in such a way that 
+the total parameter count was adequate with respect to the effective
+sample size. Indeed, we have obtained a model that generalizes pretty well.
 
 But the estimation of effects on the response is not a predictive
 problem; it is a causal inference problem, and, crucially, models that
