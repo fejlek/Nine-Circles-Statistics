@@ -895,7 +895,7 @@ is incorrect for estimating the effect of $X$ on $Y$, because some of
 the effect of $X$ will be incorporated in the effect of $Z$! The correct
 model for causal inference about the effect of $X$ here is simply $Y \sim X$.
 
-This simple example also shows us that to get a valid causal inference,
+This trivial example also shows us that to get a valid causal inference,
 we also need a *causal model* such as a directed acyclic graph (DAG)
 (Cunningham 2021). For example, the causal model for our dataset could
 look like this (<https://www.dagitty.net>)
