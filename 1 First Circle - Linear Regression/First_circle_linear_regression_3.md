@@ -908,9 +908,9 @@ exposure (the effect we want to estimate); white nodes are control
 variables, and arrows denote causal relationships. Now, this model is
 definitely a simplification; many relationships are actually
 bidirectional (which can be modeled using lagged variables), and we
-assume that all unobservables are incorporated in the fixed effect
-**Year** and random effect **Country** (notice that there are no
-relationships between it and other covariates, since we assume that
+assume that all unobservables are incorporated in the fixed effects
+**Year** and random effects **Country** (notice that there are no
+relationships between **Country** and other covariates, since we assume that
 random effects are uncorrelated with other covariates). 
 
 The tool *dagitty* also evaluated this model and determined that it is correctly
