@@ -8,7 +8,7 @@ Jiří Fejlek
 
 <br/> In this project, we will demonstrate the application of linear
 regression and some of its extensions (we will eventually move to
-panel-data models, and the final model will be a mixed-effects model).
+panel data models, and the final model will be a mixed effects model).
 Our objective will be to build a model for life expectancy using health,
 immunization, and economic and demographic data about 179 countries. We
 will explore whether the model obtained would be useful for predicting
