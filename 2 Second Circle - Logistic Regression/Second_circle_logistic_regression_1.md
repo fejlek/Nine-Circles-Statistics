@@ -6,37 +6,50 @@ Jiří Fejlek
 2025-06-02
 <br/>
 
-<br/> In this project, we will examine modeling binary response data
+<br/> In this project, we will examine how to model binary response data
 using logistic regression. As we will see in a moment, the dataset we
 will use in this demonstration contains a significant portion of missing
-values. Thus, we will also demonstrate the usage of both single and
+values. Thus, we will also demonstrate the use of both single and
 multiple imputation methods. Our primary objective will be to develop a
 model that predicts the likelihood of developing coronary heart disease.
 We will also be interested in which predictors seem to have the greatest
 effect on the predictions.
 
 We will split this presentation into three parts. In the first part, we
-will describe the data preparation and exploration and then fit the
-model with missing data using both a complete case approach. In the
-second part, we will show both single and multiple imputation
-approaches, and in the final part, we will evaluate the final model and
-discuss the results. <br/>
+will describe data preparation and exploration, and then fit the model
+with missing data using both a complete case approach. In the second
+part, we will show both single and multiple imputation approaches, and
+in the final part, we will evaluate the final model and discuss the
+results. <br/>
+
+## Table of Contents
+- [Cardiovascular study on residents of the town of Framingham,
+  Massachusetts](#cardiovascular-study-on-residents-of-the-town-of-framingham-massachusetts)
+- [Initial Data Exploration](#initial-data-exploration)
+- [Complete case analysis](#complete-case-analysis)
+  - [Significance of Predictors](#significance-of-predictors)
+  - [Predicted Marginal Effects](#predicted-marginal-effects)
+  - [Testing Nonlinearities and
+    Interactions](#testing-nonlinearities-and-interactions)
+  - [Model Diagnostics](#model-diagnostics)
+- [References](#references)
 
 ## Cardiovascular study on residents of the town of Framingham, Massachusetts
 
-<br/> In this project, we will use the dataset obtained from
+In this project, we will use the dataset obtained from
 <https://www.kaggle.com/datasets/dileep070/heart-disease-prediction-using-logistic-regression/data>
-based on Framingham Heart Study <https://www.framinghamheartstudy.org>.
+based on the Framingham Heart Study
+<https://www.framinghamheartstudy.org>.
 
-The Framingham Heart Study is a long-term, ongoing cardiovascular cohort
-study of residents in the city of Framingham, Massachusetts, which began
-in 1948 to identify factors that contribute to cardiovascular diseases,
-such as the effects of high blood pressure and smoking. It was actually
-this study that helped discover these now commonly known associations.
+The Framingham Heart Study is a long-term cardiovascular cohort study of
+residents in the city of Framingham, Massachusetts, which began in 1948
+to identify factors contributing to cardiovascular diseases, such as the
+effects of high blood pressure and smoking. It was actually this study
+that helped uncover these now-commonly known associations.
 
 The data contains the following information about 4,238 individuals.
 Each individual was examined and then followed for 10 years for the
-outcome of developing coronary heart disease. <br/>
+outcome of developing coronary heart disease.
 
 - **Sex**
 - **Age** - Age (at the time of examination)
@@ -57,10 +70,10 @@ outcome of developing coronary heart disease. <br/>
 - **Dia BP** - Diastolic blood pressure
 - **BMI** - Body Mass Index
 - **Glucose** - glucose level
-- **TenYearCHD** - Whether or not a coronary heart disease occurred in
-  10 years after examination
+- **TenYearCHD** - Whether or not coronary heart disease occurred in 10
+  years after examination
 
-<br/> First, let’s load the dataset. <br/>
+First, let’s load the dataset. <br/>
 
 ``` r
 library(readr)
@@ -83,8 +96,8 @@ head(framingham)
 
 ## Initial Data Exploration
 
-<br/> As always, we start with a data exploration. Let us check the size
-of the dataset.
+As always, we start with a data exploration. Let us check the size of
+the dataset. <br/>
 
 ``` r
 dim(framingham)
@@ -92,7 +105,7 @@ dim(framingham)
 
     ## [1] 4238   16
 
-<br/> We have 4238 observations, one response we wish to model/predict
+We have 4238 observations, one response we wish to model/predict
 (**TenYearCHD**), and 15 candidates for predictors. Let’s check whether
 any dates are missing. <br/>
 
@@ -108,8 +121,8 @@ any(is.na(framingham))
 
     ## [1] TRUE
 
-<br/> Some values are missing; let us check how many observations have
-some missing values and the pattern of missing data. <br/>
+Some values are missing; let us check how many observations have some
+missing values and the pattern of missing data. <br/>
 
 ``` r
 library(mice)
@@ -165,19 +178,18 @@ md.pattern(framingham, rotate.names = TRUE)
     ## 1             1         0   1          1       1      1         1       1   1
     ##               0         1  19         29      50     53       105     388 645
 
-<br/> We see no obvious pattern for missing data. The fraction of rows
-with some missing values is 582/4238 ~ 0.14. This is a significantly
-greater value than 3%, which is a rule of thumb value for which it
-should not matter that much how the observation with missing values is
-treated. Hence, we may need to employ a multiple imputation: data may
-not be missing completely at random (MCAR), and if so, then case
-deletion or single imputation may cause a significant bias (see *Stef
-Van Buuren. Flexible imputation of missing data. CRC press, 2018*).
+We see no obvious pattern for missing data. The fraction of rows with at
+least one missing value is 582/4238 ~ 0.14. This is a significantly
+greater value than 3%, the rule-of-thumb value for which it should not
+matter much how observations with missing values are treated (Harrell et
+al. 2001). Hence, we may need to employ multiple imputation: the data
+may not be missing completely at random (MCAR), and, if so, case
+deletion or single imputation may cause significant bias (Rubin 2018).
 
 Before we perform any imputation, we have to analyze predictors.
 Improper predictors could easily ruin the subsequent imputation process.
-We first rename the columns a little and convert the variables to proper
-types. <br/>
+We first rename the columns slightly and convert the variables to their
+proper types. <br/>
 
 ``` r
 library(tibble)
@@ -186,8 +198,6 @@ library(dplyr)
 framingham <- framingham %>% rename(Sex = male )  %>% rename(Age = age ) %>% rename(Smoker = currentSmoker ) %>% rename(Stroke = prevalentStroke) %>% rename(Hyp = prevalentHyp ) %>% rename(Diab = diabetes ) %>% rename(TCHD = TenYearCHD  ) %>% rename(SysP = sysBP) %>% rename(DiaP = diaBP) %>%
 rename(Hrate = heartRate )  %>% rename(Cig = cigsPerDay  ) %>% rename(Chol = totChol ) %>% rename(Meds = BPMeds )  %>% rename(Edu = education  ) %>% rename(Gluc = glucose )
 ```
-
-<br/>
 
 ``` r
 framingham$Sex <- factor(framingham$Sex)
@@ -201,71 +211,44 @@ framingham$Diab <- factor(framingham$Diab)
 framingham$TCHD <- factor(framingham$TCHD)
 ```
 
-<br/> Next, we check the values of the predictors and their
-distributions. <br/>
+Next, we check the values of the predictors and their distributions.
+<br/>
 
 ``` r
-summary(framingham$Age)
+summary(framingham[-16])
 ```
 
-    ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
-    ##   32.00   42.00   49.00   49.58   56.00   70.00
+    ##      Sex            Age          Edu       Smoker        Cig        
+    ##  Female:2419   Min.   :32.00   1   :1720   0:2144   Min.   : 0.000  
+    ##  Male  :1819   1st Qu.:42.00   2   :1253   1:2094   1st Qu.: 0.000  
+    ##                Median :49.00   3   : 687            Median : 0.000  
+    ##                Mean   :49.58   4   : 473            Mean   : 9.003  
+    ##                3rd Qu.:56.00   NA's: 105            3rd Qu.:20.000  
+    ##                Max.   :70.00                        Max.   :70.000  
+    ##                                                     NA's   :29      
+    ##    Meds      Stroke   Hyp      Diab          Chol            SysP      
+    ##  0   :4061   0:4213   0:2922   0:4129   Min.   :107.0   Min.   : 83.5  
+    ##  1   : 124   1:  25   1:1316   1: 109   1st Qu.:206.0   1st Qu.:117.0  
+    ##  NA's:  53                              Median :234.0   Median :128.0  
+    ##                                         Mean   :236.7   Mean   :132.4  
+    ##                                         3rd Qu.:263.0   3rd Qu.:144.0  
+    ##                                         Max.   :696.0   Max.   :295.0  
+    ##                                         NA's   :50                     
+    ##       DiaP             BMI            Hrate             Gluc       
+    ##  Min.   : 48.00   Min.   :15.54   Min.   : 44.00   Min.   : 40.00  
+    ##  1st Qu.: 75.00   1st Qu.:23.07   1st Qu.: 68.00   1st Qu.: 71.00  
+    ##  Median : 82.00   Median :25.40   Median : 75.00   Median : 78.00  
+    ##  Mean   : 82.89   Mean   :25.80   Mean   : 75.88   Mean   : 81.97  
+    ##  3rd Qu.: 89.88   3rd Qu.:28.04   3rd Qu.: 83.00   3rd Qu.: 87.00  
+    ##  Max.   :142.50   Max.   :56.80   Max.   :143.00   Max.   :394.00  
+    ##                   NA's   :19      NA's   :1        NA's   :388
 
-``` r
-summary(framingham$Cig)
-```
+<img src="Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-8-1.png" style="display: block; margin: auto;" /><img src="Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-8-2.png" style="display: block; margin: auto;" />
 
-    ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA's 
-    ##   0.000   0.000   0.000   9.003  20.000  70.000      29
-
-``` r
-summary(framingham$Chol)
-```
-
-    ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA's 
-    ##   107.0   206.0   234.0   236.7   263.0   696.0      50
-
-``` r
-summary(framingham$SysP)
-```
-
-    ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
-    ##    83.5   117.0   128.0   132.4   144.0   295.0
-
-``` r
-summary(framingham$DiaP)
-```
-
-    ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
-    ##   48.00   75.00   82.00   82.89   89.88  142.50
-
-``` r
-summary(framingham$BMI)
-```
-
-    ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA's 
-    ##   15.54   23.07   25.40   25.80   28.04   56.80      19
-
-``` r
-summary(framingham$Hrate)
-```
-
-    ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA's 
-    ##   44.00   68.00   75.00   75.88   83.00  143.00       1
-
-``` r
-summary(framingham$Gluc)
-```
-
-    ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA's 
-    ##   40.00   71.00   78.00   81.97   87.00  394.00     388
-
-<img src="Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-8-1.png" style="display: block; margin: auto;" /><img src="Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-8-2.png" style="display: block; margin: auto;" /><img src="Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-8-3.png" style="display: block; margin: auto;" /><img src="Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-8-4.png" style="display: block; margin: auto;" /><img src="Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-8-5.png" style="display: block; margin: auto;" /><img src="Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-8-6.png" style="display: block; margin: auto;" /><img src="Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-8-7.png" style="display: block; margin: auto;" /><img src="Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-8-8.png" style="display: block; margin: auto;" /><img src="Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-8-9.png" style="display: block; margin: auto;" /><img src="Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-8-10.png" style="display: block; margin: auto;" /><img src="Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-8-11.png" style="display: block; margin: auto;" /><img src="Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-8-12.png" style="display: block; margin: auto;" /><img src="Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-8-13.png" style="display: block; margin: auto;" /><img src="Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-8-14.png" style="display: block; margin: auto;" /><img src="Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-8-15.png" style="display: block; margin: auto;" />
-
-<br/> Overall, the values and their distributions seem reasonable. Some
-minima and maxima are pretty extreme, but none of these seem impossible
-to occur. Several factors, namely **BP Meds**, **Diabetes**, and
-especially **Prevalent Stroke**, have low number of cases  
+Overall, the values and their distributions seem reasonable. Some minima
+and maxima are pretty extreme, but none of these seem impossible to
+occur. Several factors, namely **BP Meds**, **Diabetes**, and especially
+**Prevalent Stroke**, have low number of cases  
 <br/>
 
     ## [1] 25
@@ -274,11 +257,10 @@ especially **Prevalent Stroke**, have low number of cases
 
     ## [1] 124
 
-<br/> which could hurt the accuracy of their estimates. Still, these
-predictors seem too important to be just ignored.
-
-Let us conclude this initial data exploration with redundancy analysis
-(on complete cases). <br/>
+which could hurt the accuracy of their estimates. Still, these
+predictors seem too important to ignore. Let us conclude this initial
+data exploration with redundancy analysis (on complete cases) (Harrell
+et al. 2001). <br/>
 
 ``` r
 library(Hmisc)
@@ -290,7 +272,7 @@ redun(~.- TCHD ,data = framingham[rowSums(is.na(framingham)) == 0,],nk = 4, r2 =
     ## 
     ## ~Sex + Age + Edu + Smoker + Cig + Meds + Stroke + Hyp + Diab + 
     ##     Chol + SysP + DiaP + BMI + Hrate + Gluc
-    ## <environment: 0x000001b23de69c80>
+    ## <environment: 0x0000025719411700>
     ## 
     ## n: 3656  p: 15   nk: 4 
     ## 
@@ -309,9 +291,9 @@ redun(~.- TCHD ,data = framingham[rowSums(is.na(framingham)) == 0,],nk = 4, r2 =
     ## 
     ## No redundant variables
 
-<br/> No variables seem overly redundant. However, we will remove
-**Current Smoker** and keep just **Cigs Per Day** since no smoker
-reports that he/she smokes zero cigarettes per day on average.  
+No variables seem overly redundant. However, we will remove **Current
+Smoker** and keep just **Cigs Per Day** since no smoker reports that
+he/she smokes zero cigarettes per day on average.  
 <br/>
 
 ``` r
@@ -320,30 +302,31 @@ which(framingham$Smoker == 1 & framingham$Cig == 0)
 
     ## integer(0)
 
-<br/> Thus, we opt to quantify the effect of smoking in our model using
-a more informative numerical predictor **Cigs Per Day.** Otherwise, we
-will consider all predictors for modeling. <br/>
+Thus, we opt to quantify the effect of smoking in our model using a more
+informative numerical predictor **Cigs Per Day.** Otherwise, we will
+consider all predictors for modeling. <br/>
 
 ## Complete case analysis
 
-<br/> Before we proceed to model with the imputation of missing values,
-we will perform *complete case analysis* (listwise deletion) for future
+Before we proceed to model with the imputation of missing values, we
+will perform *complete case analysis* (listwise deletion) for future
 comparison with other approaches. We should remember that complete case
 analysis is valid under the missing completely at random (MCAR)
 condition (the probability of being missing is the same for all cases),
 i.e., complete case analysis under MCAR produces unbiased regression
-estimates. If this is not the case (missingness depends on the data or
-it depends on some unobserved variables), then these estimates may be
-severely biased. Another disadvantage of complete case analysis is that
-it is potentially wasteful (standard errors and significance levels are
-often larger relative to all available data). On the other hand,
-complete case analysis is very simple to perform. <br/>
+estimates (Rubin 2018). If this is not the case (missingness depends on
+the data or it depends on some unobserved variables), then these
+estimates may be severely biased. Another disadvantage of complete case
+analysis is that it is potentially wasteful (standard errors and
+significance levels are usually larger relative to all available data).
+On the other hand, complete case analysis is very simple to perform.
+<br/>
 
 ``` r
 framingham_complete <- framingham[rowSums(is.na(framingham)) == 0,]
 ```
 
-<br/> Before we select our mode, let us check our effective sample size.
+Before we select our model, let us check our effective sample size.
 <br/>
 
 ``` r
@@ -359,10 +342,10 @@ summary(framingham_complete$TCHD)
     ##    0    1 
     ## 3099  557
 
-<br/> The effective sample size for binary response is the minimum of
-the two values; in our case, it is 557 (even though we technically have
-3656 observations). Thus, our data reasonably support approximately
-557/10 ~ 56 to 557/20 ~ 28 parameters.
+The effective sample size for binary response is the minimum of the two
+values; in our case, it is 557 (even though we technically have 3656
+observations). Thus, our data reasonably support approximately 557/10 ~
+56 to 557/20 ~ 28 parameters.
 
 Since we have only 14 predictors, we can include some nonlinearities and
 interactions in the model. We will consider restricted cubic splines
@@ -377,10 +360,12 @@ library(rms)
 full_model <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + rcs(Cig,4) + Meds + Stroke + Hyp + Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4) + Age:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc) + Sex:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc), family = binomial, framingham_complete)
 ```
 
-<br/> If we were only interested in testing a hypothesis whether a given
-variable (e.g., **Cigs per day**) has a significant effect on the
-probability of developing **TCHD**, we can use a likelihood ratio test
-based on the full model.  
+### Significance of Predictors
+
+If we were interested in testing a hypothesis whether a given variable
+(e.g., **Cigs per day**) has a significant effect on the probability of
+developing **TCHD**, we can use a likelihood ratio test based on the
+full model.  
 <br/>
 
 ``` r
@@ -407,19 +392,18 @@ anova(model_no_cig,full_model)
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
-<br/> Let us list these tests for all predictors in the model. We also
-include adjusted p-values for multiple comparisons if we were to use
-these values to “discover” significant predictors to reduce the chance
-of false discoveries. The price of this adjustment is losing the
-statistical power,i.e., we are more likely to not detect predictors in
-the model that have an effect on the response. Bonferroni and
-Bonferroni-Holm (Bonferroni-Holm is uniformly more powerful than
-Bonferroni. Thus, there is often little reason to use Bonferroni)
-corrections control for family-wise error (probability of making one or
-more false discoveries). Benjamini–Yekutieli procedure controls for
-false discovery rate, i.e., the expected proportion of false
-discoveries, and thus, it is less stringent and sacrifices less power.
-<br/>
+Let us list these tests for all predictors in the model. We also include
+adjusted p-values for multiple comparisons, if we were to use these
+values to “discover” significant predictors to reduce the chance of
+false discoveries. The price of this adjustment is a loss of statistical
+power. The Bonferroni and Bonferroni-Holm corrections control for
+family-wise error (probability of having at least one false positive).
+The Bonferroni-Holm correction is uniformly more powerful than the
+Bonferroni correction. Thus, there is little reason to use the widely
+known Bonferroni correction (Aickin and Gensler 1996). The
+Benjamini–Yekutieli procedure (Benjamini and Yekutieli 2001) controls
+the false discovery rate, i.e., the expected proportion of false
+positives, and thus is less stringent and sacrifices less power. <br/>
 
 ``` r
 c1 <- c('Sex','Age','Edu','Cig','Meds','Stroke','Hyp','Diab','Chol','Sysp','DiaP','BMI','Hrate','Gluc')
@@ -449,18 +433,20 @@ res
     ## 13    Hrate  0.50901          1             1               1
     ## 14     Gluc   0.0313    0.43821        0.2817         0.23748
 
-<br/> We see that, regardless of the adjustment method, we consider
+We see that, regardless of the adjustment method, we would consider
 **Sex**, **Age**, **Cigs Per Day**, and **Sys BP** to be significant
 risk factors.
 
+### Predicted Marginal Effects
+
 Let us examine the predicted marginal effects (along with their
 confidence intervals) based on our model. We will obtain the plots using
-*sjPlot* package
+the *sjPlot* package
 (<https://strengejacke.github.io/sjPlot/articles/plot_marginal_effects.html>).
-These plots are a bit more involved since the interactions with Age and
-Sex are present in the model. We should keep in mind that by default,
-continuous variables are set to their mean, while factors are set to
-their reference level in these plots. <br/>
+These plots are a bit more involved since the interactions with **Age**
+and **Sex** are present in the model. We should keep in mind that, by
+default, continuous variables are set to their means, while factors are
+set to their reference levels in these plots. <br/>
 
 ``` r
 library(sjPlot)
@@ -611,16 +597,17 @@ plot_model(full_model, type = "pred", terms = c('Gluc','Sex','Age [40,55,70]'))
 
 ![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-18-21.png)<!-- -->
 
-<br/> Looking at the plots, we can notice that **Sex**,**Age**, **Cig**,
+Looking at the plots, we can notice that **Sex**,**Age**, **Cig**,
 **Chol**, **SysP**, **DiaP**, and **Gluc** (predictors that were
-somewhat “significant”) seem to have a noticeable effect on the
-probability of TCHD. Interestingly enough, **DiaP** is the only
-numerical predictor that seems to have a strong nonlinear effect.
-Factors **Stroke** and **Diab** seem to have an effect, but the
-uncertainty of predictions is too high (probably because of the low
-number of cases, as we discussed earlier). Variables **Edu**, **Meds**,
-**Hyp**, **BMI**, **Hrate** seem to have from the plots very little
-effect.
+somewhat “significant”) have a noticeable effect on the probability of
+TCHD in the model. Interestingly enough, **DiaP** is the only numerical
+predictor that seems to have a strong nonlinear effect. Factors
+**Stroke** and **Diab** seem to have an effect, but the uncertainty of
+predictions is too high (probably because of the low number of cases, as
+we discussed earlier). Variables **Edu**, **Meds**, **Hyp**, **BMI**,
+**Hrate** seem to have from the plots very little effect.
+
+### Testing Nonlinearities and Interactions
 
 We can check that **DiaP** indeed has a significant nonlinear part, and
 we will also test all nonlinear terms in general. <br/>
@@ -674,12 +661,12 @@ anova(model_no_nonlinear,full_model)
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
-<br/> Variable **DiaP** indeed appears to have a significant nonlinear
+Variable **DiaP** indeed appears to have a significant nonlinear
 component, and the overall test is also significant.
 
-Concerning the interactions in the model, none of them seemed that
-significant from the plots. Let us perform the corresponding likelihood
-ratio test. <br/>
+Regarding the interactions in the model, none of them seemed significant
+based on the plots. Let us perform the corresponding likelihood ratio
+test. <br/>
 
 ``` r
 model_no_interactions <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + rcs(Cig,4) + Meds + Stroke + Hyp + Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4), family = binomial, framingham_complete)
@@ -701,11 +688,11 @@ anova(model_no_interactions,full_model)
     ## 1      3624     2727.7                     
     ## 2      3604     2710.1 20   17.673   0.6089
 
-<br/> The test seems noticeably nonsignificant. Thus, we can consider
-removing all interactions from our **TCHD** prediction model. Let us
-test whether we would include interactions in the cross-validation that
-would repeat in our modeling process (we will choose a p-value cut-off
-of 0.10). <br/>
+The test seems noticeably nonsignificant. Thus, we can consider removing
+all interactions from our **TCHD** prediction model. Let us test whether
+we would include interactions in the cross-validation that would repeat
+in our modeling process (we will choose a p-value cut-off of 0.10).
+<br/>
 
 ``` r
 library(caret)
@@ -746,7 +733,7 @@ mean(dev_matrix > qchisq(0.90,20))
 
     ## [1] 0.003
 
-<br/> We observe that almost no cross-validation samples would retain
+We observe that almost no cross-validation samples would retain
 interactions in the model. We can repeat the same test for nonlinear
 terms. <br/>
 
@@ -792,8 +779,10 @@ mean(dev_matrix > qchisq(0.90,15))
 
     ## [1] 0.85
 
-<br/> We observe that almost all cross-validation samples would keep
-nonlinear terms in the model.
+We observe that almost all cross-validation samples would keep nonlinear
+terms in the model.
+
+### Model Diagnostics
 
 To conclude Part One of this demonstration, let us have a look at the
 model diagnostics. Logistic regression of a binary response does not
@@ -806,15 +795,13 @@ variable bias or the choice of the link function (which is in our case
 An interesting fact about logistic regression is that omitted variable
 bias is caused by both missing predictors correlated with $X$ (as in
 linear regression) but also by uncorrelated omitted variables (unlike
-linear regression, see *C. Mood. Logistic regression: Why we cannot do
-what we think we can do, and what we can do about it. European
-sociological review 26.1 (2010): 67-82.* for more details). However,
-this second source of bias is always downwards (i.e., other effects will
-tend to look smaller than they actually are).
+linear regression, see (Mood 2010) for more details). However, this
+second source of bias is always downwards (i.e., other effects will tend
+to look smaller than they actually are).
 
-A usual method for assessing the model misspecification in linear
-regression is an analysis of residuals. However, plain residual plots
-are much less helpful in the case of binary regression. <br/>
+A usual method for assessing model misspecification in linear regression
+is an analysis of residuals. However, plain residual plots are much less
+helpful for binary regression. <br/>
 
 ``` r
 plot(predict(full_model,type = 'response'),residuals(full_model,type = 'response'),xlab = 'Predicted probabilities', ylab = 'Raw residuals')
@@ -822,12 +809,13 @@ plot(predict(full_model,type = 'response'),residuals(full_model,type = 'response
 
 ![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-23-1.png)<!-- -->
 
-<br/> Here, we plotted so-called **raw residuals** (observed outcomes
-minus predicted probabilities of outcomes) vs. predicted probabilities.
-These residuals have values in the interval \[-1,1\] that are quite
-apparently not normally distributed (and they cannot be, since apart
-from being bounded to \[-1,1\], they are inherently heteroskedastic,
-since the variance of binary outcome is $p(1-p)$) <br/>
+Here, we plotted so-called **raw residuals** (observed outcomes minus
+predicted probabilities of outcomes) vs. predicted probabilities (Dunn,
+Smyth, et al. 2018). These residuals have values in the interval
+\[-1,1\] that are quite apparently not normally distributed (and they
+cannot be, since apart from being bounded to \[-1,1\], they are
+inherently heteroskedastic, since the variance of a binary outcome is
+$p(1-p)$) <br/>
 
 ``` r
 qqnorm(residuals(full_model,type = 'response'))
@@ -836,9 +824,9 @@ qqline(residuals(full_model,type = 'response'))
 
 ![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-24-1.png)<!-- -->
 
-<br/> To obtain asymptotically normal residuals, we first need to
-normalize them by their expected standard deviation
-$\sqrt{\hat{p}(1-\hat{p})}$ (obtaining so-called *Pearson residuals* in
+To obtain asymptotically normal residuals, we first need to normalize
+them by their expected standard deviation $\sqrt{\hat{p}(1-\hat{p})}$
+(obtaining so-called *Pearson residuals* (Dunn, Smyth, et al. 2018) in
 the process <br/>
 
 ``` r
@@ -846,9 +834,9 @@ pearson_res <-  residuals(full_model,type = 'response')/sqrt(predict(full_model,
 # or simply pearson_res <- residuals(full_model,type = 'pearson')
 ```
 
-<br/> and then group them by the value of the linear predictor
-$X\hat{\beta}$ into bins and average them over these bins (letting the
-central limit theorem kick in) <br/>
+and then group them by the value of the linear predictor $X\hat{\beta}$
+into bins and average them over these bins (letting the central limit
+theorem kick in) (Faraway 2016) <br/>
 
 ``` r
 # group by quantiles of the linear predictor
@@ -866,15 +854,15 @@ plot(aggregate(predict(full_model,type = 'response'),list(grouping),mean)[,2],ag
 
 ![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-26-2.png)<!-- -->
 
-<br/> An alternative to binning the data is to use so-called *quantile
+An alternative to binning the data is to use so-called *quantile
 residuals*
 (<https://cran.r-project.org/web/packages/DHARMa/vignettes/DHARMa.html#lm-and-glm>).
-These are based on a simmulation approach similar to parametric
-bootstrap. First, new responses are generated from the model and then
-then the cumulative probability of the observed outcome is calculated
-from the simulated responses. Provided that the model is correctly
-specified these values should have uniform distribution. Quantile
-residuals can be easily computed in R using the package *DHARMa* <br/>
+These are based on a simulation approach similar to parametric
+bootstrap. First, new responses are generated from the model, and then
+the cumulative probability of the observed outcome is calculated from
+the simulated responses. Provided that the model is correctly specified,
+these values should have a uniform distribution. Quantile residuals can
+be easily computed in R using the package *DHARMa* <br/>
 
 ``` r
 library(DHARMa)
@@ -884,190 +872,80 @@ plot(simulationOutput)
 
 ![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-27-1.png)<!-- -->
 
-<br/> We see no obvious problems, But before we celebrate about having
-well-specified model, consider a trivial model model: <br/>
+We see no obvious problems. But before we celebrate having a
+well-specified model, consider a trivial model: <br/>
 
 ``` r
-full_model <- glm(TCHD ~ 1, family = binomial, framingham_complete)
-simulationOutput_null <- simulateResiduals(fittedModel = full_model)
-plot(simulationOutput_null)
+naive_model <- glm(TCHD ~ 1, family = binomial, framingham_complete)
+simulationOutput_naive <- simulateResiduals(fittedModel = naive_model)
+plot(simulationOutput_naive)
 ```
 
 ![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-28-1.png)<!-- -->
 
-<br/> There are no issues overall as well for this obviously wrong
-model. However, if we look more closely and plot quantile residuals
-against predictors <br/>
+There are no issues overall for this obviously wrong model. However, if
+we look more closely and plot quantile residuals against particular
+predictors <br/>
 
 ``` r
 par(mfrow = c(1, 2))
-
-plotResiduals(simulationOutput, framingham_complete$Sex)
-plotResiduals(simulationOutput_null, framingham_complete$Sex)
+# our model
+plotResiduals(simulationOutput, framingham_complete$Meds)
+# trivial model
+plotResiduals(simulationOutput_naive, framingham_complete$Meds)
 ```
 
 ![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-29-1.png)<!-- -->
 
 ``` r
-plotResiduals(simulationOutput, framingham_complete$Age)
-plotResiduals(simulationOutput_null, framingham_complete$Age)
+# our model
+plotResiduals(simulationOutput, framingham_complete$Diab)
+# trivial model
+plotResiduals(simulationOutput_naive, framingham_complete$Diab)
 ```
 
 ![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-29-2.png)<!-- -->
 
 ``` r
-plotResiduals(simulationOutput, framingham_complete$Edu)
-plotResiduals(simulationOutput_null, framingham_complete$Edu)
+# our model
+plotResiduals(simulationOutput, framingham_complete$SysP)
+# trivial model
+plotResiduals(simulationOutput_naive, framingham_complete$SysP)
 ```
 
 ![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-29-3.png)<!-- -->
 
-``` r
-plotResiduals(simulationOutput, framingham_complete$Cig)
-plotResiduals(simulationOutput_null, framingham_complete$Cig)
-```
-
-![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-29-4.png)<!-- -->
-
-``` r
-plotResiduals(simulationOutput, framingham_complete$Meds)
-plotResiduals(simulationOutput_null, framingham_complete$Meds)
-```
-
-![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-29-5.png)<!-- -->
-
-``` r
-plotResiduals(simulationOutput, framingham_complete$Stroke)
-plotResiduals(simulationOutput_null, framingham_complete$Stroke)
-```
-
-![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-29-6.png)<!-- -->
-
-``` r
-plotResiduals(simulationOutput, framingham_complete$Hyp)
-plotResiduals(simulationOutput_null, framingham_complete$Hyp)
-```
-
-![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-29-7.png)<!-- -->
-
-``` r
-plotResiduals(simulationOutput, framingham_complete$Diab)
-plotResiduals(simulationOutput_null, framingham_complete$Diab)
-```
-
-![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-29-8.png)<!-- -->
-
-``` r
-plotResiduals(simulationOutput, framingham_complete$Chol)
-plotResiduals(simulationOutput_null, framingham_complete$Chol)
-```
-
-![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-29-9.png)<!-- -->
-
-``` r
-plotResiduals(simulationOutput, framingham_complete$SysP)
-plotResiduals(simulationOutput_null, framingham_complete$SysP)
-```
-
-![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-29-10.png)<!-- -->
-
-``` r
-plotResiduals(simulationOutput, framingham_complete$DiaP)
-plotResiduals(simulationOutput_null, framingham_complete$DiaP)
-```
-
-![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-29-11.png)<!-- -->
-
-``` r
-plotResiduals(simulationOutput, framingham_complete$BMI)
-plotResiduals(simulationOutput_null, framingham_complete$BMI)
-```
-
-![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-29-12.png)<!-- -->
-
-``` r
-plotResiduals(simulationOutput, framingham_complete$Hrate)
-plotResiduals(simulationOutput_null, framingham_complete$Hrate)
-```
-
-![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-29-13.png)<!-- -->
-
-``` r
-plotResiduals(simulationOutput, framingham_complete$Gluc)
-plotResiduals(simulationOutput_null, framingham_complete$Gluc)
-```
-
-![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-29-14.png)<!-- -->
-
-<br/> we see discrepancies for the trivial model (e.g., **Age**,
-**SysP**, **Hyp**, and **Diab** are visually quite apparent). Thus, one
-can detect misspecification from the residuals provided that if one
-*knows* where to look. We should note that *DHARMa* also provides
-goodness-of-fit tests based on quantile regression, e.g., <br/>
+we notice discrepancies for the trivial model. Thus, one can detect
+misspecification from the residuals provided that if one *knows* where
+to look. We should note that *DHARMa* also provides goodness-of-fit
+tests based on quantile regression, e.g., <br/>
 
 ``` r
 par(mfrow = c(1, 2))
+# our model
 plotResiduals(simulationOutput, framingham_complete$DiaP, quantreg =  TRUE)
-plotResiduals(simulationOutput_null, framingham_complete$DiaP, quantreg =  TRUE)
+# trivial model
+plotResiduals(simulationOutput_naive, framingham_complete$DiaP, quantreg =  TRUE)
 ```
 
 ![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-30-1.png)<!-- -->
 
-<br/> We can check the fit wrt. all numerical predictors in the model
-<br/>
+For the sake of completeness, let check the fit with respect to all
+predictors in the model. <br/>
 
-``` r
-par(mfrow = c(1, 1))
-plotResiduals(simulationOutput, framingham_complete$Age, quantreg =  TRUE)
-```
+![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-31-1.png)<!-- -->![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-31-2.png)<!-- -->
 
-![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-31-1.png)<!-- -->
+![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-32-1.png)<!-- -->![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-32-2.png)<!-- -->![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-32-3.png)<!-- -->
 
-``` r
-plotResiduals(simulationOutput, framingham_complete$Cig, quantreg =  TRUE)
-```
+Overall, we have not detected any obvious misspecification of our model
+(at least with respect to the predictors). Having discussed the
+misspecification, let us next examine influential observations using
+Cook’s distance. <br/>
 
-![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-31-2.png)<!-- -->
+<img src="Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-33-1.png" style="display: block; margin: auto;" />
 
-``` r
-plotResiduals(simulationOutput, framingham_complete$Chol, quantreg =  TRUE)
-```
-
-![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-31-3.png)<!-- -->
-
-``` r
-plotResiduals(simulationOutput, framingham_complete$SysP, quantreg =  TRUE)
-```
-
-![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-31-4.png)<!-- -->
-
-``` r
-plotResiduals(simulationOutput, framingham_complete$BMI, quantreg =  TRUE)
-```
-
-![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-31-5.png)<!-- -->
-
-``` r
-plotResiduals(simulationOutput, framingham_complete$Hrate, quantreg =  TRUE)
-```
-
-![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-31-6.png)<!-- -->
-
-``` r
-plotResiduals(simulationOutput, framingham_complete$Gluc, quantreg =  TRUE)
-```
-
-![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-31-7.png)<!-- -->
-
-<br/> Overall, we have not detected any obvious misspecification of our
-model (at least wrt. the predictors in our model). Having discussed the
-misspecification, let us examine influential observations using Cook’s
-distance next. <br/>
-
-<img src="Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-32-1.png" style="display: block; margin: auto;" />
-
-<br/> Some observations may be overly influential. Hence, let us test
-whether deleting them significantly changes the estimates. <br/>
+Some observations may be overly influential. Hence, let us test whether
+deleting them significantly changes the estimates. <br/>
 
 ``` r
 full_model_red1 <- glm(TCHD  ~ Sex + rcs(Age,4) + Edu + rcs(Cig,4) + Meds + Stroke + Hyp + Diab + rcs(Chol,4) + rcs(SysP,4) + rcs(DiaP,4) + rcs(BMI,4) + rcs(Hrate,4) + rcs(Gluc,4) + Age:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc) + Sex:(Cig + Stroke + Hyp + Diab + Chol + SysP + DiaP + BMI + Hrate + Gluc), family = binomial, framingham_complete[cooks.distance(full_model) < 0.02,])
@@ -1087,61 +965,61 @@ ci <- confint(full_model)
 cbind(round(coeff_delete,4),round(ci,4))
 ```
 
-    ##                          All CD<0.02 CD<0.01 CD<0.005        
-    ## (Intercept)          -1.7163 -8.9136 -8.9136  -8.9136 -1.8074
-    ## SexMale              -1.7163 -1.9001 -1.9001  -1.9001 -1.6270
-    ## rcs(Age, 4)Age       -1.7163  0.1645  0.1645   0.1645 -1.8074
-    ## rcs(Age, 4)Age'      -1.7163 -0.0240 -0.0240  -0.0240 -1.6270
-    ## rcs(Age, 4)Age''     -1.7163 -0.0277 -0.0277  -0.0277 -1.8074
-    ## Edu.L                -1.7163 -0.0060 -0.0060  -0.0060 -1.6270
-    ## Edu.Q                -1.7163  0.1739  0.1739   0.1739 -1.8074
-    ## Edu.C                -1.7163  0.0152  0.0152   0.0152 -1.6270
-    ## rcs(Cig, 4)Cig       -1.7163  0.0298  0.0298   0.0298 -1.8074
-    ## rcs(Cig, 4)Cig'      -1.7163 -0.0166 -0.0166  -0.0166 -1.6270
-    ## Meds1                -1.7163  0.1143  0.1143   0.1143 -1.8074
-    ## Stroke1              -1.7163 -4.5127 -4.5127  -4.5127 -1.6270
-    ## Hyp1                 -1.7163 -0.4834 -0.4834  -0.4834 -1.8074
-    ## Diab1                -1.7163  2.4763  2.4763   2.4763 -1.6270
-    ## rcs(Chol, 4)Chol     -1.7163  0.0037  0.0037   0.0037 -1.8074
-    ## rcs(Chol, 4)Chol'    -1.7163  0.0032  0.0032   0.0032 -1.6270
-    ## rcs(Chol, 4)Chol''   -1.7163  0.0049  0.0049   0.0049 -1.8074
-    ## rcs(SysP, 4)SysP     -1.7163  0.0046  0.0046   0.0046 -1.6270
-    ## rcs(SysP, 4)SysP'    -1.7163 -0.0798 -0.0798  -0.0798 -1.8074
-    ## rcs(SysP, 4)SysP''   -1.7163  0.1988  0.1988   0.1988 -1.6270
-    ## rcs(DiaP, 4)DiaP     -1.7163  0.0144  0.0144   0.0144 -1.8074
-    ## rcs(DiaP, 4)DiaP'    -1.7163  0.1432  0.1432   0.1432 -1.6270
-    ## rcs(DiaP, 4)DiaP''   -1.7163 -0.3416 -0.3416  -0.3416 -1.8074
-    ## rcs(BMI, 4)BMI       -1.7163 -0.0583 -0.0583  -0.0583 -1.6270
-    ## rcs(BMI, 4)BMI'      -1.7163  0.2653  0.2653   0.2653 -1.8074
-    ## rcs(BMI, 4)BMI''     -1.7163 -0.7437 -0.7437  -0.7437 -1.6270
-    ## rcs(Hrate, 4)Hrate   -1.7163  0.0186  0.0186   0.0186 -1.8074
-    ## rcs(Hrate, 4)Hrate'  -1.7163 -0.1267 -0.1267  -0.1267 -1.6270
-    ## rcs(Hrate, 4)Hrate'' -1.7163  0.3229  0.3229   0.3229 -1.8074
-    ## rcs(Gluc, 4)Gluc     -1.7163 -0.0110 -0.0110  -0.0110 -1.6270
-    ## rcs(Gluc, 4)Gluc'    -1.7163 -0.0184 -0.0184  -0.0184 -1.8074
-    ## rcs(Gluc, 4)Gluc''   -1.7163  0.0733  0.0733   0.0733 -1.6270
-    ## Age:Cig              -1.7163  0.0001  0.0001   0.0001 -1.8074
-    ## Stroke1:Age          -1.7163  0.0879  0.0879   0.0879 -1.6270
-    ## Hyp1:Age             -1.7163  0.0184  0.0184   0.0184 -1.8074
-    ## Diab1:Age            -1.7163 -0.0525 -0.0525  -0.0525 -1.6270
-    ## Age:Chol             -1.7163 -0.0001 -0.0001  -0.0001 -1.8074
-    ## Age:SysP             -1.7163  0.0005  0.0005   0.0005 -1.6270
-    ## Age:DiaP             -1.7163 -0.0015 -0.0015  -0.0015 -1.8074
-    ## Age:BMI              -1.7163 -0.0002 -0.0002  -0.0002 -1.6270
-    ## Age:Hrate            -1.7163  0.0000  0.0000   0.0000 -1.8074
-    ## Age:Gluc             -1.7163  0.0003  0.0003   0.0003 -1.6270
-    ## SexMale:Cig          -1.7163 -0.0059 -0.0059  -0.0059 -1.8074
-    ## SexMale:Stroke1      -1.7163  0.4554  0.4554   0.4554 -1.6270
-    ## SexMale:Hyp1         -1.7163 -0.5314 -0.5314  -0.5314 -1.8074
-    ## SexMale:Diab1        -1.7163  0.6458  0.6458   0.6458 -1.6270
-    ## SexMale:Chol         -1.7163  0.0037  0.0037   0.0037 -1.8074
-    ## SexMale:SysP         -1.7163  0.0107  0.0107   0.0107 -1.6270
-    ## SexMale:DiaP         -1.7163  0.0040  0.0040   0.0040 -1.8074
-    ## SexMale:BMI          -1.7163 -0.0195 -0.0195  -0.0195 -1.6270
-    ## SexMale:Hrate        -1.7163  0.0069  0.0069   0.0069 -1.8074
-    ## SexMale:Gluc         -1.7163 -0.0009 -0.0009  -0.0009 -1.6270
+    ##                          All CD<0.02  CD<0.01 CD<0.005    2.5 % 97.5 %
+    ## (Intercept)          -8.9136 -8.3868  -7.7348 -10.3267 -18.8173 0.7098
+    ## SexMale              -1.9001 -2.1158  -1.8750  -1.9468  -4.4332 0.6342
+    ## rcs(Age, 4)Age        0.1645  0.1539   0.1339   0.1666   0.0019 0.3303
+    ## rcs(Age, 4)Age'      -0.0240 -0.0282  -0.0230  -0.0371  -0.2921 0.2381
+    ## rcs(Age, 4)Age''     -0.0277 -0.0192  -0.0309  -0.0185  -0.6918 0.6462
+    ## Edu.L                -0.0060  0.0031   0.0065   0.0160  -0.2416 0.2226
+    ## Edu.Q                 0.1739  0.1667   0.1741   0.1663  -0.0589 0.4059
+    ## Edu.C                 0.0152  0.0112   0.0021   0.0091  -0.2147 0.2488
+    ## rcs(Cig, 4)Cig        0.0298  0.0307   0.0310   0.0348  -0.0329 0.0927
+    ## rcs(Cig, 4)Cig'      -0.0166 -0.0158  -0.0163  -0.0192  -0.0588 0.0254
+    ## Meds1                 0.1143  0.0988   0.1680   0.2124  -0.3684 0.5802
+    ## Stroke1              -4.5127 -4.6299 -23.3719 -18.0537 -19.5736 5.9276
+    ## Hyp1                 -0.4834 -0.5164  -0.4330  -0.8449  -2.6140 1.6142
+    ## Diab1                 2.4763  2.6766   2.7674  -0.4495  -3.1107 7.7223
+    ## rcs(Chol, 4)Chol      0.0037  0.0044   0.0053   0.0021  -0.0142 0.0221
+    ## rcs(Chol, 4)Chol'     0.0032  0.0030   0.0031   0.0083  -0.0304 0.0363
+    ## rcs(Chol, 4)Chol''    0.0049  0.0061   0.0056  -0.0178  -0.1000 0.1109
+    ## rcs(SysP, 4)SysP      0.0046  0.0016   0.0041   0.0039  -0.0625 0.0714
+    ## rcs(SysP, 4)SysP'    -0.0798 -0.0787  -0.0809  -0.1004  -0.2307 0.0679
+    ## rcs(SysP, 4)SysP''    0.1988  0.1959   0.2041   0.2539  -0.2006 0.6048
+    ## rcs(DiaP, 4)DiaP      0.0144  0.0216   0.0172   0.0468  -0.0829 0.1140
+    ## rcs(DiaP, 4)DiaP'     0.1432  0.1366   0.1369   0.1160  -0.0067 0.2923
+    ## rcs(DiaP, 4)DiaP''   -0.3416 -0.3212  -0.3325  -0.2626  -0.8245 0.1426
+    ## rcs(BMI, 4)BMI       -0.0583 -0.0496  -0.0516  -0.0646  -0.2554 0.1410
+    ## rcs(BMI, 4)BMI'       0.2653  0.2524   0.2045   0.1652  -0.1301 0.6552
+    ## rcs(BMI, 4)BMI''     -0.7437 -0.7044  -0.5214  -0.4125  -1.9592 0.4820
+    ## rcs(Hrate, 4)Hrate    0.0186  0.0167   0.0187   0.0174  -0.0509 0.0890
+    ## rcs(Hrate, 4)Hrate'  -0.1267 -0.1255  -0.1264  -0.1165  -0.2729 0.0172
+    ## rcs(Hrate, 4)Hrate''  0.3229  0.3208   0.3221   0.2984  -0.0467 0.6957
+    ## rcs(Gluc, 4)Gluc     -0.0110 -0.0233  -0.0336  -0.0209  -0.0567 0.0355
+    ## rcs(Gluc, 4)Gluc'    -0.0184 -0.0304  -0.0363  -0.0366  -0.1568 0.1163
+    ## rcs(Gluc, 4)Gluc''    0.0733  0.1136   0.1358   0.1406  -0.2936 0.4486
+    ## Age:Cig               0.0001  0.0000   0.0000   0.0000  -0.0010 0.0011
+    ## Stroke1:Age           0.0879  0.0899   0.4094   0.3188  -0.0946 0.3463
+    ## Hyp1:Age              0.0184  0.0192   0.0171   0.0242  -0.0188 0.0563
+    ## Diab1:Age            -0.0525 -0.0571  -0.0624  -0.0156  -0.1440 0.0424
+    ## Age:Chol             -0.0001 -0.0001  -0.0002  -0.0001  -0.0004 0.0002
+    ## Age:SysP              0.0005  0.0005   0.0005   0.0006  -0.0006 0.0015
+    ## Age:DiaP             -0.0015 -0.0016  -0.0014  -0.0019  -0.0031 0.0002
+    ## Age:BMI              -0.0002 -0.0003  -0.0001   0.0003  -0.0032 0.0029
+    ## Age:Hrate             0.0000  0.0000   0.0000   0.0000  -0.0010 0.0011
+    ## Age:Gluc              0.0003  0.0005   0.0007   0.0005  -0.0004 0.0009
+    ## SexMale:Cig          -0.0059 -0.0062  -0.0055  -0.0036  -0.0256 0.0144
+    ## SexMale:Stroke1       0.4554  0.4829  -0.0627   0.5496  -1.6274 2.5827
+    ## SexMale:Hyp1         -0.5314 -0.5265  -0.4804  -0.4423  -1.1093 0.0427
+    ## SexMale:Diab1         0.6458  0.5258   0.6495   1.2462  -0.6526 1.9920
+    ## SexMale:Chol          0.0037  0.0036   0.0035   0.0045  -0.0009 0.0083
+    ## SexMale:SysP          0.0107  0.0118   0.0123   0.0090  -0.0049 0.0265
+    ## SexMale:DiaP          0.0040  0.0024   0.0018   0.0057  -0.0211 0.0291
+    ## SexMale:BMI          -0.0195 -0.0211  -0.0233  -0.0200  -0.0747 0.0353
+    ## SexMale:Hrate         0.0069  0.0076   0.0070   0.0077  -0.0104 0.0241
+    ## SexMale:Gluc         -0.0009  0.0021   0.0003  -0.0023  -0.0102 0.0085
 
-<br/> We see that the estimates remained within the confidence intervals
+We observe that the estimates remained within the confidence intervals
 for the coefficients; thus, there seems to be no reason to delete any
 observations. The last step is to validate the model by evaluating its
 predictive performance. However, before we proceed, we take a step back
@@ -1150,5 +1028,66 @@ thereby completely ignoring the incomplete data.
 
 Thus, in Part Two of this demonstration, we will repeat the entire
 modeling process using both complete and incomplete observations via
-single and multiple imputation methods, and we will compare our results
-with those from the complete case analysis. <br/>
+single- and multiple-imputation methods, and compare our results with
+those from the complete-case analysis. <br/>
+
+# References
+
+<div id="refs" class="references csl-bib-body hanging-indent"
+entry-spacing="0">
+
+<div id="ref-aickin1996adjusting" class="csl-entry">
+
+Aickin, Mikel, and Helen Gensler. 1996. “Adjusting for Multiple Testing
+When Reporting Research Results: The Bonferroni Vs Holm Methods.”
+*American Journal of Public Health* 86 (5): 726–28.
+
+</div>
+
+<div id="ref-benjamini2001control" class="csl-entry">
+
+Benjamini, Yoav, and Daniel Yekutieli. 2001. “The Control of the False
+Discovery Rate in Multiple Testing Under Dependency.” *Annals of
+Statistics*, 1165–88.
+
+</div>
+
+<div id="ref-dunn2018generalized" class="csl-entry">
+
+Dunn, Peter K, Gordon K Smyth, et al. 2018. *Generalized Linear Models
+with Examples in r*. Vol. 53. Springer.
+
+</div>
+
+<div id="ref-faraway2016extending" class="csl-entry">
+
+Faraway, Julian J. 2016. *Extending the Linear Model with r: Generalized
+Linear, Mixed Effects and Nonparametric Regression Models*. Chapman;
+Hall/CRC.
+
+</div>
+
+<div id="ref-harrell2001regression" class="csl-entry">
+
+Harrell, Frank E et al. 2001. *Regression Modeling Strategies: With
+Applications to Linear Models, Logistic Regression, and Survival
+Analysis*. Vol. 608. Springer.
+
+</div>
+
+<div id="ref-mood2010logistic" class="csl-entry">
+
+Mood, Carina. 2010. “Logistic Regression: Why We Cannot Do What We Think
+We Can Do, and What We Can Do about It.” *European Sociological Review*
+26 (1): 67–82.
+
+</div>
+
+<div id="ref-rubin2018multiple" class="csl-entry">
+
+Rubin, Donald B. 2018. “Multiple Imputation.” In *Flexible Imputation of
+Missing Data, Second Edition*, 29–62. Chapman; Hall/CRC.
+
+</div>
+
+</div>
