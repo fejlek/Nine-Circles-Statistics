@@ -34,6 +34,7 @@ results. <br/>
   - [Model Diagnostics](#model-diagnostics)
 - [References](#references)
 
+
 ## Cardiovascular study on residents of the town of Framingham, Massachusetts
 
 In this project, we will use the dataset obtained from
@@ -272,7 +273,7 @@ redun(~.- TCHD ,data = framingham[rowSums(is.na(framingham)) == 0,],nk = 4, r2 =
     ## 
     ## ~Sex + Age + Edu + Smoker + Cig + Meds + Stroke + Hyp + Diab + 
     ##     Chol + SysP + DiaP + BMI + Hrate + Gluc
-    ## <environment: 0x0000025719411700>
+    ## <environment: 0x000001fd244073f0>
     ## 
     ## n: 3656  p: 15   nk: 4 
     ## 
@@ -935,7 +936,29 @@ predictors in the model. <br/>
 
 ![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-31-1.png)<!-- -->![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-31-2.png)<!-- -->
 
-![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-32-1.png)<!-- -->![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-32-2.png)<!-- -->![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-32-3.png)<!-- -->
+``` r
+par(mfrow = c(1, 2))
+plotResiduals(simulationOutput, framingham_complete$Sex)
+plotResiduals(simulationOutput, framingham_complete$Edu)
+```
+
+![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-32-1.png)<!-- -->
+
+``` r
+par(mfrow = c(1, 2))
+plotResiduals(simulationOutput, framingham_complete$Meds)
+plotResiduals(simulationOutput, framingham_complete$Stroke)
+```
+
+![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-32-2.png)<!-- -->
+
+``` r
+par(mfrow = c(1, 2))
+plotResiduals(simulationOutput, framingham_complete$Hyp)
+plotResiduals(simulationOutput, framingham_complete$Diab)
+```
+
+![](Second_circle_logistic_regression_1_files/figure-GFM/unnamed-chunk-32-3.png)<!-- -->
 
 Overall, we have not detected any obvious misspecification of our model
 (at least with respect to the predictors). Having discussed the
