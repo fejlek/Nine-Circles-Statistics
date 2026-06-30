@@ -1054,7 +1054,7 @@ modeling process using both complete and incomplete observations via
 single- and multiple-imputation methods, and compare our results with
 those from the complete-case analysis. <br/>
 
-# References
+## References
 
 <div id="refs" class="references csl-bib-body hanging-indent"
 entry-spacing="0">

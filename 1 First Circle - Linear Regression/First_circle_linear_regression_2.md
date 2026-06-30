@@ -1319,7 +1319,7 @@ we will discuss our resulting model. We will examine its predictive
 performance and discuss the predictors that appeared most important for
 life expectancy prediction in the model.
 
-# References
+## References
 
 <div id="refs" class="references csl-bib-body hanging-indent"
 entry-spacing="0">

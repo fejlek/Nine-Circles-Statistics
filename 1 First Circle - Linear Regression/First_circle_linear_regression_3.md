@@ -1209,7 +1209,7 @@ However, thanks to the road we took, we obtained a model that could
 partially capture the individual effects , so moving the analysis in
 this direction felt right.
 
-# References
+## References
 
 <div id="refs" class="references csl-bib-body hanging-indent"
 entry-spacing="0">
